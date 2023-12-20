@@ -244,7 +244,6 @@ class FlacWriter {
           break;
         case 6 when (metadata.pictures.isNotEmpty): // cover
           _hasPictureBlock = true; // otherwise, we have to create the block
-          print("Add cover");
           reader.setPositionSync(reader.positionSync() + length);
           final picture = metadata.pictures.first;
           final imageBytes = <int>[];

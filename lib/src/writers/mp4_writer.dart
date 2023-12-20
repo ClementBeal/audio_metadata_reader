@@ -41,10 +41,10 @@ class Mp4Writer {
   bool _hasArtist = false;
   bool _hasAlbum = false;
   bool _hasYear = false;
-  final bool _hasDisk = false;
+  bool _hasDisk = false;
   bool _hasTrackNumber = false;
-  final bool _hasGenre = false;
-  final bool _hasTempo = false;
+  bool _hasGenre = false;
+  bool _hasTempo = false;
   bool _hasCover = false;
 
   Future<void> write(RandomAccessFile reader, Mp4Metadata metadata) async {
@@ -56,7 +56,6 @@ class Mp4Writer {
 
     while (reader.positionSync() < lengthFile) {
       final box = await _readBox(reader);
-      print("${box.type} -> ${box.data.length + 8}");
 
       if (supportedBox.contains(box.type)) {
         final newBox = processBox(reader, metadata, box);
@@ -195,7 +194,6 @@ class Mp4Writer {
           return originalBox;
       }
     } else {
-      print("unknown: ${originalBox.type}");
       return originalBox;
     }
   }
@@ -308,13 +306,9 @@ class Mp4Writer {
 
   Box _readBoxFromData(Uint8List data, int offset) {
     final parser = ByteData.sublistView(data);
-    // print(String.fromCharCodes(data.sublist(0, 100)));
-    // print(data.sublist(0, 20));
 
     final boxSize = getUint32(data.sublist(offset, 4 + offset));
     final boxName = String.fromCharCodes(data.sublist(4 + offset, 8 + offset));
-
-    // print("XX ${boxSize} -> ${boxName} XX");
 
     return Box(data.sublist(8 + offset, offset + boxSize), boxName);
   }

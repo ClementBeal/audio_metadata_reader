@@ -77,8 +77,5 @@ Future<void> writeMetadata(File track, AudioMetadata metadata) async {
             year: metadata.year,
           ));
     }
-  } catch (e, t) {
-    print(t);
-    print(e);
-  }
+  } catch (e) {}
 }

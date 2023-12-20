@@ -61,5 +61,8 @@ class AudioMetadata {
 class InvalidTag extends AudioMetadata {}
 
 abstract class TagParser {
+  final bool fetchImage;
+
+  TagParser({required this.fetchImage});
   Future<ParserTag> parse(RandomAccessFile reader);
 }

@@ -90,9 +90,7 @@ Future<AudioMetadata> readMetadata(File track, {bool getImage = false}) async {
 
       return a;
     }
-  } catch (e, t) {
-    print(t);
-    print(e);
+  } catch (e) {
     return InvalidTag();
   }
 

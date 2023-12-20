@@ -25,6 +25,7 @@ final bitrateTable = {
   14: 320,
   15: null,
 };
+
 final samplerateTable = {
   0: 44100,
   1: 48000,
@@ -36,11 +37,13 @@ class ID3v3Frame {
   final String id;
   final int size;
   final Uint8List flags;
-  final RandomAccessFile reader;
 
-  ID3v3Frame(this.id, this.size, this.flags, this.reader);
+  ID3v3Frame(this.id, this.size, this.flags);
 }
 
+///
+/// Metadata frame defined in the ID3 tag
+///
 class TextFrame {
   late final int encoding;
   late final String information;
@@ -96,6 +99,10 @@ class TextFrame {
   }
 }
 
+///
+/// Custom metadata frame
+/// Can be used my MusicBrainz for instance
+///
 class TXXXFrame {
   late final int encoding;
   late final String description;
@@ -134,8 +141,7 @@ class TXXXFrame {
             information.sublist(nullCharacterPositionDescription));
         break;
       case 3:
-        description =
-            const Utf8Decoder().convert(informationBytesDescription);
+        description = const Utf8Decoder().convert(informationBytesDescription);
 
         this.information = const Utf8Decoder()
             .convert(information.sublist(nullCharacterPositionDescription));
@@ -144,41 +150,31 @@ class TXXXFrame {
   }
 }
 
+///
+/// Parser for the ID3 tags
+///
+///
+/// https://teslabs.com/openplayer/docs/docs/specs/id3v2.3.0%20-%20ID3.org.pdf
+///
 class ID3v2Parser extends TagParser {
   final Mp3Metadata metadata = Mp3Metadata();
-  final bool fetchImage;
 
-  ID3v2Parser({this.fetchImage = false});
+  ID3v2Parser({fetchImage = false}) : super(fetchImage: fetchImage);
 
   @override
   Future<ParserTag> parse(RandomAccessFile reader) async {
     reader.setPositionSync(0);
 
     final headerBytes = reader.readSync(10);
-    final tagIdentity = String.fromCharCodes(headerBytes.sublist(0, 3));
     final majorVersion = headerBytes[3];
-    final minorversion = headerBytes[4];
-    final flags = headerBytes[5];
 
     if (majorVersion == 1) {
       return metadata;
     }
-    // print("${tagIdentity}v${majorVersion}.$minorversion");
-
-    // if (flags != 0) {
-    //   print(flags.toRadixString(2).padLeft(8, '0'));
-    //   print("${tagIdentity}v2.${majorVersion}.$minorversion");
-    //   print(flags);
-    //   // print(size);
-
-    //   print("Unsynchronisation: ${checkBit(flags, 0)}");
-    //   print("Extended header: ${checkBit(flags, 1)}");
-    //   print("Experimental indicator: ${checkBit(flags, 2)}");
-    //   print("Footer presence: ${checkBit(flags, 3)}");
-    // }
 
     var sizeBytes = headerBytes.sublist(6);
 
+    // size of the ID3 tag minus id3 header size
     int size = (sizeBytes[3] & 0x7F) |
         ((sizeBytes[2] & 0x7F) << 7) |
         ((sizeBytes[1] & 0x7F) << 14) |
@@ -198,9 +194,6 @@ class ID3v2Parser extends TagParser {
       try {
         processFrame(frame.id, frameContent);
       } catch (e) {
-        // print(track.path);
-        print(frame.id);
-        print(frameContent);
         rethrow;
       }
     }
@@ -219,38 +212,26 @@ class ID3v2Parser extends TagParser {
     final bitrateCode = mp3FrameHeader[2] >> 4;
     final samplerateCode = mp3FrameHeader[2] & 12 >> 2;
 
-    // print("bitrate: ${bitrateTable[bitrateCode]}");
-    // print("sample rate: ${samplerateTable[samplerateCode]}");
     metadata.bitrate = bitrateTable[bitrateCode];
     metadata.samplerate = samplerateTable[samplerateCode];
 
     if (metadata.bitrate != null && metadata.samplerate != null) {
       final frameLength =
           144 * metadata.bitrate! * 1000 / metadata.samplerate! + 1;
-      // print(frameLength);
       final fileSizeWithoutMetadata = reader.lengthSync() - size;
-      // print(fileSizeWithoutMetadata ~/ frameLength);
-      // print(fileSizeWithoutMetadata ~/ frameLength * 0.026);
       metadata.duration = Duration(
           seconds: (fileSizeWithoutMetadata ~/ frameLength * 0.026).ceil());
-      // for (var a in mp3FrameHeader) {
-      //   print(a.toRadixString(2).padLeft(8, "0"));
-      // }
-      // print(mp3FrameHeader[3].toRadixString(2).padLeft(8, "0"));
     }
-    // }
 
     reader.closeSync();
     return metadata;
   }
 
   void processFrame(String frameId, Uint8List content) {
-    // print("$frameId => ${TextFrame(content).information}");
     final handlers = switch (frameId) {
       "APIC" => () {
           if (fetchImage) {
             final picture = getPicture(content);
-            // File("image.jpg").writeAsBytes(picture.bytes);
             metadata.pictures.add(picture);
           }
         },
@@ -343,10 +324,11 @@ class ID3v2Parser extends TagParser {
           metadata.originalTextWriter = TextFrame(content).information;
         },
       "TOPE" => () {
-          metadata.originalArtist == TextFrame(content).information;
+          metadata.originalArtist = TextFrame(content).information;
         },
       "TORY" => () {
-          metadata.originalReleaseYear == TextFrame(content).information;
+          metadata.originalReleaseYear =
+              _parseYear(TextFrame(content).information);
         },
       "TDRL" => () {
           // tag.originalArtist == TextFrame(content).information;
@@ -393,7 +375,6 @@ class ID3v2Parser extends TagParser {
         },
       "TRCK" => () {
           final trackInfo = TextFrame(content).information;
-          // print(trackInfo.runes);
           if (trackInfo.contains("/")) {
             metadata.trackNumber ??= int.tryParse(trackInfo.split("/").first);
             metadata.trackTotal ??= int.tryParse(trackInfo.split("/").last);
@@ -414,11 +395,8 @@ class ID3v2Parser extends TagParser {
           metadata.isrc = TextFrame(content).information;
         },
       "TXXX" => () {
-          // print("aaaa");
           final frame = TXXXFrame(content);
           metadata.customMetadata[frame.description] = frame.information;
-          // print("${frame.description} => ${frame.information}");
-          // TextFrame(content).information;
         },
       "PRIV" => () {
           // TextFrame(content).information;
@@ -454,39 +432,10 @@ class ID3v2Parser extends TagParser {
           // TextFrame(content).information;
           //print("Encoding by: " + TextFrame(frame.content).information);
         },
-      "GEOB" => () {
-          getGEOB(content);
-
-          //print("Encoding by: " + TextFrame(frame.content).information);
-        },
-      "UFID" => () {
-          metadata.uniqueFileIdentifer = getUniqueFileIdentifier(content);
-          //print("Encoding by: " + TextFrame(frame.content).information);
-        },
-      "TSOA" || "TSOP" || "TDOR" => () {},
-      "POPM" => () {
-          int i = 0;
-          while (content[i] != 0) {
-            i++;
-          }
-
-          metadata.popularimeter = Popularimeter(
-              String.fromCharCodes(content.sublist(0, i)), content[i + 1], 0);
-        },
-      _ => () {
-          if (frameId.startsWith("T")) {
-            // print("To implement: $frameId");
-            // print(TextFrame(content).information);
-          }
-          // if (frame.id.length != 4) {
-          //   return;
-          // }
-          // print(frame.id);
-          // throw Exception("frame id: -${frame.id}-");
-        }
+      // "TSOA" || "TSOP" || "TDOR" => () {},
+      _ => () {}
     };
 
-    // print(frame.id);
     handlers.call();
   }
 
@@ -494,8 +443,10 @@ class ID3v2Parser extends TagParser {
     final headerBytes = reader.readSync(10);
 
     if (headerBytes.every((element) => element == 0)) return null;
+
     int size;
-    final id = String.fromCharCodes(headerBytes.sublist(0, 4));
+
+    // the id3 v4 ignore the first bit of every byte from the size
     if (isV4) {
       size = (headerBytes[7] & 0xFF) |
           ((headerBytes[6] & 0xFF) << 7) |
@@ -509,50 +460,20 @@ class ID3v2Parser extends TagParser {
     }
 
     final flags = headerBytes.sublist(8);
+    final id = String.fromCharCodes(headerBytes.sublist(0, 4));
 
     return ID3v3Frame(
       id,
       size,
       flags,
-      reader,
     );
   }
 
-  String getComments(Uint8List content) {
-    var offset = 0;
-
-    final reader = ByteData.sublistView(content);
-    final encoding = reader.getInt8(offset);
-    final language = String.fromCharCodes([
-      reader.getInt8(offset++),
-      reader.getInt8(offset++),
-      reader.getInt8(offset++)
-    ]);
-
-    final shortDescription = [reader.getInt8(offset)];
-    while (shortDescription.last != 0) {
-      shortDescription.add(reader.getInt8(offset));
-      offset++;
-    }
-
-    final rest = reader.buffer.asUint8List(offset);
-
-    return switch (encoding) {
-      0 => const Latin1Decoder().convert(rest),
-      1 => utf16.decode(rest),
-      2 => utf16.decode(rest),
-      3 || _ => const Utf8Decoder().convert(rest),
-    };
-  }
-
   Picture getPicture(Uint8List content) {
-    // print(content.sublist(0, 130));
     var offset = 1;
 
     final reader = ByteData.sublistView(content);
-    final encoding = reader.getUint8(0);
 
-    // print(encoding);
     final mimetype = [reader.getUint8(offset++)];
 
     while (mimetype.last != 0) {
@@ -591,11 +512,11 @@ class ID3v2Parser extends TagParser {
     final reader = ByteData.sublistView(content);
     final encoding = reader.getInt8(0);
 
-    final language = [
+    [
       reader.getInt8(offset++),
       reader.getInt8(offset++),
       reader.getInt8(offset++),
-    ];
+    ]; // language
 
     final description = [reader.getInt8(offset)];
     while (description.last != 0) {
@@ -613,47 +534,14 @@ class ID3v2Parser extends TagParser {
     };
   }
 
-  String getUniqueFileIdentifier(Uint8List content) {
-    final reader = ByteData.sublistView(content);
-    int offset = 0;
-    final ownerIdentifier = [reader.getInt8(offset)];
-
-    while (ownerIdentifier.last != 0) {
-      ownerIdentifier.add(reader.getInt8(offset));
-      offset++;
-    }
-
-    final identifier = content.sublist(offset);
-
-    return String.fromCharCodes(identifier);
-  }
-
-  String getGEOB(Uint8List content) {
-    var offset = 1;
-
-    final reader = ByteData.sublistView(content);
-    final encoding = reader.getInt8(0);
-
-    final ownerIdentifier = [reader.getInt8(offset)];
-
-    while (ownerIdentifier.last != 0) {
-      ownerIdentifier.add(reader.getInt8(offset));
-      offset++;
-    }
-
-    final identifier = content.sublist(offset);
-
-    // TODO
-
-    return "";
-  }
-
+  ///
+  /// To detect if this file can be parsed with this parser, the first 3 bytes
+  /// must be equal to `ID3`
+  ///
   static Future<bool> canUserParser(RandomAccessFile reader) async {
     reader.setPositionSync(0);
-    final headerBytes = reader.readSync(10);
-    final tagIdentity = String.fromCharCodes(headerBytes.sublist(0, 3));
-    final majorVersion = headerBytes[3];
-    final minorversion = headerBytes[4];
+    final headerBytes = reader.readSync(3);
+    final tagIdentity = String.fromCharCodes(headerBytes);
 
     return tagIdentity == "ID3";
   }

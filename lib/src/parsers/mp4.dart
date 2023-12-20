@@ -10,14 +10,17 @@ import '../utils/bit_manipulator.dart';
 
 // https://xhelmboyx.tripod.com/formats/mp4-layout.txt
 
-class Box {
+///
+/// Contains the data of a box header
+///
+/// The size is the sum of the box header size and the box data
+class BoxHeader {
   int size;
   String type;
 
-  Box(this.size, this.type);
+  BoxHeader(this.size, this.type);
 }
 
-final recursiveBox = ["moov"];
 final supportedBox = [
   "moov",
   "mvhd",
@@ -41,11 +44,22 @@ final supportedBox = [
   "----",
 ];
 
+///
+/// The parser for the MP4 files
+///
+/// The mp4 metadata format uses boxes (also called atoms) to format its data
+/// In our case, we only need the metadata and some additional information like
+/// bitrate and duration.
+///
+/// In short, the metadata are stored there:
+/// `moov` -> `udta` - `meta` -> `ilst`
+///
+/// Information about the bitrate and duration are stored in `mvhd`
+///
 class MP4Parser extends TagParser {
   Mp4Metadata tags = Mp4Metadata();
-  final bool fetchImage;
 
-  MP4Parser({this.fetchImage = false});
+  MP4Parser({fetchImage = false}) : super(fetchImage: fetchImage);
 
   @override
   Future<ParserTag> parse(RandomAccessFile reader) async {
@@ -59,8 +73,8 @@ class MP4Parser extends TagParser {
       if (supportedBox.contains(box.type)) {
         await processBox(reader, box);
       } else {
-        // printIndent(_indent, "${box.type} -> ${box.size}");
-
+        // We substract 8 to the box size because we already read the data for
+        // the box header
         reader.setPositionSync(reader.positionSync() + box.size - 8);
       }
     }
@@ -70,20 +84,30 @@ class MP4Parser extends TagParser {
     return tags;
   }
 
-  Future<Box> _readBox(RandomAccessFile reader) async {
+  ///
+  /// A box (or atom) header uses 8 bytes
+  ///
+  /// [0...3] -> box size (header + body)
+  /// [4...7] -> box name (ASCII)
+  ///
+  Future<BoxHeader> _readBox(RandomAccessFile reader) async {
     final headerBytes = reader.readSync(8);
     final parser = ByteData.sublistView(headerBytes);
 
     final boxSize = parser.getUint32(0);
     final boxName = String.fromCharCodes(headerBytes.sublist(4));
 
-    return Box(boxSize, boxName);
+    return BoxHeader(boxSize, boxName);
   }
 
-  Future<void> processBox(RandomAccessFile reader, Box box) async {
-    // printIndent(_indent, "${box.type} -> ${box.size}");
-
-    if (recursiveBox.contains(box.type)) {
+  ///
+  /// Parse a box
+  ///
+  /// The metadata are inside special boxes. We only read data when we need it
+  /// otherwise we skip them
+  ///
+  Future<void> processBox(RandomAccessFile reader, BoxHeader box) async {
+    if (box.type == "moov") {
       await parseRecurvise(reader, box);
     } else if (box.type == "mvhd") {
       final bytes = reader.readSync(100);
@@ -106,9 +130,6 @@ class MP4Parser extends TagParser {
         ["gnre", "trkn", "disk", "tmpo", "cpil", "too", "covr", "pgap"]
             .contains(box.type)) {
       final bytes = reader.readSync(box.size - 8);
-      final i = bytes.sublist(0, 4);
-      final dataString = bytes.sublist(4, 8);
-      final flags = bytes.sublist(8, 12);
 
       String value;
       try {
@@ -116,6 +137,7 @@ class MP4Parser extends TagParser {
       } catch (e) {
         value = String.fromCharCodes(bytes.sublist(16));
       }
+
       final boxName = (box.type[0] == "©") ? box.type.substring(1) : box.type;
 
       switch (boxName) {
@@ -129,16 +151,12 @@ class MP4Parser extends TagParser {
           tags.album = value;
           break;
         case "cmt":
-          // tags. = value;
           break;
         case "day":
           tags.year = DateTime(int.parse(value));
-          // tags.year = int.parse(value);
           break;
         case "too":
-          // print("too ->");
           break;
-        // tags.year = int.parse(value);
         case "disk":
           tags.discNumber = getUint32(bytes.sublist(16, 20));
           break;
@@ -147,18 +165,16 @@ class MP4Parser extends TagParser {
           tags.picture = Picture(bytes.sublist(16), "", PictureType.coverFront);
         case "trkn":
           final a = getUint32(bytes.sublist(16, 20));
-          // print("trkn: $a");
-          if (a != 0) {
+          if (a > 0) {
             tags.trackNumber = a;
           }
           break;
       }
     } else if (box.type == "----") {
       final mean = await _readBox(reader);
-      final meanValue = String.fromCharCodes(reader.readSync(mean.size - 8));
+      String.fromCharCodes(reader.readSync(mean.size - 8)); // mean value
 
       final name = await _readBox(reader);
-      // reader.readSync(4);
 
       final nameValue =
           String.fromCharCodes(reader.readSync(name.size - 8).sublist(4));
@@ -177,11 +193,14 @@ class MP4Parser extends TagParser {
     }
   }
 
-  Future<void> parseRecurvise(RandomAccessFile reader, Box box) async {
+  ///
+  /// Parse a box with multiple sub boxes.
+  ///
+  Future<void> parseRecurvise(RandomAccessFile reader, BoxHeader box) async {
     final limit = box.size - 8;
     int offset = 0;
-    // printIndent(_indent, "Recursive: ${box.type}");
 
+    // the `meta` box has 4 additional bytes that are not useful. We skip them
     if (box.type == "meta") {
       offset += 4;
     }
@@ -192,24 +211,22 @@ class MP4Parser extends TagParser {
       if (supportedBox.contains(newBox.type)) {
         await processBox(reader, newBox);
       } else {
-        // printIndent(_indent, "Not contain: ${newBox.type}");
         reader.setPositionSync(reader.positionSync() + newBox.size - 8);
       }
 
       offset += newBox.size;
-      // printIndent(_indent + 1, "${box.type} -> $offset/${limit}");
     }
-
-    // printIndent(_indent, "End Recursive: ${box.type}");
   }
 
+  ///
+  /// To detect if this parser can be used to parse this file, we need to detect
+  /// the first box. It should be a `ftyp` box
+  ///
   static Future<bool> canUserParser(RandomAccessFile reader) async {
-    reader.setPositionSync(0);
+    reader.setPositionSync(4);
 
-    final headerBytes = reader.readSync(8);
-    final parser = ByteData.sublistView(headerBytes);
-
-    final boxName = String.fromCharCodes(headerBytes.sublist(4));
+    final headerBytes = reader.readSync(4);
+    final boxName = String.fromCharCodes(headerBytes);
 
     return boxName == "ftyp";
   }

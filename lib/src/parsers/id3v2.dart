@@ -422,17 +422,9 @@ class ID3v2Parser extends TagParser {
         },
       "TSSE" => () {
           metadata.encoderSoftware = TextFrame(content).information;
-          //print("Encoding by: " + TextFrame(frame.content).information);
         },
-      "TSOC" => () {
-          // TextFrame(content).information;
-          //print("Encoding by: " + TextFrame(frame.content).information);
-        },
-      "TSO2" => () {
-          // TextFrame(content).information;
-          //print("Encoding by: " + TextFrame(frame.content).information);
-        },
-      // "TSOA" || "TSOP" || "TDOR" => () {},
+      "TSOC" => () {},
+      "TSO2" => () {},
       _ => () {}
     };
 

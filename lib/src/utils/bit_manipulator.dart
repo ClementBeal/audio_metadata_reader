@@ -40,15 +40,6 @@ int getUint32LE(Uint8List data) =>
     ((data[3] & 0xFF) << 24);
 
 int getIntFromArbitraryBits(int data, int offset, int length) {
-  // int result = 0;
-
-  // // 0000 1010 1100 0100 0100
-  // for (var i = 0; i < length; i++) {
-  //   // print(getBit(data, 64 - i - offset));
-  //   result = result | (getBit(data, 64 - i - offset) << (length - i));
-  //   print(result.toRadixString(2).padLeft(length, "0"));
-  // }
-
   return (data >> (64 - offset - length)) & ((1 << length) - 1);
 }
 

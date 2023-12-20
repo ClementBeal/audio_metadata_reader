@@ -27,7 +27,7 @@ Future<AudioMetadata> readMetadata(File track, {bool getImage = false}) async {
         lyrics: mp3Metadata.lyric,
         sampleRate: mp3Metadata.samplerate,
         title: mp3Metadata.songName,
-        totalDisc: 0,
+        totalDisc: null,
         trackNumber: mp3Metadata.trackNumber,
         trackTotal: mp3Metadata.trackTotal,
         year:
@@ -37,10 +37,6 @@ Future<AudioMetadata> readMetadata(File track, {bool getImage = false}) async {
 
       a.pictures = mp3Metadata.pictures;
       a.genres = mp3Metadata.genres;
-      // if (mp3Metadata.contentType != null) {
-      //   print(mp3Metadata.contentType);
-      //   // a.genres.add(mp3Metadata.contentType!);
-      // }
 
       return a;
     } else if (await FlacParser.canUserParser(reader)) {

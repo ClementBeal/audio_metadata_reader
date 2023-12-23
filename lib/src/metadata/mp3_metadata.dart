@@ -48,10 +48,10 @@ class Mp3Metadata extends ParserTag {
   String? uniqueFileIdentifer; // UFID
   String? termsOfUSe; // USER
   String? lyric; // USLT
-  late Map<String, String> customMetadata; // TXXX
-  late List<Picture> pictures; // APIC
+  Map<String, String> customMetadata = {}; // TXXX
+  List<Picture> pictures = []; // APIC
   AudioEncryption? audioEncryption; // AENC
-  late List<Comment> comments; // COMM
+  List<Comment> comments = []; // COMM
   CommercialFrame? commercialFrame; // COMR
 // 4.26 ENCR [#sec4.26 Encryption method registration]
 // 4.13 EQUA [#sec4.13 Equalization]
@@ -78,12 +78,6 @@ class Mp3Metadata extends ParserTag {
   int? samplerate;
   List<String> genres = [];
   int? discNumber;
-
-  Mp3Metadata() {
-    pictures = [];
-    comments = [];
-    customMetadata = HashMap();
-  }
 
   @override
   String toString() {

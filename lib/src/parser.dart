@@ -42,6 +42,7 @@ Future<AudioMetadata> readMetadata(File track, {bool getImage = false}) async {
     } else if (await FlacParser.canUserParser(reader)) {
       final vorbisMetadata = await FlacParser(fetchImage: getImage)
           .parse(reader) as VorbisMetadata;
+
       final newMetadata = AudioMetadata(
         album: vorbisMetadata.album.firstOrNull,
         artist: vorbisMetadata.artist.firstOrNull,

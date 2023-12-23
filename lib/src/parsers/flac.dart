@@ -90,6 +90,8 @@ class FlacParser extends TagParser {
         metadata.duration = Duration(milliseconds: duration.toInt());
         metadata.sampleRate = sampleRate;
         metadata.bitrate = (bitPerSample * sampleRate).toInt();
+
+        reader.readSync(128 ~/ 8); // signature
         break;
       case 3:
         reader.readSync(block.length);

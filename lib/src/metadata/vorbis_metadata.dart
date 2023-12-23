@@ -133,7 +133,6 @@ class VorbisMetadata extends ParserTag {
         newData.composer.isNotEmpty ? newData.composer : original.composer;
     original.comment =
         newData.comment.isNotEmpty ? newData.comment : original.comment;
-    // ... Repeat this for each additional field
 
     original.actor = newData.actor.isNotEmpty ? newData.actor : original.actor;
     original.composer =

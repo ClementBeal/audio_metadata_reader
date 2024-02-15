@@ -70,8 +70,8 @@ class FlacParser extends TagParser {
     final byteNumber = bytes[0];
 
     final block = MetadataBlockHeader(
-      byteNumber >> 7 == 1,
-      byteNumber & 0xFF,
+      byteNumber >> 7 == 1, // 0: not last block - 1: last block
+      byteNumber & 0x7F, // keep the 7 next bits (0XXXXXXX)
       bytes[3] | bytes[2] << 8 | bytes[1] << 16,
     );
 

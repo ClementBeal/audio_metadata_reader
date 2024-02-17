@@ -1,18 +1,12 @@
 name: audio_metadata_reader
 description: A metadata reader for audio files. Support ID3, Vorbis comments and ILST itunes
-version: 0.0.1
+version: 0.0.2
 homepage: https://clementbeal.github.io/
 repository: https://github.com/ClementBeal/audio_metadata_reader
 
 environment:
   sdk: ">=3.0.6 <4.0.0"
-  flutter: ">=1.17.0"
 
 dependencies:
   charset: ^2.0.1
   intl: ^0.18.1
-
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
-  flutter_lints: ^2.0.0

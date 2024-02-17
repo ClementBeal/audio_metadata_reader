@@ -5,6 +5,7 @@ import 'package:audio_metadata_reader/src/metadata/mp4_metadata.dart';
 import 'package:audio_metadata_reader/src/metadata/vorbis_metadata.dart';
 import 'package:audio_metadata_reader/src/parsers/id3v2.dart';
 import 'package:audio_metadata_reader/src/parsers/mp4.dart';
+import 'package:audio_metadata_reader/src/parsers/ogg.dart';
 import 'package:audio_metadata_reader/src/parsers/tag_parser.dart';
 import 'package:audio_metadata_reader/src/parsers/flac.dart';
 
@@ -58,6 +59,7 @@ Future<AudioMetadata> readMetadata(File track, {bool getImage = false}) async {
         trackTotal: vorbisMetadata.trackTotal,
         year: vorbisMetadata.date.firstOrNull,
       );
+
       newMetadata.genres = vorbisMetadata.genres;
 
       return newMetadata;
@@ -86,6 +88,29 @@ Future<AudioMetadata> readMetadata(File track, {bool getImage = false}) async {
       }
 
       return a;
+    } else if (await OGGParser.canUserParser(reader)) {
+      final oggMetadata =
+          await OGGParser(fetchImage: getImage).parse(reader) as VorbisMetadata;
+
+      final newMetadata = AudioMetadata(
+        album: oggMetadata.album.firstOrNull,
+        artist: oggMetadata.artist.firstOrNull,
+        bitrate: oggMetadata.bitrate,
+        discNumber: oggMetadata.discNumber,
+        duration: oggMetadata.duration,
+        language: oggMetadata.artist.firstOrNull,
+        lyrics: oggMetadata.artist.firstOrNull,
+        sampleRate: oggMetadata.sampleRate,
+        title: oggMetadata.title.firstOrNull,
+        totalDisc: oggMetadata.discTotal,
+        trackNumber: oggMetadata.trackNumber.firstOrNull,
+        trackTotal: oggMetadata.trackTotal,
+        year: oggMetadata.date.firstOrNull,
+      );
+      newMetadata.genres = oggMetadata.genres;
+      newMetadata.pictures.addAll(oggMetadata.pictures);
+
+      return newMetadata;
     }
   } catch (e) {
     return InvalidTag();

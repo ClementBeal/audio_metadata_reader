@@ -4,34 +4,9 @@ import 'dart:typed_data';
 import 'package:audio_metadata_reader/src/constants/id3_genres.dart';
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/metadata/mp3_metadata.dart';
+import 'package:audio_metadata_reader/src/utils/bit_manipulator.dart';
 import 'package:charset/charset.dart';
 import 'tag_parser.dart';
-
-final bitrateTable = {
-  0: null,
-  1: 32,
-  2: 40,
-  3: 48,
-  4: 56,
-  5: 64,
-  6: 80,
-  7: 96,
-  8: 112,
-  9: 128,
-  10: 160,
-  11: 192,
-  12: 224,
-  13: 256,
-  14: 320,
-  15: null,
-};
-
-final samplerateTable = {
-  0: 44100,
-  1: 48000,
-  2: 32000,
-  3: null,
-};
 
 class ID3v3Frame {
   final String id;
@@ -198,29 +173,62 @@ class ID3v2Parser extends TagParser {
       }
     }
 
-    // if (metadata.duration == null || metadata.duration == Duration.zero) {
-    reader.setPositionSync(size + 10);
+    if (metadata.duration == null || metadata.duration == Duration.zero) {
+      reader.setPositionSync(size + 10);
 
-    List<int> mp3FrameHeader = [...reader.readSync(4)];
+      List<int> mp3FrameHeader = [...reader.readSync(4)];
 
-    // CHECK : may have performance issues
-    while (mp3FrameHeader.first != 0xff) {
-      mp3FrameHeader.add(reader.readByteSync());
-      mp3FrameHeader.removeAt(0);
-    }
+      // CHECK : may have performance issues
+      while (mp3FrameHeader.first != 0xff) {
+        mp3FrameHeader.add(reader.readByteSync());
+        mp3FrameHeader.removeAt(0);
+      }
 
-    final bitrateCode = mp3FrameHeader[2] >> 4;
-    final samplerateCode = mp3FrameHeader[2] & 12 >> 2;
+      final mpegVersion = (mp3FrameHeader[1] >> 3) & 0x3;
+      final mpegLayer = (mp3FrameHeader[1] >> 1) & 3;
 
-    metadata.bitrate = bitrateTable[bitrateCode];
-    metadata.samplerate = samplerateTable[samplerateCode];
+      final bitrateIndex = mp3FrameHeader[2] >> 4;
+      final samplerateIndex = mp3FrameHeader[2] & 12 >> 0x3;
 
-    if (metadata.bitrate != null && metadata.samplerate != null) {
-      final frameLength =
-          144 * metadata.bitrate! * 1000 / metadata.samplerate! + 1;
-      final fileSizeWithoutMetadata = reader.lengthSync() - size;
-      metadata.duration = Duration(
-          seconds: (fileSizeWithoutMetadata ~/ frameLength * 0.026).ceil());
+      metadata.samplerate = _getSampleRate(mpegVersion, samplerateIndex);
+
+      // arbitrary choice.  Usually the `Xing` header is located after ~30 bytes
+      // then the header size is about ~150 bytes
+      final possibleXingHeader = (await reader.read(200)).toList();
+
+      while (possibleXingHeader.first == 0) {
+        possibleXingHeader.removeAt(0);
+      }
+
+      if (possibleXingHeader[0] == 0x58 &&
+          possibleXingHeader[1] == 0X69 &&
+          possibleXingHeader[2] == 0x6E &&
+          possibleXingHeader[3] == 0x67) {
+        // it's a VBR file (Variable Bit Rate)
+        final xingFrameFlag = possibleXingHeader[7] & 0x1;
+        // final xingBytesFlag = possibleXingHeader[7] >> 1 & 0x1;
+        // final xingTOCFlag = possibleXingHeader[7] >> 2 & 0x1;
+        // final xingVBRScaleFlag = possibleXingHeader[7] >> 3 & 0x1;
+
+        if (xingFrameFlag == 1) {
+          final numberOfFrames =
+              getUint32(Uint8List.fromList(possibleXingHeader.sublist(8, 12)));
+          metadata.duration = Duration(
+              seconds: numberOfFrames *
+                  (_getSamplePerFrame(mpegVersion, mpegLayer) ?? 0) ~/
+                  metadata.samplerate!);
+        }
+      } else {
+        // it's a CBR file (Constant Bit Rate)
+        metadata.bitrate = _getBitrate(mpegVersion, mpegLayer, bitrateIndex);
+
+        if (metadata.bitrate != null) {
+          final fileSizeWithoutMetadata = reader.lengthSync() - size;
+          metadata.duration = Duration(
+              seconds:
+                  (8 * fileSizeWithoutMetadata / metadata.bitrate!).round());
+        }
+      }
     }
 
     reader.closeSync();
@@ -546,5 +554,163 @@ class ID3v2Parser extends TagParser {
     } else {
       return int.parse(year);
     }
+  }
+
+  int? _getSampleRate(int mpegVersion, int sampleRateIndex) {
+    if (mpegVersion == 3) {
+      return switch (sampleRateIndex) {
+        0 => 44100,
+        1 => 48000,
+        2 => 32000,
+        _ => null,
+      };
+    }
+
+    if (mpegVersion == 2) {
+      return switch (sampleRateIndex) {
+        0 => 22050,
+        1 => 24000,
+        2 => 16000,
+        _ => null,
+      };
+    }
+
+    if (mpegVersion == 1) {
+      return switch (sampleRateIndex) {
+        0 => 11025,
+        1 => 12000,
+        2 => 8000,
+        _ => null,
+      };
+    }
+
+    return null;
+  }
+
+  int? _getBitrate(int mpegVersion, int mpegLayer, int bitrateIndex) {
+    if (mpegVersion == 3 && mpegLayer == 3) {
+      return switch (bitrateIndex) {
+        0 => null,
+        1 => 32000,
+        2 => 64000,
+        3 => 96000,
+        4 => 128000,
+        5 => 160000,
+        6 => 192000,
+        7 => 224000,
+        8 => 256000,
+        9 => 288000,
+        10 => 320000,
+        11 => 352000,
+        12 => 384000,
+        13 => 416000,
+        14 => 448000,
+        _ => null,
+      };
+    }
+
+    if (mpegVersion == 3 && mpegLayer == 2) {
+      return switch (bitrateIndex) {
+        0 => null,
+        1 => 32000,
+        2 => 48000,
+        3 => 56000,
+        4 => 64000,
+        5 => 80000,
+        6 => 96000,
+        7 => 112000,
+        8 => 128000,
+        9 => 160000,
+        10 => 192000,
+        11 => 224000,
+        12 => 256000,
+        13 => 320000,
+        14 => 384000,
+        _ => null,
+      };
+    }
+
+    if (mpegVersion == 3 && mpegLayer == 1) {
+      return switch (bitrateIndex) {
+        0 => null,
+        1 => 32000,
+        2 => 40000,
+        3 => 48000,
+        4 => 56000,
+        5 => 64000,
+        6 => 80000,
+        7 => 96000,
+        8 => 112000,
+        9 => 128000,
+        10 => 160000,
+        11 => 192000,
+        12 => 224000,
+        13 => 256000,
+        14 => 320000,
+        _ => null,
+      };
+    }
+    if (mpegVersion != 3 && mpegLayer == 3) {
+      return switch (bitrateIndex) {
+        0 => null,
+        1 => 32000,
+        2 => 48000,
+        3 => 56000,
+        4 => 64000,
+        5 => 80000,
+        6 => 96000,
+        7 => 112000,
+        8 => 128000,
+        9 => 144000,
+        10 => 160000,
+        11 => 176000,
+        12 => 192000,
+        13 => 224000,
+        14 => 256000,
+        _ => null,
+      };
+    }
+    if (mpegVersion != 3) {
+      return switch (bitrateIndex) {
+        0 => null,
+        1 => 8000,
+        2 => 16000,
+        3 => 24000,
+        4 => 32000,
+        5 => 40000,
+        6 => 48000,
+        7 => 56000,
+        8 => 64000,
+        9 => 80000,
+        10 => 96000,
+        11 => 112000,
+        12 => 128000,
+        13 => 144000,
+        14 => 160000,
+        _ => null,
+      };
+    }
+
+    return null;
+  }
+
+  int? _getSamplePerFrame(int mpegAudioVersion, int mpegLayer) {
+    if (mpegAudioVersion == 3) {
+      return switch (mpegLayer) {
+        3 => 384,
+        2 => 1152,
+        1 => 1152,
+        _ => null,
+      };
+    } else if (mpegAudioVersion == 2) {
+      return switch (mpegLayer) {
+        3 => 192,
+        2 => 1152,
+        1 => 576,
+        _ => null,
+      };
+    }
+
+    return null;
   }
 }

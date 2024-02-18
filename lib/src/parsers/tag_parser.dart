@@ -21,6 +21,11 @@ class Picture {
 
 abstract class ParserTag {}
 
+/// A generic class to gather the metadata. To make it universal, some format-specific metadata
+/// are dropped.
+///
+/// To use more precise metadata information related to a format, please
+/// use the parser of the format.
 class AudioMetadata {
   String? album;
   DateTime? year;

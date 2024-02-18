@@ -235,6 +235,9 @@ class ID3v2Parser extends TagParser {
     return metadata;
   }
 
+  /// Process a frame.
+  ///
+  /// If the frame ID is not defined in the id3vX specs, then its content is dropped.
   void processFrame(String frameId, Uint8List content) {
     final handlers = switch (frameId) {
       "APIC" => () {

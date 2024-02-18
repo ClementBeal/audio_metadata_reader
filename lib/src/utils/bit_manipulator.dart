@@ -1,6 +1,9 @@
 import 'dart:typed_data';
 
+/// Check if a bit is set
 bool checkBit(int value, int bit) => (value & (1 << bit)) != 0;
+
+/// Get the value of the bit at a specific position
 int getBit(int number, int position) => (number >> position) & 1;
 
 int synchsafe(input) {
@@ -17,22 +20,27 @@ int synchsafe(input) {
   return out;
 }
 
+/// Transform an array of 1 byte into a Integer8
 int getInt8(Uint8List data) {
   return data[0];
 }
 
+/// Transform an array of 2 bytes into a Integer16
 int getUint16(Uint8List data) {
   return data[0] << 8 | data[1];
 }
 
+/// Transform an array of 3 bytes into a Integer24
 int getUint24(Uint8List data) {
   return data[0] << 16 | data[1] << 8 | data[2];
 }
 
+/// Transform an array of 4 bytes into a Integer32
 int getUint32(Uint8List data) {
   return data[0] << 24 | data[1] << 16 | data[2] << 8 | data[3];
 }
 
+/// Transform an array of Little-Endian 4 bytes into a Integer32
 int getUint32LE(Uint8List data) =>
     (data[0] & 0xFF) |
     ((data[1] & 0xFF) << 8) |
@@ -43,6 +51,7 @@ int getIntFromArbitraryBits(int data, int offset, int length) {
   return (data >> (64 - offset - length)) & ((1 << length) - 1);
 }
 
+/// Transform an integer into a Big-Endian 3 bytes array
 Uint8List intToUint24(int value) {
   Uint8List result = Uint8List(3);
   result[0] = (value >> 16) & 0xFF;
@@ -51,6 +60,7 @@ Uint8List intToUint24(int value) {
   return result;
 }
 
+/// Transform an integer into a Big-Endian 4 bytes array
 Uint8List intToUint32(int value) {
   Uint8List result = Uint8List(4);
   result[0] = (value >> 24) & 0xFF;
@@ -60,6 +70,7 @@ Uint8List intToUint32(int value) {
   return result;
 }
 
+/// Transform an integer into a Little-Endian 4 bytes array
 Uint8List intToUint32LE(int value) {
   Uint8List result = Uint8List(4);
   result[3] = (value >> 24) & 0xFF;
@@ -69,6 +80,7 @@ Uint8List intToUint32LE(int value) {
   return result;
 }
 
+/// Transform an integer into a Little-Endian 3 bytes array
 Uint8List intToUint24LE(int value) {
   Uint8List result = Uint8List(4);
   result[2] = (value >> 16) & 0xFF;

@@ -8,6 +8,16 @@ import 'package:audio_metadata_reader/src/parsers/mp4.dart';
 import 'package:audio_metadata_reader/src/parsers/tag_parser.dart';
 import 'package:audio_metadata_reader/src/parsers/flac.dart';
 
+/// Parse the metadata of a file.
+///
+/// It automatically detects the type of the file (`.mp3`, `.ogg`, `.flac` etc)
+/// and select the matching file parser.
+///
+/// If there's no parser or an error, a `InvalidTag` instance should be returned.
+///
+/// By default, it does not fetch the images of the file. Because some
+/// images/covers are sometimes huge (~5MB), it can drastically make the
+/// parsing slower.
 Future<AudioMetadata> readMetadata(File track, {bool getImage = false}) async {
   final reader = await track.open();
 

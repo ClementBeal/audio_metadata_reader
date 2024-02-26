@@ -41,10 +41,10 @@ class Mp4Writer {
   bool _hasArtist = false;
   bool _hasAlbum = false;
   bool _hasYear = false;
-  bool _hasDisk = false;
+  final bool _hasDisk = false;
   bool _hasTrackNumber = false;
-  bool _hasGenre = false;
-  bool _hasTempo = false;
+  final bool _hasGenre = false;
+  final bool _hasTempo = false;
   bool _hasCover = false;
 
   Future<void> write(RandomAccessFile reader, Mp4Metadata metadata) async {

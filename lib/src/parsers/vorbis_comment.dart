@@ -1,11 +1,9 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/metadata/vorbis_metadata.dart';
 import 'package:audio_metadata_reader/src/parsers/tag_parser.dart';
-import 'package:audio_metadata_reader/src/utils/bit_manipulator.dart';
 
 VorbisMetadata parseVorbisComment(
   Uint8List bytes,
@@ -23,40 +21,42 @@ VorbisMetadata parseVorbisComment(
   final commentName = utf8.decode(commentBytes);
 
   dynamic value;
-  if (commentName == "METADATA_BLOCK_PICTURE") {
-    try {
-      final a = utf8.decode(bytes, allowMalformed: true);
-      print(a.substring(62710, 62720));
-      // final d = bytes.sublist(i);
-      // d.where((element) => element != );
-      // print(d.sublist(62690, 62698));
-      // // print(.whe(0xff));
-      // value = base64Decode(
-      //   utf8.decode(
-      //     d,
-      //   ),
-      // );
-      // print(String.fromCharCodes(value));
-      // final stp = bytes.sublist(i).toList().map((e) => 127).toList();
-      // utf8.decode(stp, allowMalformed: true);
+  // if (commentName == "METADATA_BLOCK_PICTURE") {
+  //   final a = utf8.decode(bytes);
+  //   final imageValue = value = base64Decode(a);
 
-      // value = base64.decode(
-      // utf8.decode(stp, allowMalformed: true),
-      // );
-    } catch (e, t) {
-      // print(bytes.sublist(i).sublist(62680, 62700));
-      // print(bytes.sublist(i)[62690]);
-      // print(bytes.sublist(i, bytes.length - 1).sublist(62690, 62700));
-      print(e);
-      print(t);
-    }
-  } else {
-    value = utf8.decode(bytes.sublist(i));
-  }
+  //   metadata.pictures
+  //       .add(Picture(imageValue, "image/jpeg", PictureType.coverFront));
+  // } else {
+  value = utf8.decode(bytes.sublist(i));
+  // }
 
   switch (commentName.toUpperCase()) {
     case 'METADATA_BLOCK_PICTURE':
-      // metadata.pictures.add(Picture(value, "", PictureType.coverFront));
+      final imageValue = value = base64Decode(value);
+      final buffer = ByteData.sublistView(imageValue);
+      var offset = 0;
+
+      final pictureType = buffer.getUint32(offset);
+      offset += 4;
+      final mimeLength = buffer.getUint32(offset);
+      offset += 4;
+
+      final mime =
+          String.fromCharCodes(buffer.buffer.asUint8List(offset, mimeLength));
+      offset += mimeLength;
+
+      final descriptionLength = buffer.getUint32(offset);
+      offset += 4 + descriptionLength + 16;
+
+      final lengthData = buffer.getUint32(offset);
+      offset += 4;
+
+      final data = buffer.buffer.asUint8List(offset, lengthData);
+
+      metadata.pictures
+          .add(Picture(data, mime, getPictureTypeEnum(pictureType)));
+
       break;
     case 'TITLE':
       metadata.title.add(value);

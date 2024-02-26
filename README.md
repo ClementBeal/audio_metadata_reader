@@ -5,6 +5,8 @@ A pure-Dart package for reading and writing metadata for different audio format
 | MP3         | `ID3v2` `ID3v3` `ID3v4` |
 | MP4         | `iTunes-style ilst`     |
 | FLAC        | `Vorbis Comments`       |
+| OGG         | `Vorbis Comments`       |
+| Opus        | `Vorbis Comments`       |
 
 It's still in development and there's some metadat format that I could implement or some information the library could return. Just open an issue for that.
 

@@ -1,3 +1,7 @@
+## 0.0.3
+
+- Remove dependencies to Flutter
+
 ## 0.0.2
 
 - FIX : read correcly a FLAC track. A mistake in the mask was missing the metadata

@@ -4,7 +4,6 @@ import 'package:audio_metadata_reader/src/parsers/tag_parser.dart';
 
 // https://xiph.org/vorbis/doc/v-comment.html
 // https://exiftool.org/TagNames/Vorbis.html
-
 class VorbisMetadata extends ParserTag {
   List<String> title = []; // TITLE
   List<String> version = []; // VERSION

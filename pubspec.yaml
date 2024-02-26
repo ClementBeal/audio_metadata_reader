@@ -1,6 +1,6 @@
 name: audio_metadata_reader
 description: A metadata reader for audio files. Support ID3, Vorbis comments and ILST itunes
-version: 0.0.2
+version: 0.0.3
 homepage: https://clementbeal.github.io/
 repository: https://github.com/ClementBeal/audio_metadata_reader
 
@@ -9,4 +9,4 @@ environment:
 
 dependencies:
   charset: ^2.0.1
-  intl: ^0.18.1
+  intl: ^0.19.0

@@ -61,7 +61,7 @@ Future<AudioMetadata> readMetadata(File track, {bool getImage = false}) async {
         discNumber: vorbisMetadata.discNumber,
         duration: vorbisMetadata.duration,
         language: vorbisMetadata.artist.firstOrNull,
-        lyrics: vorbisMetadata.artist.firstOrNull,
+        lyrics: vorbisMetadata.lyric,
         sampleRate: vorbisMetadata.sampleRate,
         title: vorbisMetadata.title.firstOrNull,
         totalDisc: vorbisMetadata.discTotal,
@@ -71,6 +71,7 @@ Future<AudioMetadata> readMetadata(File track, {bool getImage = false}) async {
       );
 
       newMetadata.genres = vorbisMetadata.genres;
+      newMetadata.pictures = vorbisMetadata.pictures;
 
       return newMetadata;
     } else if (await MP4Parser.canUserParser(reader)) {

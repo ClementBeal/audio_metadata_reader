@@ -377,6 +377,7 @@ class ID3v2Parser extends TagParser {
 
           if (RegExp(r"\d+/\d+").hasMatch(value)) {
             metadata.discNumber = int.parse(value.split("/").first);
+            metadata.totalDics = int.parse(value.split("/").last);
           } else {
             metadata.discNumber = int.tryParse(value);
           }
@@ -428,6 +429,7 @@ class ID3v2Parser extends TagParser {
           //print("Replay gain: " + TextFrame(frame.content).information);
         },
       "USLT" => () {
+          metadata.lyric = getUnsynchronisedLyric(content);
           // TextFrame(content).information;
           //print("Recording date: " + getUnsynchronisedLyric(frame.content));
         },
@@ -483,11 +485,9 @@ class ID3v2Parser extends TagParser {
       mimetype.add(reader.getUint8(offset));
       offset++;
     }
-    // offset++;
-    // print(String.fromCharCodes(mimetype));
+    mimetype.removeLast();
 
     final pictureType = reader.getUint8(offset);
-    // print(pictureType);
 
     offset++;
 
@@ -522,6 +522,7 @@ class ID3v2Parser extends TagParser {
     ]; // language
 
     final description = [reader.getInt8(offset)];
+
     while (description.last != 0) {
       description.add(reader.getInt8(offset));
       offset++;
@@ -529,12 +530,50 @@ class ID3v2Parser extends TagParser {
 
     final rest = reader.buffer.asUint8List(offset);
 
-    return switch (encoding) {
-      0 => const Latin1Decoder().convert(rest),
-      1 => utf16.decode(rest),
-      2 => utf16.decode(rest),
-      3 || _ => const Utf8Decoder().convert(rest),
-    };
+    switch (encoding) {
+      case 0:
+        final nullCharacterPosition = rest.indexOf(0, 1);
+        final informationBytes = rest.sublist(
+            1, (nullCharacterPosition >= 0) ? nullCharacterPosition : null);
+        return const Latin1Decoder().convert(informationBytes);
+      case 1:
+        int nullCharacterPosition = -1;
+        int i = 1;
+        while (i + 1 < rest.length) {
+          if (rest[i] == 0 && rest[i + 1] == 0) {
+            nullCharacterPosition = i;
+          }
+          i += 2;
+        }
+
+        final informationBytes = rest.sublist(
+            1, (nullCharacterPosition >= 0) ? nullCharacterPosition : null);
+        return const Utf16Decoder().decodeUtf16Le(informationBytes);
+
+      case 2:
+        int nullCharacterPosition = 1;
+        bool zeroFound = false;
+        while (nullCharacterPosition < rest.length) {
+          if (rest[nullCharacterPosition] == 0) {
+            if (zeroFound) {
+              break;
+            }
+            zeroFound = true;
+          }
+          nullCharacterPosition++;
+        }
+
+        final informationBytes = rest.sublist(
+            1, (nullCharacterPosition >= 0) ? nullCharacterPosition : null);
+        return const Utf16Decoder().decodeUtf16Le(informationBytes);
+      case 3:
+        final nullCharacterPosition = rest.indexOf(0, 1);
+        final informationBytes = rest.sublist(
+            1, (nullCharacterPosition >= 0) ? nullCharacterPosition : null);
+        return const Utf8Decoder().convert(informationBytes);
+    }
+
+    return "";
   }
 
   ///

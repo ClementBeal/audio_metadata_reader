@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/src/metadata/mp4_metadata.dart';
 import 'package:audio_metadata_reader/src/parsers/tag_parser.dart';
+import 'package:mime/mime.dart';
 
 import '../../audio_metadata_reader.dart';
 import '../utils/bit_manipulator.dart';
@@ -25,6 +26,7 @@ final supportedBox = [
   "moov",
   "mvhd",
   "meta",
+  "mdat",
   "udta",
   "ilst",
   "gnre",
@@ -41,7 +43,15 @@ final supportedBox = [
   "©day",
   "©too",
   "©trk",
+  "©lyr",
+  "©gen",
   "----",
+  "trak",
+  "mdia",
+  "minf",
+  "stbl",
+  "stsd",
+  "mp4a",
 ];
 
 ///
@@ -60,6 +70,8 @@ class MP4Parser extends TagParser {
   Mp4Metadata tags = Mp4Metadata();
 
   MP4Parser({fetchImage = false}) : super(fetchImage: fetchImage);
+
+  int? _metaBoxSize;
 
   @override
   Future<ParserTag> parse(RandomAccessFile reader) async {
@@ -115,19 +127,19 @@ class MP4Parser extends TagParser {
       final timeScale = getUint32(bytes.sublist(12, 16));
       final timeUnit = getUint32(bytes.sublist(16, 20));
 
-      tags.bitrate = timeScale;
-
       tags.duration = Duration(seconds: timeUnit ~/ timeScale);
     } else if (box.type == "udta") {
       await parseRecurvise(reader, box);
     } else if (box.type == "ilst") {
+      await parseRecurvise(reader, box);
+    } else if (["trak", "mdia", "minf", "stbl", "stsd"].contains(box.type)) {
       await parseRecurvise(reader, box);
     } else if (box.type == "meta") {
       reader.readSync(4);
 
       await parseRecurvise(reader, box);
     } else if (box.type[0] == "©" ||
-        ["gnre", "trkn", "disk", "tmpo", "cpil", "too", "covr", "pgap"]
+        ["gnre", "trkn", "disk", "tmpo", "cpil", "too", "covr", "pgap", "gen"]
             .contains(box.type)) {
       final bytes = reader.readSync(box.size - 8);
 
@@ -152,19 +164,31 @@ class MP4Parser extends TagParser {
           break;
         case "cmt":
           break;
+        case "lyr":
+          tags.lyrics = value;
+          break;
+        case "gen":
+          tags.genre = value;
+          break;
         case "day":
           tags.year = DateTime(int.parse(value));
           break;
         case "too":
           break;
         case "disk":
-          tags.discNumber = getUint32(bytes.sublist(16, 20));
+          tags.discNumber = getUint16(bytes.sublist(18, 20));
+          tags.totalDiscs = getUint16(bytes.sublist(20, 22));
           break;
 
         case "covr":
-          tags.picture = Picture(bytes.sublist(16), "", PictureType.coverFront);
+          tags.picture = Picture(
+              bytes.sublist(16),
+              lookupMimeType("no path", headerBytes: bytes.sublist(16)) ?? "",
+              PictureType.coverFront);
         case "trkn":
-          final a = getUint32(bytes.sublist(16, 20));
+          final a = getUint16(bytes.sublist(18, 20));
+          final totalTracks = getUint16(bytes.sublist(20, 22));
+          tags.totalTracks = totalTracks;
           if (a > 0) {
             tags.trackNumber = a;
           }
@@ -186,8 +210,16 @@ class MP4Parser extends TagParser {
         case "iTunes_CDDB_TrackNumber":
           tags.trackNumber = int.parse(finalValue);
           break;
+        // case "iTunes_CDDB_TrackNumber":
+        //   tags.trackNumber = int.parse(finalValue);
+        //   break;
         default:
       }
+    } else if (box.type == "mp4a") {
+      final bytes = reader.readSync(box.size - 8);
+
+      // tags.bitrate = timeScale;
+      tags.sampleRate = getUint32(bytes.sublist(22, 26));
     } else {
       reader.setPositionSync(reader.positionSync() + box.size - 8);
     }
@@ -201,8 +233,11 @@ class MP4Parser extends TagParser {
     int offset = 0;
 
     // the `meta` box has 4 additional bytes that are not useful. We skip them
-    if (box.type == "meta") {
+    if ("meta" == box.type) {
       offset += 4;
+    } else if (box.type == "stsd") {
+      offset += 8;
+      reader.readSync(8);
     }
 
     while (offset < limit) {

@@ -10,6 +10,11 @@ class Mp4Metadata extends ParserTag {
   Picture? picture;
   int? bitrate;
   int? discNumber;
+  String? lyrics;
+  String? genre;
+  int? sampleRate;
+  int? totalTracks;
+  int? totalDiscs;
 
   Mp4Metadata({
     this.title,
@@ -21,5 +26,10 @@ class Mp4Metadata extends ParserTag {
     this.picture,
     this.bitrate,
     this.discNumber,
+    this.lyrics,
+    this.genre,
+    this.sampleRate,
+    this.totalTracks,
+    this.totalDiscs,
   });
 }

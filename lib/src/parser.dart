@@ -38,7 +38,7 @@ Future<AudioMetadata> readMetadata(File track, {bool getImage = false}) async {
         lyrics: mp3Metadata.lyric,
         sampleRate: mp3Metadata.samplerate,
         title: mp3Metadata.songName,
-        totalDisc: null,
+        totalDisc: mp3Metadata.totalDics,
         trackNumber: mp3Metadata.trackNumber,
         trackTotal: mp3Metadata.trackTotal,
         year:
@@ -85,17 +85,21 @@ Future<AudioMetadata> readMetadata(File track, {bool getImage = false}) async {
         discNumber: mp4Metadata.discNumber,
         duration: mp4Metadata.duration,
         language: null,
-        lyrics: null,
-        sampleRate: null,
+        lyrics: mp4Metadata.lyrics,
+        sampleRate: mp4Metadata.sampleRate,
         title: mp4Metadata.title,
-        totalDisc: null,
+        totalDisc: mp4Metadata.totalDiscs,
         trackNumber: mp4Metadata.trackNumber,
-        trackTotal: null,
+        trackTotal: mp4Metadata.totalTracks,
         year: mp4Metadata.year,
       );
 
       if (mp4Metadata.picture != null) {
         a.pictures.add(mp4Metadata.picture!);
+      }
+
+      if (mp4Metadata.genre != null) {
+        a.genres.add(mp4Metadata.genre!);
       }
 
       return a;
@@ -110,7 +114,7 @@ Future<AudioMetadata> readMetadata(File track, {bool getImage = false}) async {
         discNumber: oggMetadata.discNumber,
         duration: oggMetadata.duration,
         language: oggMetadata.artist.firstOrNull,
-        lyrics: oggMetadata.artist.firstOrNull,
+        lyrics: oggMetadata.lyric,
         sampleRate: oggMetadata.sampleRate,
         title: oggMetadata.title.firstOrNull,
         totalDisc: oggMetadata.discTotal,

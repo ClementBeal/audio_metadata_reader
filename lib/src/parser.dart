@@ -28,6 +28,7 @@ Future<AudioMetadata> readMetadata(File track, {bool getImage = false}) async {
           await ID3v2Parser(fetchImage: getImage).parse(reader) as Mp3Metadata;
 
       final a = AudioMetadata(
+        file: track,
         album: mp3Metadata.album,
         artist: mp3Metadata.bandOrOrchestra ??
             mp3Metadata.originalArtist ??
@@ -55,6 +56,7 @@ Future<AudioMetadata> readMetadata(File track, {bool getImage = false}) async {
           .parse(reader) as VorbisMetadata;
 
       final newMetadata = AudioMetadata(
+        file: track,
         album: vorbisMetadata.album.firstOrNull,
         artist: vorbisMetadata.artist.firstOrNull,
         bitrate: vorbisMetadata.bitrate,
@@ -79,6 +81,7 @@ Future<AudioMetadata> readMetadata(File track, {bool getImage = false}) async {
           await MP4Parser(fetchImage: getImage).parse(reader) as Mp4Metadata;
 
       final a = AudioMetadata(
+        file: track,
         album: mp4Metadata.album,
         artist: mp4Metadata.artist,
         bitrate: mp4Metadata.bitrate,
@@ -108,6 +111,7 @@ Future<AudioMetadata> readMetadata(File track, {bool getImage = false}) async {
           await OGGParser(fetchImage: getImage).parse(reader) as VorbisMetadata;
 
       final newMetadata = AudioMetadata(
+        file: track,
         album: oggMetadata.album.firstOrNull,
         artist: oggMetadata.artist.firstOrNull,
         bitrate: oggMetadata.bitrate,
@@ -128,8 +132,8 @@ Future<AudioMetadata> readMetadata(File track, {bool getImage = false}) async {
       return newMetadata;
     }
   } catch (e) {
-    return InvalidTag();
+    return InvalidTag(file: File(""));
   }
 
-  return InvalidTag();
+  return InvalidTag(file: File(""));
 }

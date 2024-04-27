@@ -42,6 +42,7 @@ class AudioMetadata {
   int? bitrate;
   int? sampleRate;
   late List<Picture> pictures;
+  File file;
 
   AudioMetadata({
     this.album,
@@ -57,13 +58,16 @@ class AudioMetadata {
     this.lyrics,
     this.bitrate,
     this.sampleRate,
+    required this.file,
   }) {
     genres = [];
     pictures = [];
   }
 }
 
-class InvalidTag extends AudioMetadata {}
+class InvalidTag extends AudioMetadata {
+  InvalidTag({required super.file});
+}
 
 abstract class TagParser {
   final bool fetchImage;

@@ -1,3 +1,15 @@
+## 0.0.5
+
+- A reference to the file is returned with the metadata
+
+## 0.0.4
+
+- Update docs : show what format can be read and written
+- Add tests to the projects
+- Fix : mp3 can retreive total discs
+- Fix : mp4 can retreive lyrics/genre/samplerate/total tracks/total discs
+- Fix : OGG and OPUS can retreive lyrics
+
 ## 0.0.3
 
 - Remove dependencies to Flutter

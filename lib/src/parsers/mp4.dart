@@ -71,8 +71,6 @@ class MP4Parser extends TagParser {
 
   MP4Parser({fetchImage = false}) : super(fetchImage: fetchImage);
 
-  int? _metaBoxSize;
-
   @override
   Future<ParserTag> parse(RandomAccessFile reader) async {
     reader.setPositionSync(0);

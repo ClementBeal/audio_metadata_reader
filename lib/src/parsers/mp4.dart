@@ -125,7 +125,8 @@ class MP4Parser extends TagParser {
       final timeScale = getUint32(bytes.sublist(12, 16));
       final timeUnit = getUint32(bytes.sublist(16, 20));
 
-      tags.duration = Duration(microseconds: timeUnit * timeScale);
+      double microseconds = (timeUnit / timeScale) * 1000000;
+      tags.duration = Duration(microseconds: microseconds.toInt());      
     } else if (box.type == "udta") {
       await parseRecurvise(reader, box);
     } else if (box.type == "ilst") {

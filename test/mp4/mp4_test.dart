@@ -16,7 +16,7 @@ void main() {
     // expect(result.bitrate, equals(48000));
     expect(result.title, equals("Title"));
     expect(result.trackNumber, equals(1));
-    expect(result.duration, equals(Duration(seconds: 1)));
+    expect(result.duration, equals(Duration(microseconds: 1021333)));
     expect(result.totalDisc, equals(1));
     expect(result.lyrics, equals("Lyrics"));
     expect(result.trackTotal, equals(10));

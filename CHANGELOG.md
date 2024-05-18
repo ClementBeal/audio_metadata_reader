@@ -1,3 +1,7 @@
+## 0.0.6
+
+- Fix : the MP4 duration was not accurate (#9). Thanks to @PKiman
+
 ## 0.0.5
 
 - A reference to the file is returned with the metadata

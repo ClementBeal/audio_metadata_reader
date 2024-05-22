@@ -20,6 +20,9 @@ class BoxHeader {
   String type;
 
   BoxHeader(this.size, this.type);
+
+  @override
+  toString() => 'size: ${size}, type: ${type}';
 }
 
 final supportedBox = [
@@ -82,9 +85,13 @@ class MP4Parser extends TagParser {
 
       if (supportedBox.contains(box.type)) {
         await processBox(reader, box);
-      } else {
-        // We substract 8 to the box size because we already read the data for
+      } else if (box.type == "ftyp"){
+        // read 4 bytes brand name
+        reader.readSync(4);
+        // We substract 4 to the box size because we already read the data for
         // the box header
+        reader.setPositionSync(reader.positionSync() + box.size - 4);
+      } else {
         reader.setPositionSync(reader.positionSync() + box.size - 8);
       }
     }
@@ -126,7 +133,7 @@ class MP4Parser extends TagParser {
       final timeUnit = getUint32(bytes.sublist(16, 20));
 
       double microseconds = (timeUnit / timeScale) * 1000000;
-      tags.duration = Duration(microseconds: microseconds.toInt());      
+      tags.duration = Duration(microseconds: microseconds.toInt());
     } else if (box.type == "udta") {
       await parseRecurvise(reader, box);
     } else if (box.type == "ilst") {
@@ -134,8 +141,6 @@ class MP4Parser extends TagParser {
     } else if (["trak", "mdia", "minf", "stbl", "stsd"].contains(box.type)) {
       await parseRecurvise(reader, box);
     } else if (box.type == "meta") {
-      reader.readSync(4);
-
       await parseRecurvise(reader, box);
     } else if (box.type[0] == "©" ||
         ["gnre", "trkn", "disk", "tmpo", "cpil", "too", "covr", "pgap", "gen"]
@@ -199,8 +204,7 @@ class MP4Parser extends TagParser {
 
       final name = await _readBox(reader);
 
-      final nameValue =
-          String.fromCharCodes(reader.readSync(name.size - 8).sublist(4));
+      final nameValue = String.fromCharCodes(reader.readSync(name.size - 8).sublist(4));
       final dataBox = await _readBox(reader);
       final data = reader.readSync(dataBox.size - 8);
       final finalValue = String.fromCharCodes(data.sublist(8));
@@ -234,6 +238,7 @@ class MP4Parser extends TagParser {
     // the `meta` box has 4 additional bytes that are not useful. We skip them
     if ("meta" == box.type) {
       offset += 4;
+      reader.readSync(4);
     } else if (box.type == "stsd") {
       offset += 8;
       reader.readSync(8);

@@ -33,4 +33,10 @@ void main() {
     expect(result.pictures.first.bytes,
         File("test/data/cover.png").readAsBytesSync());
   });
+  test("Parse MP4 file with ftypmp42 container without the cover", () async {
+    final track = File('./test/mp4/track_ftypmp42.m4a');
+    final result = await readMetadata(track, getImage: false);
+
+    expect(result.duration, equals(3392), reason: 'Wrong: Audio duration');
+  });
 }

@@ -59,10 +59,11 @@ class FlacParser extends TagParser {
 
     buffer.skip(4);
 
-    while (true) {
+    bool isLastBlock = false;
+    while (!isLastBlock) {
       final block = _parseMetadataBlock(reader);
 
-      if (block.isLastBlock) break;
+      isLastBlock = block.isLastBlock;
     }
 
     reader.closeSync();
@@ -113,11 +114,13 @@ class FlacParser extends TagParser {
 
           final mime = String.fromCharCodes(buffer.read(mimeLength));
           final descriptionLength = getUint32(buffer.read(4));
-          (descriptionLength > 0)
-              ? const Utf8Decoder().convert(buffer.read(descriptionLength))
-              : ""; // description
 
-          buffer.skip(16);
+          buffer.skip(descriptionLength + 16);
+          // (descriptionLength > 0)
+          //     ? const Utf8Decoder().convert(buffer.read(descriptionLength))
+          //     : ""; // description
+
+          // buffer.skip(16);
           final lengthData = getUint32(buffer.read(4));
 
           final data = buffer.read(lengthData);
@@ -131,6 +134,7 @@ class FlacParser extends TagParser {
         }
         break;
       default:
+        buffer.skip(block.length);
         break;
     }
 

@@ -4,6 +4,7 @@ import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 import 'package:audio_metadata_reader/src/metadata/mp3_metadata.dart';
 import 'package:audio_metadata_reader/src/metadata/mp4_metadata.dart';
 import 'package:audio_metadata_reader/src/metadata/vorbis_metadata.dart';
+import 'package:audio_metadata_reader/src/parsers/id3v1.dart';
 import 'package:audio_metadata_reader/src/parsers/id3v2.dart';
 import 'package:audio_metadata_reader/src/parsers/mp4.dart';
 import 'package:audio_metadata_reader/src/parsers/ogg.dart';
@@ -132,8 +133,7 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
       return newMetadata;
     }
     if (ID3v2Parser.isID3v1(reader)) {
-      final mp3Metadata =
-          ID3v2Parser(fetchImage: getImage).parse(reader) as Mp3Metadata;
+      final mp3Metadata = ID3v1Parser().parse(reader) as Mp3Metadata;
 
       final a = AudioMetadata(
         file: track,

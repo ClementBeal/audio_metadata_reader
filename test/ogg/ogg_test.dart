@@ -6,21 +6,21 @@ import 'package:test/test.dart';
 
 void main() {
   test("Parse OGG file without the cover", () {
-    // final track = File('./test/ogg/track.ogg');
-    // final result = readMetadata(track, getImage: false);
+    final track = File('./test/ogg/track.ogg');
+    final result = readMetadata(track, getImage: false);
 
-    // expect(result.album, equals("Album"));
-    // expect(result.artist, equals("Artist"));
-    // expect(result.discNumber, equals(1));
-    // expect(result.sampleRate, equals(48000));
-    // expect(result.title, equals("Title"));
-    // expect(result.trackNumber, equals(1));
-    // expect(result.duration, equals(Duration(seconds: 0)));
-    // expect(result.totalDisc, equals(1));
-    // expect(result.lyrics, equals("Lyrics"));
-    // expect(result.trackTotal, equals(10));
-    // expect(result.genres.length, equals(1));
-    // expect(result.genres.first, equals("Rock"));
+    expect(result.album, equals("Album"));
+    expect(result.artist, equals("Artist"));
+    expect(result.discNumber, equals(1));
+    expect(result.sampleRate, equals(48000));
+    expect(result.title, equals("Title"));
+    expect(result.trackNumber, equals(1));
+    expect(result.duration, equals(Duration(seconds: 0)));
+    expect(result.totalDisc, equals(1));
+    expect(result.lyrics, equals("Lyrics"));
+    expect(result.trackTotal, equals(10));
+    expect(result.genres.length, equals(1));
+    expect(result.genres.first, equals("Rock"));
   });
   test("Parse FLAC file and the cover", () {
     final track = File('./test/ogg/track.ogg');

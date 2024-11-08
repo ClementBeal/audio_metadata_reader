@@ -206,6 +206,8 @@ class ID3v2Parser extends TagParser {
   final Mp3Metadata metadata = Mp3Metadata();
   late final Buffer buffer;
 
+  final _discRegex = RegExp(r"(\d+)/(\d+)");
+
   ID3v2Parser({fetchImage = false}) : super(fetchImage: fetchImage);
 
   @override
@@ -449,9 +451,11 @@ class ID3v2Parser extends TagParser {
           final value = TextFrame(content).information;
           metadata.partOfSet = value;
 
-          if (RegExp(r"\d+/\d+").hasMatch(value)) {
-            metadata.discNumber = int.parse(value.split("/").first);
-            metadata.totalDics = int.parse(value.split("/").last);
+          final match = _discRegex.firstMatch(value);
+
+          if (match != null) {
+            metadata.discNumber = int.parse(match.group(1)!);
+            metadata.totalDics = int.parse(match.group(2)!);
           } else {
             metadata.discNumber = int.tryParse(value);
           }

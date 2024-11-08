@@ -12,9 +12,9 @@ class Buffer {
   final RandomAccessFile randomAccessFile;
   final Uint8List _buffer;
   int _cursor = 0;
-  final int _bufferSize = 8192;
+  static final int _bufferSize = 16384;
 
-  Buffer({required this.randomAccessFile}) : _buffer = Uint8List(8192) {
+  Buffer({required this.randomAccessFile}) : _buffer = Uint8List(16384) {
     _fill();
   }
 

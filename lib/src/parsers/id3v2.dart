@@ -248,11 +248,11 @@ class ID3v2Parser extends TagParser {
       if (frame == null) {
         break;
       }
-      final frameContent = buffer.read(frame.size);
+
       offset = offset + 10 + frame.size;
 
       try {
-        processFrame(frame.id, frameContent);
+        processFrame(frame.id, frame.size);
       } catch (e) {
         rethrow;
       }
@@ -324,24 +324,33 @@ class ID3v2Parser extends TagParser {
   /// Process a frame.
   ///
   /// If the frame ID is not defined in the id3vX specs, then its content is dropped.
-  void processFrame(String frameId, Uint8List content) {
+  void processFrame(String frameId, int size) {
+    // why do we duplicate the content in every block?
+    // it's because the biggest thing to get in the cover
+    // sometimes, we don't want to read so we have to read the content
+    // at the very last time
     final handlers = switch (frameId) {
       "APIC" => () {
           if (fetchImage) {
+            final content = buffer.read(size);
             final picture = getPicture(content);
             metadata.pictures.add(picture);
           }
         },
       "TALB" => () {
+          final content = buffer.read(size);
           metadata.album = TextFrame(content).information;
         },
       "TBPM" => () {
+          final content = buffer.read(size);
           metadata.bpm = TextFrame(content).information;
         },
       "TCOP" => () {
+          final content = buffer.read(size);
           metadata.copyrightMessage = TextFrame(content).information;
         },
       "TCON" => () {
+          final content = buffer.read(size);
           metadata.contentType = TextFrame(content).information;
           final regex = RegExp(r"(\d+).*");
           final containRegex = RegExp(r";|/|\||,");
@@ -360,18 +369,23 @@ class ID3v2Parser extends TagParser {
           }
         },
       "TCOM" => () {
+          final content = buffer.read(size);
           metadata.composer = TextFrame(content).information;
         },
       "TDAT" => () {
+          final content = buffer.read(size);
           metadata.date = TextFrame(content).information;
         },
       "TDLY" => () {
+          final content = buffer.read(size);
           metadata.playlistDelay = TextFrame(content).information;
         },
       "TENC" => () {
+          final content = buffer.read(size);
           metadata.encodedBy = TextFrame(content).information;
         },
       "TFLT" => () {
+          final content = buffer.read(size);
           metadata.fileType = TextFrame(content).information;
         },
       "TCMP" => () {
@@ -379,27 +393,34 @@ class ID3v2Parser extends TagParser {
           //print("Encoding by: " + TextFrame(frame.content).information);
         },
       "TIME" => () {
+          final content = buffer.read(size);
           metadata.time = TextFrame(content).information;
         },
       "TIPL" => () {
           // TextFrame(content).information;
         },
       "TIT1" => () {
+          final content = buffer.read(size);
           metadata.contentGroupDescription = TextFrame(content).information;
         },
       "TIT2" => () {
+          final content = buffer.read(size);
           metadata.songName = TextFrame(content).information;
         },
       "TIT3" => () {
+          final content = buffer.read(size);
           metadata.subtitle = TextFrame(content).information;
         },
       "TKEY" => () {
+          final content = buffer.read(size);
           metadata.initialKey = TextFrame(content).information;
         },
       "TLAN" => () {
+          final content = buffer.read(size);
           metadata.languages = TextFrame(content).information;
         },
       "TLEN" => () {
+          final content = buffer.read(size);
           final time = int.parse(TextFrame(content).information);
 
           if ((time / 1000) < 1) {
@@ -409,21 +430,27 @@ class ID3v2Parser extends TagParser {
           }
         },
       "TMED" => () {
+          final content = buffer.read(size);
           metadata.mediatype = TextFrame(content).information;
         },
       "TOAL" => () {
+          final content = buffer.read(size);
           metadata.originalAlbum = TextFrame(content).information;
         },
       "TOFN" => () {
+          final content = buffer.read(size);
           metadata.originalFilename = TextFrame(content).information;
         },
       "TOLY" => () {
+          final content = buffer.read(size);
           metadata.originalTextWriter = TextFrame(content).information;
         },
       "TOPE" => () {
+          final content = buffer.read(size);
           metadata.originalArtist = TextFrame(content).information;
         },
       "TORY" => () {
+          final content = buffer.read(size);
           metadata.originalReleaseYear =
               _parseYear(TextFrame(content).information);
         },
@@ -431,33 +458,43 @@ class ID3v2Parser extends TagParser {
           // tag.originalArtist == TextFrame(content).information;
         },
       "TOWN" => () {
+          final content = buffer.read(size);
           metadata.fileOwner == TextFrame(content).information;
         },
       "TDRC" => () {
+          final content = buffer.read(size);
           metadata.year = _parseYear(TextFrame(content).information);
         },
       "TYER" => () {
+          final content = buffer.read(size);
           metadata.year = _parseYear(TextFrame(content).information);
         },
       "TRDA" => () {
+          final content = buffer.read(size);
           metadata.year = _parseYear(TextFrame(content).information);
         },
       "TPE1" => () {
+          final content = buffer.read(size);
           metadata.leadPerformer = TextFrame(content).information;
         },
       "TPE2" => () {
+          final content = buffer.read(size);
           metadata.bandOrOrchestra = TextFrame(content).information;
         },
       "TPE3" => () {
+          final content = buffer.read(size);
           metadata.conductor = TextFrame(content).information;
         },
       "TPE4" => () {
+          final content = buffer.read(size);
           metadata.interpreted = TextFrame(content).information;
         },
       "TEXT" => () {
+          final content = buffer.read(size);
           metadata.textWriter = TextFrame(content).information;
         },
       "TPOS" || "TPA" => () {
+          final content = buffer.read(size);
           final value = TextFrame(content).information;
           metadata.partOfSet = value;
 
@@ -471,9 +508,11 @@ class ID3v2Parser extends TagParser {
           }
         },
       "TPUB" => () {
+          final content = buffer.read(size);
           metadata.publisher = TextFrame(content).information;
         },
       "TRCK" => () {
+          final content = buffer.read(size);
           final trackInfo = TextFrame(content).information;
 
           final match = _trackRegex.firstMatch(trackInfo);
@@ -486,18 +525,23 @@ class ID3v2Parser extends TagParser {
           }
         },
       "TRSN" => () {
+          final content = buffer.read(size);
           metadata.internetRadioStationName = TextFrame(content).information;
         },
       "TRSO" => () {
+          final content = buffer.read(size);
           metadata.internetRadioStationOwner = TextFrame(content).information;
         },
       "TSIZ" => () {
+          final content = buffer.read(size);
           metadata.size = TextFrame(content).information;
         },
       "TSRC" => () {
+          final content = buffer.read(size);
           metadata.isrc = TextFrame(content).information;
         },
       "TXXX" => () {
+          final content = buffer.read(size);
           final frame = TXXXFrame(content);
           metadata.customMetadata[frame.description] = frame.information;
         },
@@ -520,11 +564,13 @@ class ID3v2Parser extends TagParser {
           //print("Replay gain: " + TextFrame(frame.content).information);
         },
       "USLT" => () {
+          final content = buffer.read(size);
           metadata.lyric = getUnsynchronisedLyric(content);
           // TextFrame(content).information;
           //print("Recording date: " + getUnsynchronisedLyric(frame.content));
         },
       "TSSE" => () {
+          final content = buffer.read(size);
           metadata.encoderSoftware = TextFrame(content).information;
         },
       "TSOC" => () {},

@@ -7,7 +7,8 @@
 
 ## Other
 
-- Performance improvement : 70% faster by using sync IO operations and a File Buffer to read files
+- Performance improvement : **70%** faster by using sync IO operations and a File Buffer to read files
+- Support `ID3v1`
 
 ## 0.0.6
 

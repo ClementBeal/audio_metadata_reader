@@ -4,7 +4,6 @@ import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/metadata/vorbis_metadata.dart';
-import 'package:audio_metadata_reader/src/parsers/id3v2.dart';
 import 'package:audio_metadata_reader/src/parsers/tag_parser.dart';
 import 'package:audio_metadata_reader/src/utils/buffer.dart';
 

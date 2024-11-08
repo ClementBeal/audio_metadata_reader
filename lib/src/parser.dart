@@ -1,12 +1,12 @@
 import 'dart:io';
 
+import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 import 'package:audio_metadata_reader/src/metadata/mp3_metadata.dart';
 import 'package:audio_metadata_reader/src/metadata/mp4_metadata.dart';
 import 'package:audio_metadata_reader/src/metadata/vorbis_metadata.dart';
 import 'package:audio_metadata_reader/src/parsers/id3v2.dart';
 import 'package:audio_metadata_reader/src/parsers/mp4.dart';
 import 'package:audio_metadata_reader/src/parsers/ogg.dart';
-import 'package:audio_metadata_reader/src/parsers/tag_parser.dart';
 import 'package:audio_metadata_reader/src/parsers/flac.dart';
 
 /// Parse the metadata of a file.
@@ -132,8 +132,12 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
       return newMetadata;
     }
   } catch (e) {
-    return InvalidTag(file: File(""));
+    throw MetadataParserException(track: track, message: e.toString());
   }
 
-  return InvalidTag(file: File(""));
+  throw MetadataParserException(
+    track: track,
+    message:
+        "No available parser for this file. Please raise an issue in Github",
+  );
 }

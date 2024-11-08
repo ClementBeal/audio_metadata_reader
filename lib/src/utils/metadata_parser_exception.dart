@@ -11,5 +11,5 @@ class MetadataParserException implements Exception {
 
   @override
   String toString() =>
-      'MetadataParserException : error durring the parsing of ${track.path}\n${message}';
+      'MetadataParserException : error during the parsing of "${track.path}"\n${message}';
 }

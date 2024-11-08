@@ -131,7 +131,37 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
 
       return newMetadata;
     }
-  } catch (e) {
+    if (ID3v2Parser.isID3v1(reader)) {
+      final mp3Metadata =
+          ID3v2Parser(fetchImage: getImage).parse(reader) as Mp3Metadata;
+
+      final a = AudioMetadata(
+        file: track,
+        album: mp3Metadata.album,
+        artist: mp3Metadata.bandOrOrchestra ??
+            mp3Metadata.originalArtist ??
+            mp3Metadata.leadPerformer,
+        bitrate: mp3Metadata.bitrate,
+        duration: mp3Metadata.duration,
+        language: mp3Metadata.languages,
+        lyrics: mp3Metadata.lyric,
+        sampleRate: mp3Metadata.samplerate,
+        title: mp3Metadata.songName,
+        totalDisc: mp3Metadata.totalDics,
+        trackNumber: mp3Metadata.trackNumber,
+        trackTotal: mp3Metadata.trackTotal,
+        year:
+            DateTime(mp3Metadata.originalReleaseYear ?? mp3Metadata.year ?? 0),
+        discNumber: mp3Metadata.discNumber,
+      );
+
+      a.pictures = mp3Metadata.pictures;
+      a.genres = mp3Metadata.genres;
+
+      return a;
+    }
+  } catch (e, trace) {
+    print(trace);
     throw MetadataParserException(track: track, message: e.toString());
   }
 

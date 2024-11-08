@@ -19,16 +19,8 @@ class Buffer {
   }
 
   void _fill() {
-    // Fill buffer with data starting at the current file position
-    final bytesRead = randomAccessFile.readIntoSync(_buffer);
+    randomAccessFile.readIntoSync(_buffer);
     _cursor = 0;
-
-    // If we read less than _bufferSize bytes, fill remaining buffer with zeros (EOF reached)
-    if (bytesRead < _bufferSize) {
-      for (int i = bytesRead; i < _bufferSize; i++) {
-        _buffer[i] = 0;
-      }
-    }
   }
 
   Uint8List read(int size) {

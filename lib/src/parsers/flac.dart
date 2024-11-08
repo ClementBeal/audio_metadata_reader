@@ -22,16 +22,11 @@ enum BlockType {
 }
 
 ///
+
 /// Representation of a FLAC bloc. The only important information is to know
 /// if the block is the last one or not
 ///
-class MetadataBlockHeader {
-  final bool isLastBlock;
-  final int type;
-  final int length;
-
-  MetadataBlockHeader(this.isLastBlock, this.type, this.length);
-}
+typedef MetadataBlockHeader = ({bool isLastBlock, int type, int length});
 
 ///
 /// Parser for a FLAC file
@@ -75,10 +70,10 @@ class FlacParser extends TagParser {
     final bytes = buffer.read(4);
     final byteNumber = bytes[0];
 
-    final block = MetadataBlockHeader(
-      byteNumber >> 7 == 1, // 0: not last block - 1: last block
-      byteNumber & 0x7F, // keep the 7 next bits (0XXXXXXX)
-      bytes[3] | bytes[2] << 8 | bytes[1] << 16,
+    final MetadataBlockHeader block = (
+      isLastBlock: byteNumber >> 7 == 1, // 0: not last block - 1: last block
+      type: byteNumber & 0x7F, // keep the 7 next bits (0XXXXXXX)
+      length: bytes[3] | bytes[2] << 8 | bytes[1] << 16,
     );
 
     switch (block.type) {
@@ -96,7 +91,7 @@ class FlacParser extends TagParser {
         metadata.sampleRate = sampleRate;
         metadata.bitrate = (bitPerSample * sampleRate).toInt();
 
-        buffer.skip(128 ~/ 8); // signature
+        buffer.skip(16); // signature (128 ~/ 8)
         break;
       case 3:
         buffer.skip(block.length);

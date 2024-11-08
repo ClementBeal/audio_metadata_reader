@@ -50,11 +50,11 @@ class FlacParser extends TagParser {
   FlacParser({fetchImage = false}) : super(fetchImage: fetchImage);
 
   @override
-  Future<ParserTag> parse(RandomAccessFile reader) async {
+  ParserTag parse(RandomAccessFile reader) {
     reader.setPositionSync(4);
 
     while (true) {
-      final block = await _parseMetadataBlock(reader);
+      final block = _parseMetadataBlock(reader);
 
       if (block.isLastBlock) break;
     }
@@ -64,8 +64,7 @@ class FlacParser extends TagParser {
     return metadata;
   }
 
-  Future<MetadataBlockHeader> _parseMetadataBlock(
-      RandomAccessFile reader) async {
+  MetadataBlockHeader _parseMetadataBlock(RandomAccessFile reader) {
     final bytes = reader.readSync(4);
     final byteNumber = bytes[0];
 

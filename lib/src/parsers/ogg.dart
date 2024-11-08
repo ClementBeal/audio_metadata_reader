@@ -16,7 +16,7 @@ class OGGParser extends TagParser {
   OGGParser({required super.fetchImage});
 
   @override
-  Future<ParserTag> parse(RandomAccessFile reader) async {
+  ParserTag parse(RandomAccessFile reader) {
     reader.setPositionSync(0);
 
     // first page : useless

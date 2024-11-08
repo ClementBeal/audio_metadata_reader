@@ -204,7 +204,7 @@ class ID3v2Parser extends TagParser {
   ID3v2Parser({fetchImage = false}) : super(fetchImage: fetchImage);
 
   @override
-  Future<ParserTag> parse(RandomAccessFile reader) async {
+  ParserTag parse(RandomAccessFile reader) {
     reader.setPositionSync(0);
     buffer = Buffer(randomAccessFile: reader);
 

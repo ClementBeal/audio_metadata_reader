@@ -275,13 +275,18 @@ class ID3v2Parser extends TagParser {
     if (metadata.duration == null || metadata.duration == Duration.zero) {
       buffer.setPositionSync(size + 10);
 
-      List<int> mp3FrameHeader = [...buffer.read(4)];
+      // List<int> mp3FrameHeader = [...buffer.read(4)];
+      Uint8List mp3FrameHeader = Uint8List(4);
+      mp3FrameHeader[0] = buffer.read(1)[0];
 
       // CHECK : may have performance issues
       while (mp3FrameHeader.first != 0xff) {
-        mp3FrameHeader.add(buffer.read(1)[0]);
-        mp3FrameHeader.removeAt(0);
+        mp3FrameHeader[0] = buffer.read(1)[0];
       }
+
+      mp3FrameHeader[1] = buffer.read(1)[0];
+      mp3FrameHeader[2] = buffer.read(1)[0];
+      mp3FrameHeader[3] = buffer.read(1)[0];
 
       final mpegVersion = (mp3FrameHeader[1] >> 3) & 0x3;
       final mpegLayer = (mp3FrameHeader[1] >> 1) & 3;
@@ -311,8 +316,8 @@ class ID3v2Parser extends TagParser {
         // final xingVBRScaleFlag = possibleXingHeader[7] >> 3 & 0x1;
 
         if (xingFrameFlag == 1) {
-          final numberOfFrames = getUint32(
-              Uint8List.fromList(possibleXingHeader.sublist(i + 8, i + 12)));
+          final numberOfFrames =
+              getUint32(possibleXingHeader.sublist(i + 8, i + 12));
           metadata.duration = Duration(
               seconds: numberOfFrames *
                   (_getSamplePerFrame(mpegVersion, mpegLayer) ?? 0) ~/

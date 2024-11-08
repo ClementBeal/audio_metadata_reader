@@ -8,6 +8,77 @@ import 'package:audio_metadata_reader/src/utils/bit_manipulator.dart';
 import 'package:charset/charset.dart';
 import 'tag_parser.dart';
 
+class Buffer {
+  final RandomAccessFile randomAccessFile;
+  final Uint8List _buffer;
+  int _cursor = 0;
+  final int _bufferSize = 8192;
+
+  Buffer({required this.randomAccessFile}) : _buffer = Uint8List(8192) {
+    _fill();
+  }
+
+  void _fill() {
+    // Fill buffer with data starting at the current file position
+    final bytesRead = randomAccessFile.readIntoSync(_buffer);
+    _cursor = 0;
+
+    // If we read less than _bufferSize bytes, fill remaining buffer with zeros (EOF reached)
+    if (bytesRead < _bufferSize) {
+      for (int i = bytesRead; i < _bufferSize; i++) {
+        _buffer[i] = 0;
+      }
+    }
+  }
+
+  Uint8List read(int size) {
+    if (size <= _bufferSize - _cursor) {
+      // Data fits within the current buffer
+      final result = _buffer.sublist(_cursor, _cursor + size);
+      _cursor += size;
+      return result;
+    } else {
+      // Data exceeds remaining buffer, needs refill
+      final result = Uint8List(size);
+      int remaining = _bufferSize - _cursor;
+
+      // Copy remaining data from the buffer
+      for (int i = 0; i < remaining; i++) {
+        result[i] = _buffer[_cursor + i];
+      }
+
+      // Refill the buffer and adjust the cursor
+      _fill();
+      int filled = remaining;
+
+      // Continue filling `result` with new buffer data
+      while (filled < size) {
+        int toCopy = size - filled;
+        if (toCopy > _bufferSize) {
+          toCopy = _bufferSize;
+        }
+        result.setRange(filled, filled + toCopy, _buffer, 0);
+        filled += toCopy;
+        _cursor = toCopy;
+
+        // Fill buffer again if more data is needed
+        if (filled < size) {
+          _fill();
+        }
+      }
+      return result;
+    }
+  }
+
+  void setPositionSync(int position) {
+    // Set the file position in the RandomAccessFile
+    randomAccessFile.setPositionSync(position);
+
+    // Reset the buffer by filling it with data starting at the new position
+    _fill();
+  }
+}
+
 class ID3v3Frame {
   final String id;
   final int size;
@@ -133,14 +204,16 @@ class TXXXFrame {
 ///
 class ID3v2Parser extends TagParser {
   final Mp3Metadata metadata = Mp3Metadata();
+  late final Buffer buffer;
 
   ID3v2Parser({fetchImage = false}) : super(fetchImage: fetchImage);
 
   @override
   Future<ParserTag> parse(RandomAccessFile reader) async {
     reader.setPositionSync(0);
+    buffer = Buffer(randomAccessFile: reader);
 
-    final headerBytes = reader.readSync(10);
+    final headerBytes = buffer.read(10);
     final majorVersion = headerBytes[3];
 
     if (majorVersion == 1) {
@@ -163,7 +236,7 @@ class ID3v2Parser extends TagParser {
       if (frame == null) {
         break;
       }
-      final frameContent = reader.readSync(frame.size);
+      final frameContent = buffer.read(frame.size);
       offset = offset + 10 + frame.size;
 
       try {
@@ -173,10 +246,11 @@ class ID3v2Parser extends TagParser {
       }
     }
 
-    if (metadata.duration == null || metadata.duration == Duration.zero) {
-      reader.setPositionSync(size + 10);
+    if (false) {
+      // if (metadata.duration == null || metadata.duration == Duration.zero) {
+      buffer.setPositionSync(size + 10);
 
-      List<int> mp3FrameHeader = [...reader.readSync(4)];
+      List<int> mp3FrameHeader = [...buffer.read(4)];
 
       // CHECK : may have performance issues
       while (mp3FrameHeader.first != 0xff) {
@@ -445,7 +519,7 @@ class ID3v2Parser extends TagParser {
   }
 
   ID3v3Frame? getFrame(RandomAccessFile reader, bool isV4) {
-    final headerBytes = reader.readSync(10);
+    final headerBytes = buffer.read(10);
 
     if (headerBytes.every((element) => element == 0)) return null;
 

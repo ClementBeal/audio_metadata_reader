@@ -205,7 +205,7 @@ class ID3v2Parser extends TagParser {
 
       // arbitrary choice.  Usually the `Xing` header is located after ~30 bytes
       // then the header size is about ~150 bytes
-      final possibleXingHeader = buffer.read(400);
+      final possibleXingHeader = buffer.read(1500);
 
       int i = 0;
       while (possibleXingHeader[i] == 0) {
@@ -647,6 +647,15 @@ class ID3v2Parser extends TagParser {
     final tagIdentity = String.fromCharCodes(headerBytes);
 
     return tagIdentity == "ID3";
+  }
+
+  static bool isID3v1(RandomAccessFile reader) {
+    reader.setPositionSync(reader.lengthSync() - 128);
+
+    final headerBytes = reader.readSync(3);
+    final tagIdentity = String.fromCharCodes(headerBytes);
+
+    return tagIdentity == "TAG";
   }
 
   int _parseYear(String year) {

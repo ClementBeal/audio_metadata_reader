@@ -24,6 +24,7 @@ class Buffer {
   }
 
   Uint8List read(int size) {
+    // print(size);
     // if we read something big (~100kb), we can read it directly from file
     // it makes the read faster
     // no need to use the buffer
@@ -85,6 +86,19 @@ class Buffer {
 
     // Reset the buffer by filling it with data starting at the new position
     _fill();
+  }
+
+  void skip(int length) {
+    if (length <= _bufferSize - _cursor) {
+      // If we can skip within the current buffer, just move the cursor
+      _cursor += length;
+    } else {
+      // Calculate the actual file position we need to skip to
+      int currentPosition =
+          randomAccessFile.positionSync() - (_bufferSize - _cursor);
+      randomAccessFile.setPositionSync(currentPosition + length);
+      _fill();
+    }
   }
 }
 

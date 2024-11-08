@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/metadata/vorbis_metadata.dart';
+import 'package:audio_metadata_reader/src/parsers/id3v2.dart';
 import 'package:audio_metadata_reader/src/parsers/tag_parser.dart';
 
 import '../utils/bit_manipulator.dart';
@@ -46,12 +47,17 @@ class MetadataBlockHeader {
 /// Documentation: https://xiph.org/flac/format.html
 class FlacParser extends TagParser {
   final metadata = VorbisMetadata();
+  late final Buffer buffer;
 
   FlacParser({fetchImage = false}) : super(fetchImage: fetchImage);
 
   @override
   ParserTag parse(RandomAccessFile reader) {
-    reader.setPositionSync(4);
+    reader.setPositionSync(0);
+
+    buffer = Buffer(randomAccessFile: reader);
+
+    buffer.skip(4);
 
     while (true) {
       final block = _parseMetadataBlock(reader);
@@ -65,7 +71,7 @@ class FlacParser extends TagParser {
   }
 
   MetadataBlockHeader _parseMetadataBlock(RandomAccessFile reader) {
-    final bytes = reader.readSync(4);
+    final bytes = buffer.read(4);
     final byteNumber = bytes[0];
 
     final block = MetadataBlockHeader(
@@ -76,10 +82,9 @@ class FlacParser extends TagParser {
 
     switch (block.type) {
       case 0:
-        reader.readSync(10);
+        buffer.skip(10);
 
-        final end = ByteData.sublistView(reader.readSync(8).buffer.asByteData())
-            .getUint64(0);
+        final end = ByteData.sublistView(buffer.read(8)).getUint64(0);
 
         final sampleRate = getIntFromArbitraryBits(end, 0, 20);
         final bitPerSample = getIntFromArbitraryBits(end, 23, 5) + 1;
@@ -90,35 +95,39 @@ class FlacParser extends TagParser {
         metadata.sampleRate = sampleRate;
         metadata.bitrate = (bitPerSample * sampleRate).toInt();
 
-        reader.readSync(128 ~/ 8); // signature
+        buffer.skip(128 ~/ 8); // signature
         break;
       case 3:
-        reader.readSync(block.length);
+        buffer.skip(block.length);
         break;
       case 4:
-        final bytes = reader.readSync(block.length);
+        final bytes = buffer.read(block.length);
         _parseVorbisComment(bytes);
         break;
       case 6:
         if (!fetchImage) {
-          final actualPosition = reader.positionSync();
-          reader.setPositionSync(actualPosition + block.length);
+          buffer.skip(block.length);
         } else {
-          final pictureType = getUint32(reader.readSync(4));
-          final mimeLength = getUint32(reader.readSync(4));
+          final pictureType = getUint32(buffer.read(4));
+          final mimeLength = getUint32(buffer.read(4));
 
-          final mime = String.fromCharCodes(reader.readSync(mimeLength));
-          final descriptionLength = getUint32(reader.readSync(4));
+          final mime = String.fromCharCodes(buffer.read(mimeLength));
+          final descriptionLength = getUint32(buffer.read(4));
           (descriptionLength > 0)
-              ? const Utf8Decoder().convert(reader.readSync(descriptionLength))
+              ? const Utf8Decoder().convert(buffer.read(descriptionLength))
               : ""; // description
 
-          reader.readSync(16);
-          final lengthData = getUint32(reader.readSync(4));
+          buffer.skip(16);
+          final lengthData = getUint32(buffer.read(4));
 
-          final data = reader.readSync(lengthData);
-          metadata.pictures
-              .add(Picture(data, mime, getPictureTypeEnum(pictureType)));
+          final data = buffer.read(lengthData);
+          metadata.pictures.add(
+            Picture(
+              data,
+              mime,
+              getPictureTypeEnum(pictureType),
+            ),
+          );
         }
         break;
       default:

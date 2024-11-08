@@ -126,7 +126,7 @@ class MP4Parser extends TagParser {
       final timeUnit = getUint32(bytes.sublist(16, 20));
 
       double microseconds = (timeUnit / timeScale) * 1000000;
-      tags.duration = Duration(microseconds: microseconds.toInt());      
+      tags.duration = Duration(microseconds: microseconds.toInt());
     } else if (box.type == "udta") {
       await parseRecurvise(reader, box);
     } else if (box.type == "ilst") {
@@ -256,7 +256,7 @@ class MP4Parser extends TagParser {
   /// To detect if this parser can be used to parse this file, we need to detect
   /// the first box. It should be a `ftyp` box
   ///
-  static Future<bool> canUserParser(RandomAccessFile reader) async {
+  static bool canUserParser(RandomAccessFile reader) {
     reader.setPositionSync(4);
 
     final headerBytes = reader.readSync(4);

@@ -198,8 +198,8 @@ class ID3v2Parser extends TagParser {
   final Mp3Metadata metadata = Mp3Metadata();
   late final Buffer buffer;
 
-  final _discRegex = RegExp(r"(\d+)/(\d+)");
-  final _trackRegex = RegExp(r"(\d+)/(\d+)");
+  static final _discRegex = RegExp(r"(\d+)/(\d+)");
+  static final _trackRegex = RegExp(r"(\d+)/(\d+)");
 
   ID3v2Parser({fetchImage = false}) : super(fetchImage: fetchImage);
 
@@ -652,7 +652,7 @@ class ID3v2Parser extends TagParser {
   /// To detect if this file can be parsed with this parser, the first 3 bytes
   /// must be equal to `ID3`
   ///
-  static Future<bool> canUserParser(RandomAccessFile reader) async {
+  static bool canUserParser(RandomAccessFile reader) {
     reader.setPositionSync(0);
     final headerBytes = reader.readSync(3);
     final tagIdentity = String.fromCharCodes(headerBytes);

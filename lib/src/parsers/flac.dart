@@ -133,7 +133,7 @@ class FlacParser extends TagParser {
   /// To detect if this parser can be used to parse this file, the 4 first bytes
   /// must be equal to `fLaC`
   ///
-  static Future<bool> canUserParser(RandomAccessFile reader) async {
+  static bool canUserParser(RandomAccessFile reader) {
     reader.setPositionSync(0);
     final vendorName = String.fromCharCodes(reader.readSync(4));
     return vendorName == "fLaC";

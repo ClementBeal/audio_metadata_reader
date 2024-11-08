@@ -23,7 +23,7 @@ Future<AudioMetadata> readMetadata(File track, {bool getImage = false}) async {
   final reader = await track.open();
 
   try {
-    if (await ID3v2Parser.canUserParser(reader)) {
+    if (ID3v2Parser.canUserParser(reader)) {
       final mp3Metadata =
           await ID3v2Parser(fetchImage: getImage).parse(reader) as Mp3Metadata;
 
@@ -51,7 +51,7 @@ Future<AudioMetadata> readMetadata(File track, {bool getImage = false}) async {
       a.genres = mp3Metadata.genres;
 
       return a;
-    } else if (await FlacParser.canUserParser(reader)) {
+    } else if (FlacParser.canUserParser(reader)) {
       final vorbisMetadata = await FlacParser(fetchImage: getImage)
           .parse(reader) as VorbisMetadata;
 
@@ -76,7 +76,7 @@ Future<AudioMetadata> readMetadata(File track, {bool getImage = false}) async {
       newMetadata.pictures = vorbisMetadata.pictures;
 
       return newMetadata;
-    } else if (await MP4Parser.canUserParser(reader)) {
+    } else if (MP4Parser.canUserParser(reader)) {
       final mp4Metadata =
           await MP4Parser(fetchImage: getImage).parse(reader) as Mp4Metadata;
 
@@ -106,7 +106,7 @@ Future<AudioMetadata> readMetadata(File track, {bool getImage = false}) async {
       }
 
       return a;
-    } else if (await OGGParser.canUserParser(reader)) {
+    } else if (OGGParser.canUserParser(reader)) {
       final oggMetadata =
           await OGGParser(fetchImage: getImage).parse(reader) as VorbisMetadata;
 

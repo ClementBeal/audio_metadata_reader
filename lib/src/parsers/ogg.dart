@@ -76,7 +76,7 @@ class OGGParser extends TagParser {
     return m;
   }
 
-  static Future<bool> canUserParser(RandomAccessFile reader) async {
+  static bool canUserParser(RandomAccessFile reader) {
     reader.setPositionSync(0);
 
     final capturePatternBytes = reader.readSync(4);

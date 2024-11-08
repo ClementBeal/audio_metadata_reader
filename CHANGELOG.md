@@ -4,6 +4,7 @@
 
 - `readMetadata` is now synchronous. You may remove some `Future.wait()`
 - `InvalidTag` class has beem removed and replace with a real exception `MetadataParserException`
+- Remove the writers. They are not working
 
 ## Other
 

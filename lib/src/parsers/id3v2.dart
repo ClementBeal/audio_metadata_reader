@@ -24,7 +24,6 @@ class Buffer {
   }
 
   Uint8List read(int size) {
-    // print(size);
     // if we read something big (~100kb), we can read it directly from file
     // it makes the read faster
     // no need to use the buffer
@@ -32,8 +31,8 @@ class Buffer {
       final result = Uint8List(size);
       final remaining = _bufferSize - _cursor;
 
-      for (var i = 0; i < remaining; i++) {
-        result[i] = _buffer[remaining + 1];
+      if (remaining > 0) {
+        result.setRange(0, remaining, _buffer, _cursor);
       }
 
       randomAccessFile.readIntoSync(result, remaining);

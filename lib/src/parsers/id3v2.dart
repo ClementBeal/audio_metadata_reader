@@ -567,20 +567,18 @@ class ID3v2Parser extends TagParser {
 
     final description = [reader.getUint8(offset)];
     offset += 1;
+
     while (description.last != 0) {
       final a = reader.getUint8(offset);
-      // print(a);
       description.add(a);
       offset++;
     }
 
-    // print(description);
-    // print(String.fromCharCodes(description));
-    // print(reader.buffer.asUint8List(offset).sublist(0, 10));
-// 14
-    // print(offset);
-    return Picture(reader.buffer.asUint8List(offset),
-        String.fromCharCodes(mimetype), getPictureTypeEnum(pictureType));
+    return Picture(
+      reader.buffer.asUint8List(offset),
+      String.fromCharCodes(mimetype),
+      getPictureTypeEnum(pictureType),
+    );
   }
 
   String getUnsynchronisedLyric(Uint8List content) {

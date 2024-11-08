@@ -207,6 +207,7 @@ class ID3v2Parser extends TagParser {
   late final Buffer buffer;
 
   final _discRegex = RegExp(r"(\d+)/(\d+)");
+  final _trackRegex = RegExp(r"(\d+)/(\d+)");
 
   ID3v2Parser({fetchImage = false}) : super(fetchImage: fetchImage);
 
@@ -465,11 +466,14 @@ class ID3v2Parser extends TagParser {
         },
       "TRCK" => () {
           final trackInfo = TextFrame(content).information;
-          if (trackInfo.contains("/")) {
-            metadata.trackNumber ??= int.tryParse(trackInfo.split("/").first);
-            metadata.trackTotal ??= int.tryParse(trackInfo.split("/").last);
+
+          final match = _trackRegex.firstMatch(trackInfo);
+
+          if (match != null) {
+            metadata.trackNumber = int.parse(match.group(1)!);
+            metadata.trackTotal = int.parse(match.group(2)!);
           } else {
-            metadata.trackNumber = int.tryParse(trackInfo);
+            metadata.trackNumber = int.parse(trackInfo);
           }
         },
       "TRSN" => () {

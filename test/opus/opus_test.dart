@@ -5,9 +5,9 @@ import 'package:audio_metadata_reader/src/parser.dart';
 import 'package:test/test.dart';
 
 void main() {
-  test("Parse OPUS file without the cover", () async {
+  test("Parse OPUS file without the cover", () {
     final track = File('./test/opus/track.opus');
-    final result = await readMetadata(track, getImage: false);
+    final result = readMetadata(track, getImage: false);
 
     expect(result.album, equals("Album"));
     expect(result.artist, equals("Artist"));
@@ -22,9 +22,9 @@ void main() {
     expect(result.genres.length, equals(1));
     expect(result.genres.first, equals("Rock"));
   });
-  test("Parse OPUS file and the cover", () async {
+  test("Parse OPUS file and the cover", () {
     final track = File('./test/opus/track.opus');
-    final result = await readMetadata(track, getImage: true);
+    final result = readMetadata(track, getImage: true);
 
     expect(result.pictures.length, 1);
     expect(result.pictures.first.mimetype, "image/png");

@@ -44,7 +44,7 @@ Future<void> writeMetadata(File track, AudioMetadata metadata) async {
 
     //   return a;
     // } else
-    if (await FlacParser.canUserParser(reader)) {
+    if (FlacParser.canUserParser(reader)) {
       final newMetadata = VorbisMetadata();
       if (metadata.title != null) newMetadata.title.add(metadata.title!);
       if (metadata.album != null) newMetadata.album.add(metadata.album!);
@@ -62,7 +62,7 @@ Future<void> writeMetadata(File track, AudioMetadata metadata) async {
       if (metadata.year != null) newMetadata.date.add(metadata.year!);
 
       await FlacWriter().write(track, newMetadata);
-    } else if (await MP4Parser.canUserParser(reader)) {
+    } else if (MP4Parser.canUserParser(reader)) {
       await Mp4Writer().write(
           reader,
           Mp4Metadata(

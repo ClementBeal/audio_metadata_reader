@@ -5,6 +5,7 @@ import 'package:audio_metadata_reader/src/constants/id3_genres.dart';
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/metadata/mp3_metadata.dart';
 import 'package:audio_metadata_reader/src/utils/bit_manipulator.dart';
+import 'package:audio_metadata_reader/src/utils/buffer.dart';
 import 'package:charset/charset.dart';
 import 'tag_parser.dart';
 
@@ -133,14 +134,19 @@ class TXXXFrame {
 ///
 class ID3v2Parser extends TagParser {
   final Mp3Metadata metadata = Mp3Metadata();
+  late final Buffer buffer;
+
+  static final _discRegex = RegExp(r"(\d+)/(\d+)");
+  static final _trackRegex = RegExp(r"(\d+)/(\d+)");
 
   ID3v2Parser({fetchImage = false}) : super(fetchImage: fetchImage);
 
   @override
-  Future<ParserTag> parse(RandomAccessFile reader) async {
+  ParserTag parse(RandomAccessFile reader) {
     reader.setPositionSync(0);
+    buffer = Buffer(randomAccessFile: reader);
 
-    final headerBytes = reader.readSync(10);
+    final headerBytes = buffer.read(10);
     final majorVersion = headerBytes[3];
 
     if (majorVersion == 1) {
@@ -163,26 +169,31 @@ class ID3v2Parser extends TagParser {
       if (frame == null) {
         break;
       }
-      final frameContent = reader.readSync(frame.size);
+
       offset = offset + 10 + frame.size;
 
       try {
-        processFrame(frame.id, frameContent);
+        processFrame(frame.id, frame.size);
       } catch (e) {
         rethrow;
       }
     }
 
     if (metadata.duration == null || metadata.duration == Duration.zero) {
-      reader.setPositionSync(size + 10);
+      buffer.setPositionSync(size + 10);
 
-      List<int> mp3FrameHeader = [...reader.readSync(4)];
+      // List<int> mp3FrameHeader = [...buffer.read(4)];
+      Uint8List mp3FrameHeader = Uint8List(4);
+      mp3FrameHeader[0] = buffer.read(1)[0];
 
       // CHECK : may have performance issues
       while (mp3FrameHeader.first != 0xff) {
-        mp3FrameHeader.add(reader.readByteSync());
-        mp3FrameHeader.removeAt(0);
+        mp3FrameHeader[0] = buffer.read(1)[0];
       }
+
+      mp3FrameHeader[1] = buffer.read(1)[0];
+      mp3FrameHeader[2] = buffer.read(1)[0];
+      mp3FrameHeader[3] = buffer.read(1)[0];
 
       final mpegVersion = (mp3FrameHeader[1] >> 3) & 0x3;
       final mpegLayer = (mp3FrameHeader[1] >> 1) & 3;
@@ -194,25 +205,26 @@ class ID3v2Parser extends TagParser {
 
       // arbitrary choice.  Usually the `Xing` header is located after ~30 bytes
       // then the header size is about ~150 bytes
-      final possibleXingHeader = (await reader.read(200)).toList();
+      final possibleXingHeader = buffer.read(400);
 
-      while (possibleXingHeader.first == 0) {
-        possibleXingHeader.removeAt(0);
+      int i = 0;
+      while (possibleXingHeader[i] == 0) {
+        i++;
       }
 
-      if (possibleXingHeader[0] == 0x58 &&
-          possibleXingHeader[1] == 0X69 &&
-          possibleXingHeader[2] == 0x6E &&
-          possibleXingHeader[3] == 0x67) {
+      if (possibleXingHeader[i] == 0x58 &&
+          possibleXingHeader[i + 1] == 0X69 &&
+          possibleXingHeader[i + 2] == 0x6E &&
+          possibleXingHeader[i + 3] == 0x67) {
         // it's a VBR file (Variable Bit Rate)
-        final xingFrameFlag = possibleXingHeader[7] & 0x1;
+        final xingFrameFlag = possibleXingHeader[i + 7] & 0x1;
         // final xingBytesFlag = possibleXingHeader[7] >> 1 & 0x1;
         // final xingTOCFlag = possibleXingHeader[7] >> 2 & 0x1;
         // final xingVBRScaleFlag = possibleXingHeader[7] >> 3 & 0x1;
 
         if (xingFrameFlag == 1) {
           final numberOfFrames =
-              getUint32(Uint8List.fromList(possibleXingHeader.sublist(8, 12)));
+              getUint32(possibleXingHeader.sublist(i + 8, i + 12));
           metadata.duration = Duration(
               seconds: numberOfFrames *
                   (_getSamplePerFrame(mpegVersion, mpegLayer) ?? 0) ~/
@@ -238,24 +250,33 @@ class ID3v2Parser extends TagParser {
   /// Process a frame.
   ///
   /// If the frame ID is not defined in the id3vX specs, then its content is dropped.
-  void processFrame(String frameId, Uint8List content) {
+  void processFrame(String frameId, int size) {
+    // why do we duplicate the content in every block?
+    // it's because the biggest thing to get in the cover
+    // sometimes, we don't want to read so we have to read the content
+    // at the very last time
     final handlers = switch (frameId) {
       "APIC" => () {
           if (fetchImage) {
+            final content = buffer.read(size);
             final picture = getPicture(content);
             metadata.pictures.add(picture);
           }
         },
       "TALB" => () {
+          final content = buffer.read(size);
           metadata.album = TextFrame(content).information;
         },
       "TBPM" => () {
+          final content = buffer.read(size);
           metadata.bpm = TextFrame(content).information;
         },
       "TCOP" => () {
+          final content = buffer.read(size);
           metadata.copyrightMessage = TextFrame(content).information;
         },
       "TCON" => () {
+          final content = buffer.read(size);
           metadata.contentType = TextFrame(content).information;
           final regex = RegExp(r"(\d+).*");
           final containRegex = RegExp(r";|/|\||,");
@@ -274,18 +295,23 @@ class ID3v2Parser extends TagParser {
           }
         },
       "TCOM" => () {
+          final content = buffer.read(size);
           metadata.composer = TextFrame(content).information;
         },
       "TDAT" => () {
+          final content = buffer.read(size);
           metadata.date = TextFrame(content).information;
         },
       "TDLY" => () {
+          final content = buffer.read(size);
           metadata.playlistDelay = TextFrame(content).information;
         },
       "TENC" => () {
+          final content = buffer.read(size);
           metadata.encodedBy = TextFrame(content).information;
         },
       "TFLT" => () {
+          final content = buffer.read(size);
           metadata.fileType = TextFrame(content).information;
         },
       "TCMP" => () {
@@ -293,27 +319,34 @@ class ID3v2Parser extends TagParser {
           //print("Encoding by: " + TextFrame(frame.content).information);
         },
       "TIME" => () {
+          final content = buffer.read(size);
           metadata.time = TextFrame(content).information;
         },
       "TIPL" => () {
           // TextFrame(content).information;
         },
       "TIT1" => () {
+          final content = buffer.read(size);
           metadata.contentGroupDescription = TextFrame(content).information;
         },
       "TIT2" => () {
+          final content = buffer.read(size);
           metadata.songName = TextFrame(content).information;
         },
       "TIT3" => () {
+          final content = buffer.read(size);
           metadata.subtitle = TextFrame(content).information;
         },
       "TKEY" => () {
+          final content = buffer.read(size);
           metadata.initialKey = TextFrame(content).information;
         },
       "TLAN" => () {
+          final content = buffer.read(size);
           metadata.languages = TextFrame(content).information;
         },
       "TLEN" => () {
+          final content = buffer.read(size);
           final time = int.parse(TextFrame(content).information);
 
           if ((time / 1000) < 1) {
@@ -323,21 +356,27 @@ class ID3v2Parser extends TagParser {
           }
         },
       "TMED" => () {
+          final content = buffer.read(size);
           metadata.mediatype = TextFrame(content).information;
         },
       "TOAL" => () {
+          final content = buffer.read(size);
           metadata.originalAlbum = TextFrame(content).information;
         },
       "TOFN" => () {
+          final content = buffer.read(size);
           metadata.originalFilename = TextFrame(content).information;
         },
       "TOLY" => () {
+          final content = buffer.read(size);
           metadata.originalTextWriter = TextFrame(content).information;
         },
       "TOPE" => () {
+          final content = buffer.read(size);
           metadata.originalArtist = TextFrame(content).information;
         },
       "TORY" => () {
+          final content = buffer.read(size);
           metadata.originalReleaseYear =
               _parseYear(TextFrame(content).information);
         },
@@ -345,68 +384,90 @@ class ID3v2Parser extends TagParser {
           // tag.originalArtist == TextFrame(content).information;
         },
       "TOWN" => () {
+          final content = buffer.read(size);
           metadata.fileOwner == TextFrame(content).information;
         },
       "TDRC" => () {
+          final content = buffer.read(size);
           metadata.year = _parseYear(TextFrame(content).information);
         },
       "TYER" => () {
+          final content = buffer.read(size);
           metadata.year = _parseYear(TextFrame(content).information);
         },
       "TRDA" => () {
+          final content = buffer.read(size);
           metadata.year = _parseYear(TextFrame(content).information);
         },
       "TPE1" => () {
+          final content = buffer.read(size);
           metadata.leadPerformer = TextFrame(content).information;
         },
       "TPE2" => () {
+          final content = buffer.read(size);
           metadata.bandOrOrchestra = TextFrame(content).information;
         },
       "TPE3" => () {
+          final content = buffer.read(size);
           metadata.conductor = TextFrame(content).information;
         },
       "TPE4" => () {
+          final content = buffer.read(size);
           metadata.interpreted = TextFrame(content).information;
         },
       "TEXT" => () {
+          final content = buffer.read(size);
           metadata.textWriter = TextFrame(content).information;
         },
       "TPOS" || "TPA" => () {
+          final content = buffer.read(size);
           final value = TextFrame(content).information;
           metadata.partOfSet = value;
 
-          if (RegExp(r"\d+/\d+").hasMatch(value)) {
-            metadata.discNumber = int.parse(value.split("/").first);
-            metadata.totalDics = int.parse(value.split("/").last);
+          final match = _discRegex.firstMatch(value);
+
+          if (match != null) {
+            metadata.discNumber = int.parse(match.group(1)!);
+            metadata.totalDics = int.parse(match.group(2)!);
           } else {
             metadata.discNumber = int.tryParse(value);
           }
         },
       "TPUB" => () {
+          final content = buffer.read(size);
           metadata.publisher = TextFrame(content).information;
         },
       "TRCK" => () {
+          final content = buffer.read(size);
           final trackInfo = TextFrame(content).information;
-          if (trackInfo.contains("/")) {
-            metadata.trackNumber ??= int.tryParse(trackInfo.split("/").first);
-            metadata.trackTotal ??= int.tryParse(trackInfo.split("/").last);
+
+          final match = _trackRegex.firstMatch(trackInfo);
+
+          if (match != null) {
+            metadata.trackNumber = int.parse(match.group(1)!);
+            metadata.trackTotal = int.parse(match.group(2)!);
           } else {
-            metadata.trackNumber = int.tryParse(trackInfo);
+            metadata.trackNumber = int.parse(trackInfo);
           }
         },
       "TRSN" => () {
+          final content = buffer.read(size);
           metadata.internetRadioStationName = TextFrame(content).information;
         },
       "TRSO" => () {
+          final content = buffer.read(size);
           metadata.internetRadioStationOwner = TextFrame(content).information;
         },
       "TSIZ" => () {
+          final content = buffer.read(size);
           metadata.size = TextFrame(content).information;
         },
       "TSRC" => () {
+          final content = buffer.read(size);
           metadata.isrc = TextFrame(content).information;
         },
       "TXXX" => () {
+          final content = buffer.read(size);
           final frame = TXXXFrame(content);
           metadata.customMetadata[frame.description] = frame.information;
         },
@@ -429,11 +490,13 @@ class ID3v2Parser extends TagParser {
           //print("Replay gain: " + TextFrame(frame.content).information);
         },
       "USLT" => () {
+          final content = buffer.read(size);
           metadata.lyric = getUnsynchronisedLyric(content);
           // TextFrame(content).information;
           //print("Recording date: " + getUnsynchronisedLyric(frame.content));
         },
       "TSSE" => () {
+          final content = buffer.read(size);
           metadata.encoderSoftware = TextFrame(content).information;
         },
       "TSOC" => () {},
@@ -445,7 +508,7 @@ class ID3v2Parser extends TagParser {
   }
 
   ID3v3Frame? getFrame(RandomAccessFile reader, bool isV4) {
-    final headerBytes = reader.readSync(10);
+    final headerBytes = buffer.read(10);
 
     if (headerBytes.every((element) => element == 0)) return null;
 
@@ -493,20 +556,18 @@ class ID3v2Parser extends TagParser {
 
     final description = [reader.getUint8(offset)];
     offset += 1;
+
     while (description.last != 0) {
       final a = reader.getUint8(offset);
-      // print(a);
       description.add(a);
       offset++;
     }
 
-    // print(description);
-    // print(String.fromCharCodes(description));
-    // print(reader.buffer.asUint8List(offset).sublist(0, 10));
-// 14
-    // print(offset);
-    return Picture(reader.buffer.asUint8List(offset),
-        String.fromCharCodes(mimetype), getPictureTypeEnum(pictureType));
+    return Picture(
+      reader.buffer.asUint8List(offset),
+      String.fromCharCodes(mimetype),
+      getPictureTypeEnum(pictureType),
+    );
   }
 
   String getUnsynchronisedLyric(Uint8List content) {
@@ -580,7 +641,7 @@ class ID3v2Parser extends TagParser {
   /// To detect if this file can be parsed with this parser, the first 3 bytes
   /// must be equal to `ID3`
   ///
-  static Future<bool> canUserParser(RandomAccessFile reader) async {
+  static bool canUserParser(RandomAccessFile reader) {
     reader.setPositionSync(0);
     final headerBytes = reader.readSync(3);
     final tagIdentity = String.fromCharCodes(headerBytes);

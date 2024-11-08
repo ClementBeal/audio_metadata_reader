@@ -1,3 +1,8 @@
+## 0.0.7
+
+- BREAKING CHANGE : the API is now synchronous
+- Performance improvement : 70% faster by using sync IO operations and a File Buffer to read files
+
 ## 0.0.6
 
 - Fix : the MP4 duration was not accurate (#9). Thanks to @PKiman

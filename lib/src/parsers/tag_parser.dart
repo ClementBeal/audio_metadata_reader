@@ -73,5 +73,5 @@ abstract class TagParser {
   final bool fetchImage;
 
   TagParser({required this.fetchImage});
-  Future<ParserTag> parse(RandomAccessFile reader);
+  ParserTag parse(RandomAccessFile reader);
 }

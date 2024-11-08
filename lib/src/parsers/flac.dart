@@ -4,7 +4,9 @@ import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/metadata/vorbis_metadata.dart';
+import 'package:audio_metadata_reader/src/parsers/id3v2.dart';
 import 'package:audio_metadata_reader/src/parsers/tag_parser.dart';
+import 'package:audio_metadata_reader/src/utils/buffer.dart';
 
 import '../utils/bit_manipulator.dart';
 
@@ -21,16 +23,11 @@ enum BlockType {
 }
 
 ///
+
 /// Representation of a FLAC bloc. The only important information is to know
 /// if the block is the last one or not
 ///
-class MetadataBlockHeader {
-  final bool isLastBlock;
-  final int type;
-  final int length;
-
-  MetadataBlockHeader(this.isLastBlock, this.type, this.length);
-}
+typedef MetadataBlockHeader = ({bool isLastBlock, int type, int length});
 
 ///
 /// Parser for a FLAC file
@@ -46,17 +43,23 @@ class MetadataBlockHeader {
 /// Documentation: https://xiph.org/flac/format.html
 class FlacParser extends TagParser {
   final metadata = VorbisMetadata();
+  late final Buffer buffer;
 
   FlacParser({fetchImage = false}) : super(fetchImage: fetchImage);
 
   @override
-  Future<ParserTag> parse(RandomAccessFile reader) async {
-    reader.setPositionSync(4);
+  ParserTag parse(RandomAccessFile reader) {
+    reader.setPositionSync(0);
 
-    while (true) {
-      final block = await _parseMetadataBlock(reader);
+    buffer = Buffer(randomAccessFile: reader);
 
-      if (block.isLastBlock) break;
+    buffer.skip(4);
+
+    bool isLastBlock = false;
+    while (!isLastBlock) {
+      final block = _parseMetadataBlock(reader);
+
+      isLastBlock = block.isLastBlock;
     }
 
     reader.closeSync();
@@ -64,23 +67,21 @@ class FlacParser extends TagParser {
     return metadata;
   }
 
-  Future<MetadataBlockHeader> _parseMetadataBlock(
-      RandomAccessFile reader) async {
-    final bytes = reader.readSync(4);
+  MetadataBlockHeader _parseMetadataBlock(RandomAccessFile reader) {
+    final bytes = buffer.read(4);
     final byteNumber = bytes[0];
 
-    final block = MetadataBlockHeader(
-      byteNumber >> 7 == 1, // 0: not last block - 1: last block
-      byteNumber & 0x7F, // keep the 7 next bits (0XXXXXXX)
-      bytes[3] | bytes[2] << 8 | bytes[1] << 16,
+    final MetadataBlockHeader block = (
+      isLastBlock: byteNumber >> 7 == 1, // 0: not last block - 1: last block
+      type: byteNumber & 0x7F, // keep the 7 next bits (0XXXXXXX)
+      length: bytes[3] | bytes[2] << 8 | bytes[1] << 16,
     );
 
     switch (block.type) {
       case 0:
-        reader.readSync(10);
+        buffer.skip(10);
 
-        final end = ByteData.sublistView(reader.readSync(8).buffer.asByteData())
-            .getUint64(0);
+        final end = ByteData.sublistView(buffer.read(8)).getUint64(0);
 
         final sampleRate = getIntFromArbitraryBits(end, 0, 20);
         final bitPerSample = getIntFromArbitraryBits(end, 23, 5) + 1;
@@ -91,38 +92,45 @@ class FlacParser extends TagParser {
         metadata.sampleRate = sampleRate;
         metadata.bitrate = (bitPerSample * sampleRate).toInt();
 
-        reader.readSync(128 ~/ 8); // signature
+        buffer.skip(16); // signature (128 ~/ 8)
         break;
       case 3:
-        reader.readSync(block.length);
+        buffer.skip(block.length);
         break;
       case 4:
-        final bytes = reader.readSync(block.length);
+        final bytes = buffer.read(block.length);
         _parseVorbisComment(bytes);
         break;
       case 6:
         if (!fetchImage) {
-          final actualPosition = reader.positionSync();
-          reader.setPositionSync(actualPosition + block.length);
+          buffer.skip(block.length);
         } else {
-          final pictureType = getUint32(reader.readSync(4));
-          final mimeLength = getUint32(reader.readSync(4));
+          final pictureType = getUint32(buffer.read(4));
+          final mimeLength = getUint32(buffer.read(4));
 
-          final mime = String.fromCharCodes(reader.readSync(mimeLength));
-          final descriptionLength = getUint32(reader.readSync(4));
-          (descriptionLength > 0)
-              ? const Utf8Decoder().convert(reader.readSync(descriptionLength))
-              : ""; // description
+          final mime = String.fromCharCodes(buffer.read(mimeLength));
+          final descriptionLength = getUint32(buffer.read(4));
 
-          reader.readSync(16);
-          final lengthData = getUint32(reader.readSync(4));
+          buffer.skip(descriptionLength + 16);
+          // (descriptionLength > 0)
+          //     ? const Utf8Decoder().convert(buffer.read(descriptionLength))
+          //     : ""; // description
 
-          final data = reader.readSync(lengthData);
-          metadata.pictures
-              .add(Picture(data, mime, getPictureTypeEnum(pictureType)));
+          // buffer.skip(16);
+          final lengthData = getUint32(buffer.read(4));
+
+          final data = buffer.read(lengthData);
+          metadata.pictures.add(
+            Picture(
+              data,
+              mime,
+              getPictureTypeEnum(pictureType),
+            ),
+          );
         }
         break;
       default:
+        buffer.skip(block.length);
         break;
     }
 
@@ -133,7 +141,7 @@ class FlacParser extends TagParser {
   /// To detect if this parser can be used to parse this file, the 4 first bytes
   /// must be equal to `fLaC`
   ///
-  static Future<bool> canUserParser(RandomAccessFile reader) async {
+  static bool canUserParser(RandomAccessFile reader) {
     reader.setPositionSync(0);
     final vendorName = String.fromCharCodes(reader.readSync(4));
     return vendorName == "fLaC";

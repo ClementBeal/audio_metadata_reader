@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/src/metadata/mp3_metadata.dart';
 import 'package:audio_metadata_reader/src/parsers/tag_parser.dart';
 import 'package:audio_metadata_reader/src/utils/bit_manipulator.dart';
+import 'package:audio_metadata_reader/src/utils/buffer.dart';
 
 class ID3v1Parser extends TagParser {
   final Mp3Metadata metadata = Mp3Metadata();
@@ -26,68 +28,66 @@ class ID3v1Parser extends TagParser {
 
     // metadata.genres =  [tagData[127]];
 
-    // final buffer = Buffer(randomAccessFile: reader);
+    final buffer = Buffer(randomAccessFile: reader);
+    buffer.setPositionSync(0);
+    // List<int> mp3FrameHeader = [...buffer.read(4)];
+    Uint8List mp3FrameHeader = Uint8List(4);
+    mp3FrameHeader[0] = buffer.read(1)[0];
 
-    // buffer.setPositionSync(size + 10);
+    // CHECK : may have performance issues
+    while (mp3FrameHeader.first != 0xff) {
+      mp3FrameHeader[0] = buffer.read(1)[0];
+    }
 
-    // // List<int> mp3FrameHeader = [...buffer.read(4)];
-    // Uint8List mp3FrameHeader = Uint8List(4);
-    // mp3FrameHeader[0] = buffer.read(1)[0];
+    mp3FrameHeader[1] = buffer.read(1)[0];
+    mp3FrameHeader[2] = buffer.read(1)[0];
+    mp3FrameHeader[3] = buffer.read(1)[0];
 
-    // // CHECK : may have performance issues
-    // while (mp3FrameHeader.first != 0xff) {
-    //   mp3FrameHeader[0] = buffer.read(1)[0];
-    // }
+    final mpegVersion = (mp3FrameHeader[1] >> 3) & 0x3;
+    final mpegLayer = (mp3FrameHeader[1] >> 1) & 3;
 
-    // mp3FrameHeader[1] = buffer.read(1)[0];
-    // mp3FrameHeader[2] = buffer.read(1)[0];
-    // mp3FrameHeader[3] = buffer.read(1)[0];
+    final bitrateIndex = mp3FrameHeader[2] >> 4;
+    final samplerateIndex = mp3FrameHeader[2] & 12 >> 0x3;
 
-    // final mpegVersion = (mp3FrameHeader[1] >> 3) & 0x3;
-    // final mpegLayer = (mp3FrameHeader[1] >> 1) & 3;
+    metadata.samplerate = _getSampleRate(mpegVersion, samplerateIndex);
 
-    // final bitrateIndex = mp3FrameHeader[2] >> 4;
-    // final samplerateIndex = mp3FrameHeader[2] & 12 >> 0x3;
+    // arbitrary choice.  Usually the `Xing` header is located after ~30 bytes
+    // then the header size is about ~150 bytes
+    final possibleXingHeader = buffer.read(400);
 
-    // metadata.samplerate = _getSampleRate(mpegVersion, samplerateIndex);
+    int i = 0;
+    while (possibleXingHeader[i] == 0) {
+      i++;
+    }
 
-    // // arbitrary choice.  Usually the `Xing` header is located after ~30 bytes
-    // // then the header size is about ~150 bytes
-    // final possibleXingHeader = buffer.read(400);
+    if (possibleXingHeader[i] == 0x58 &&
+        possibleXingHeader[i + 1] == 0X69 &&
+        possibleXingHeader[i + 2] == 0x6E &&
+        possibleXingHeader[i + 3] == 0x67) {
+      // it's a VBR file (Variable Bit Rate)
+      final xingFrameFlag = possibleXingHeader[i + 7] & 0x1;
+      // final xingBytesFlag = possibleXingHeader[7] >> 1 & 0x1;
+      // final xingTOCFlag = possibleXingHeader[7] >> 2 & 0x1;
+      // final xingVBRScaleFlag = possibleXingHeader[7] >> 3 & 0x1;
 
-    // int i = 0;
-    // while (possibleXingHeader[i] == 0) {
-    //   i++;
-    // }
+      if (xingFrameFlag == 1) {
+        final numberOfFrames =
+            getUint32(possibleXingHeader.sublist(i + 8, i + 12));
+        metadata.duration = Duration(
+            seconds: numberOfFrames *
+                (_getSamplePerFrame(mpegVersion, mpegLayer) ?? 0) ~/
+                metadata.samplerate!);
+      }
+    } else {
+      // it's a CBR file (Constant Bit Rate)
+      metadata.bitrate = _getBitrate(mpegVersion, mpegLayer, bitrateIndex);
 
-    // if (possibleXingHeader[i] == 0x58 &&
-    //     possibleXingHeader[i + 1] == 0X69 &&
-    //     possibleXingHeader[i + 2] == 0x6E &&
-    //     possibleXingHeader[i + 3] == 0x67) {
-    //   // it's a VBR file (Variable Bit Rate)
-    //   final xingFrameFlag = possibleXingHeader[i + 7] & 0x1;
-    //   // final xingBytesFlag = possibleXingHeader[7] >> 1 & 0x1;
-    //   // final xingTOCFlag = possibleXingHeader[7] >> 2 & 0x1;
-    //   // final xingVBRScaleFlag = possibleXingHeader[7] >> 3 & 0x1;
-
-    //   if (xingFrameFlag == 1) {
-    //     final numberOfFrames =
-    //         getUint32(possibleXingHeader.sublist(i + 8, i + 12));
-    //     metadata.duration = Duration(
-    //         seconds: numberOfFrames *
-    //             (_getSamplePerFrame(mpegVersion, mpegLayer) ?? 0) ~/
-    //             metadata.samplerate!);
-    //   }
-    // } else {
-    //   // it's a CBR file (Constant Bit Rate)
-    //   metadata.bitrate = _getBitrate(mpegVersion, mpegLayer, bitrateIndex);
-
-    //   if (metadata.bitrate != null) {
-    //     final fileSizeWithoutMetadata = reader.lengthSync() - size;
-    //     metadata.duration = Duration(
-    //         seconds: (8 * fileSizeWithoutMetadata / metadata.bitrate!).round());
-    //   }
-    // }
+      if (metadata.bitrate != null) {
+        final fileSizeWithoutMetadata = reader.lengthSync() - 128;
+        metadata.duration = Duration(
+            seconds: (8 * fileSizeWithoutMetadata / metadata.bitrate!).round());
+      }
+    }
 
     reader.closeSync();
     return metadata;

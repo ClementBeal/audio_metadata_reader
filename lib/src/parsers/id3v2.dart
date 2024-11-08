@@ -246,15 +246,14 @@ class ID3v2Parser extends TagParser {
       }
     }
 
-    if (false) {
-      // if (metadata.duration == null || metadata.duration == Duration.zero) {
+    if (metadata.duration == null || metadata.duration == Duration.zero) {
       buffer.setPositionSync(size + 10);
 
       List<int> mp3FrameHeader = [...buffer.read(4)];
 
       // CHECK : may have performance issues
       while (mp3FrameHeader.first != 0xff) {
-        mp3FrameHeader.add(reader.readByteSync());
+        mp3FrameHeader.add(buffer.read(1)[0]);
         mp3FrameHeader.removeAt(0);
       }
 
@@ -268,25 +267,26 @@ class ID3v2Parser extends TagParser {
 
       // arbitrary choice.  Usually the `Xing` header is located after ~30 bytes
       // then the header size is about ~150 bytes
-      final possibleXingHeader = (await reader.read(200)).toList();
+      final possibleXingHeader = buffer.read(400);
 
-      while (possibleXingHeader.first == 0) {
-        possibleXingHeader.removeAt(0);
+      int i = 0;
+      while (possibleXingHeader[i] == 0) {
+        i++;
       }
 
-      if (possibleXingHeader[0] == 0x58 &&
-          possibleXingHeader[1] == 0X69 &&
-          possibleXingHeader[2] == 0x6E &&
-          possibleXingHeader[3] == 0x67) {
+      if (possibleXingHeader[i] == 0x58 &&
+          possibleXingHeader[i + 1] == 0X69 &&
+          possibleXingHeader[i + 2] == 0x6E &&
+          possibleXingHeader[i + 3] == 0x67) {
         // it's a VBR file (Variable Bit Rate)
-        final xingFrameFlag = possibleXingHeader[7] & 0x1;
+        final xingFrameFlag = possibleXingHeader[i + 7] & 0x1;
         // final xingBytesFlag = possibleXingHeader[7] >> 1 & 0x1;
         // final xingTOCFlag = possibleXingHeader[7] >> 2 & 0x1;
         // final xingVBRScaleFlag = possibleXingHeader[7] >> 3 & 0x1;
 
         if (xingFrameFlag == 1) {
-          final numberOfFrames =
-              getUint32(Uint8List.fromList(possibleXingHeader.sublist(8, 12)));
+          final numberOfFrames = getUint32(
+              Uint8List.fromList(possibleXingHeader.sublist(i + 8, i + 12)));
           metadata.duration = Duration(
               seconds: numberOfFrames *
                   (_getSamplePerFrame(mpegVersion, mpegLayer) ?? 0) ~/

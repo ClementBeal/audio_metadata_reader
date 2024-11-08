@@ -65,10 +65,6 @@ class AudioMetadata {
   }
 }
 
-class InvalidTag extends AudioMetadata {
-  InvalidTag({required super.file});
-}
-
 abstract class TagParser {
   final bool fetchImage;
 

@@ -12,17 +12,31 @@ class ID3v1Parser extends TagParser {
 
   ID3v1Parser({fetchImage = false}) : super(fetchImage: fetchImage);
 
+  /**
+   * Extract the part text between the [start] and the [end]
+   * until we reach a "\x00" character
+   */
+  String _extract(Uint8List tagData, int start, int end) {
+    int i = start;
+    while (i < end && tagData[i] != 0) {
+      i++;
+    }
+
+    return utf8.decode(tagData.sublist(start, i));
+  }
+
   @override
   ParserTag parse(RandomAccessFile reader) {
     reader.setPositionSync(reader.lengthSync() - 128);
 
     final tagData = reader.readSync(128);
-    metadata.songName = utf8.decode(tagData.sublist(3, 33)).trim();
-    metadata.leadPerformer = utf8.decode(tagData.sublist(33, 63)).trim();
-    metadata.album = utf8.decode(tagData.sublist(63, 93)).trim();
+    metadata.songName = _extract(tagData, 3, 33);
+    metadata.leadPerformer = _extract(tagData, 33, 63);
+    metadata.album = _extract(tagData, 63, 93);
     metadata.year = getUint32(tagData.sublist(93, 97));
+    metadata.year = metadata.year == 0 ? null : metadata.year;
     metadata.comments = [
-      Comment("", utf8.decode(tagData.sublist(97, 127)).trim())
+      Comment("", _extract(tagData, 97, 127)),
     ];
     metadata.genres = [""];
 

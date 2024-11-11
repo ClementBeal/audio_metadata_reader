@@ -255,6 +255,7 @@ class ID3v2Parser extends TagParser {
     // it's because the biggest thing to get in the cover
     // sometimes, we don't want to read so we have to read the content
     // at the very last time
+
     final handlers = switch (frameId) {
       "APIC" => () {
           if (fetchImage) {
@@ -314,16 +315,9 @@ class ID3v2Parser extends TagParser {
           final content = buffer.read(size);
           metadata.fileType = TextFrame(content).information;
         },
-      "TCMP" => () {
-          // TextFrame(content).information;
-          //print("Encoding by: " + TextFrame(frame.content).information);
-        },
       "TIME" => () {
           final content = buffer.read(size);
           metadata.time = TextFrame(content).information;
-        },
-      "TIPL" => () {
-          // TextFrame(content).information;
         },
       "TIT1" => () {
           final content = buffer.read(size);
@@ -379,9 +373,6 @@ class ID3v2Parser extends TagParser {
           final content = buffer.read(size);
           metadata.originalReleaseYear =
               _parseYear(TextFrame(content).information);
-        },
-      "TDRL" => () {
-          // tag.originalArtist == TextFrame(content).information;
         },
       "TOWN" => () {
           final content = buffer.read(size);
@@ -471,24 +462,6 @@ class ID3v2Parser extends TagParser {
           final frame = TXXXFrame(content);
           metadata.customMetadata[frame.description] = frame.information;
         },
-      "PRIV" => () {
-          // TextFrame(content).information;
-          //print("PRIV: " + String.fromCharCodes(frame.content));
-        },
-      "WCOM" => () {
-          // TextFrame(content).information;
-          //print("WCOM (commercial informtin): " +
-          // String.fromCharCodes(frame.content));
-        },
-      "COMM" => () {
-          // TextFrame(content).information;
-
-          //print("COMM: " + getComments(frame.content));
-        },
-      "RGAD" => () {
-          // TextFrame(content).information;
-          //print("Replay gain: " + TextFrame(frame.content).information);
-        },
       "USLT" => () {
           final content = buffer.read(size);
           metadata.lyric = getUnsynchronisedLyric(content);
@@ -499,9 +472,9 @@ class ID3v2Parser extends TagParser {
           final content = buffer.read(size);
           metadata.encoderSoftware = TextFrame(content).information;
         },
-      "TSOC" => () {},
-      "TSO2" => () {},
-      _ => () {}
+      _ => () {
+          buffer.skip(size);
+        }
     };
 
     handlers.call();

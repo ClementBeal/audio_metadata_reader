@@ -9,6 +9,10 @@ import 'package:audio_metadata_reader/src/utils/buffer.dart';
 import 'package:charset/charset.dart';
 import 'tag_parser.dart';
 
+const utf8Decoder = Utf8Decoder();
+const utf16Decoder = Utf16Decoder();
+const latin1Decoder = Latin1Decoder();
+
 class ID3v3Frame {
   final String id;
   final int size;
@@ -32,7 +36,7 @@ class TextFrame {
         final nullCharacterPosition = information.indexOf(0, 1);
         final informationBytes = information.sublist(
             1, (nullCharacterPosition >= 0) ? nullCharacterPosition : null);
-        this.information = const Latin1Decoder().convert(informationBytes);
+        this.information = latin1Decoder.convert(informationBytes);
         break;
       case 1:
         int nullCharacterPosition = -1;
@@ -46,7 +50,7 @@ class TextFrame {
 
         final informationBytes = information.sublist(
             1, (nullCharacterPosition >= 0) ? nullCharacterPosition : null);
-        this.information = const Utf16Decoder().decodeUtf16Le(informationBytes);
+        this.information = utf16Decoder.decodeUtf16Le(informationBytes);
         break;
       case 2:
         int nullCharacterPosition = 1;
@@ -63,13 +67,13 @@ class TextFrame {
 
         final informationBytes = information.sublist(
             1, (nullCharacterPosition >= 0) ? nullCharacterPosition : null);
-        this.information = const Utf16Decoder().decodeUtf16Le(informationBytes);
+        this.information = utf16Decoder.decodeUtf16Le(informationBytes);
         break;
       case 3:
         final nullCharacterPosition = information.indexOf(0, 1);
         final informationBytes = information.sublist(
             1, (nullCharacterPosition >= 0) ? nullCharacterPosition : null);
-        this.information = const Utf8Decoder().convert(informationBytes);
+        this.information = utf8Decoder.convert(informationBytes);
         break;
     }
   }
@@ -96,30 +100,27 @@ class TXXXFrame {
 
     switch (encoding) {
       case 0:
-        description =
-            const Latin1Decoder().convert(informationBytesDescription);
+        description = latin1Decoder.convert(informationBytesDescription);
 
-        this.information = const Latin1Decoder()
+        this.information = latin1Decoder
             .convert(information.sublist(nullCharacterPositionDescription));
         break;
       case 1:
-        description =
-            const Utf16Decoder().decodeUtf16Le(informationBytesDescription);
+        description = utf16Decoder.decodeUtf16Le(informationBytesDescription);
 
-        this.information = const Utf16Decoder().decodeUtf16Le(
+        this.information = utf16Decoder.decodeUtf16Le(
             information.sublist(nullCharacterPositionDescription));
         break;
       case 2:
-        description =
-            const Utf16Decoder().decodeUtf16Le(informationBytesDescription);
+        description = utf16Decoder.decodeUtf16Le(informationBytesDescription);
 
-        this.information = const Utf16Decoder().decodeUtf16Le(
+        this.information = utf16Decoder.decodeUtf16Le(
             information.sublist(nullCharacterPositionDescription));
         break;
       case 3:
-        description = const Utf8Decoder().convert(informationBytesDescription);
+        description = utf8Decoder.convert(informationBytesDescription);
 
-        this.information = const Utf8Decoder()
+        this.information = utf8Decoder
             .convert(information.sublist(nullCharacterPositionDescription));
         break;
     }
@@ -569,7 +570,7 @@ class ID3v2Parser extends TagParser {
         final nullCharacterPosition = rest.indexOf(0, 1);
         final informationBytes = rest.sublist(
             1, (nullCharacterPosition >= 0) ? nullCharacterPosition : null);
-        return const Latin1Decoder().convert(informationBytes);
+        return latin1Decoder.convert(informationBytes);
       case 1:
         int nullCharacterPosition = -1;
         int i = 1;
@@ -582,7 +583,7 @@ class ID3v2Parser extends TagParser {
 
         final informationBytes = rest.sublist(
             1, (nullCharacterPosition >= 0) ? nullCharacterPosition : null);
-        return const Utf16Decoder().decodeUtf16Le(informationBytes);
+        return utf16Decoder.decodeUtf16Le(informationBytes);
 
       case 2:
         int nullCharacterPosition = 1;
@@ -599,12 +600,12 @@ class ID3v2Parser extends TagParser {
 
         final informationBytes = rest.sublist(
             1, (nullCharacterPosition >= 0) ? nullCharacterPosition : null);
-        return const Utf16Decoder().decodeUtf16Le(informationBytes);
+        return utf16Decoder.decodeUtf16Le(informationBytes);
       case 3:
         final nullCharacterPosition = rest.indexOf(0, 1);
         final informationBytes = rest.sublist(
             1, (nullCharacterPosition >= 0) ? nullCharacterPosition : null);
-        return const Utf8Decoder().convert(informationBytes);
+        return utf8Decoder.convert(informationBytes);
     }
 
     return "";

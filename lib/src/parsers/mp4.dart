@@ -170,7 +170,13 @@ class MP4Parser extends TagParser {
           tags.genre = value;
           break;
         case "day":
-          tags.year = DateTime(int.parse(value));
+          final intDay = int.tryParse(value);
+
+          if (intDay != null) {
+            tags.year = DateTime(intDay);
+          } else {
+            tags.year = DateTime.tryParse(value);
+          }
           break;
         case "too":
           break;

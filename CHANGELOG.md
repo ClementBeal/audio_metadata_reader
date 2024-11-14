@@ -1,3 +1,9 @@
+## 0.0.8
+
+- Fix : MP4 day is parsed correctly
+- Fix : The `Buffer` skip function is skipping correctly
+- Some basic refactoring
+
 ## 0.0.7
 
 ### BREAKING CHANGE

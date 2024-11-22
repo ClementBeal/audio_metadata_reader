@@ -1,3 +1,7 @@
+## 0.0.9
+
+- OGG : compute correctly the duration
+
 ## 0.0.8
 
 - Fix : MP4 day is parsed correctly

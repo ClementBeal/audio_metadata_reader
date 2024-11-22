@@ -158,7 +158,18 @@ class ID3v2Parser extends TagParser {
         ((sizeBytes[1] & 0x7F) << 14) |
         ((sizeBytes[0] & 0x7F) << 21);
 
-    var offset = 10;
+    int offset = 10;
+
+    // extended header
+    // useless
+    //
+    // > The extended header contains information
+    // > that is not vital to the correct
+    // > parsing of the tag information
+    if (getBit(headerBytes[5], 6) == 1) {
+      final extendedHeaderSize = getUint32(buffer.read(4));
+      buffer.skip(extendedHeaderSize - 4);
+    }
 
     while (offset < size) {
       final frame = getFrame(reader, majorVersion == 4);
@@ -167,13 +178,10 @@ class ID3v2Parser extends TagParser {
         break;
       }
 
+      // 10 -> frame header
       offset = offset + 10 + frame.size;
 
-      try {
-        processFrame(frame.id, frame.size);
-      } catch (e) {
-        rethrow;
-      }
+      processFrame(frame.id, frame.size);
     }
 
     if (metadata.duration == null || metadata.duration == Duration.zero) {
@@ -192,13 +200,26 @@ class ID3v2Parser extends TagParser {
       mp3FrameHeader[2] = buffer.read(1)[0];
       mp3FrameHeader[3] = buffer.read(1)[0];
 
-      final mpegVersion = (mp3FrameHeader[1] >> 3) & 0x3;
-      final mpegLayer = (mp3FrameHeader[1] >> 1) & 3;
+      final mpegVersion = switch ((mp3FrameHeader[1] >> 3) & 0x3) {
+        0x00 => 3,
+        0x01 => -1,
+        0x02 => 2,
+        0x03 => 1,
+        _ => -1
+      };
+      final mpegLayer = switch ((mp3FrameHeader[1] >> 1) & 0x3) {
+        0 => -1,
+        1 => 3,
+        2 => 2,
+        3 => 1,
+        _ => -1,
+      };
 
       final bitrateIndex = mp3FrameHeader[2] >> 4;
       final samplerateIndex = mp3FrameHeader[2] & 12 >> 0x3;
 
       metadata.samplerate = _getSampleRate(mpegVersion, samplerateIndex);
+      metadata.bitrate = _getBitrate(mpegVersion, mpegLayer, bitrateIndex);
 
       // arbitrary choice.  Usually the `Xing` header is located after ~30 bytes
       // then the header size is about ~150 bytes
@@ -229,7 +250,6 @@ class ID3v2Parser extends TagParser {
         }
       } else {
         // it's a CBR file (Constant Bit Rate)
-        metadata.bitrate = _getBitrate(mpegVersion, mpegLayer, bitrateIndex);
 
         if (metadata.bitrate != null) {
           final fileSizeWithoutMetadata = reader.lengthSync() - size;
@@ -259,6 +279,8 @@ class ID3v2Parser extends TagParser {
             final content = buffer.read(size);
             final picture = getPicture(content);
             metadata.pictures.add(picture);
+          } else {
+            buffer.skip(size);
           }
         },
       "TALB" => () {
@@ -636,7 +658,7 @@ class ID3v2Parser extends TagParser {
   }
 
   int? _getSampleRate(int mpegVersion, int sampleRateIndex) {
-    if (mpegVersion == 3) {
+    if (mpegVersion == 1) {
       return switch (sampleRateIndex) {
         0 => 44100,
         1 => 48000,
@@ -654,7 +676,7 @@ class ID3v2Parser extends TagParser {
       };
     }
 
-    if (mpegVersion == 1) {
+    if (mpegVersion == 3) {
       return switch (sampleRateIndex) {
         0 => 11025,
         1 => 12000,
@@ -667,7 +689,7 @@ class ID3v2Parser extends TagParser {
   }
 
   int? _getBitrate(int mpegVersion, int mpegLayer, int bitrateIndex) {
-    if (mpegVersion == 3 && mpegLayer == 3) {
+    if (mpegVersion == 1 && mpegLayer == 1) {
       return switch (bitrateIndex) {
         0 => null,
         1 => 32000,
@@ -688,7 +710,7 @@ class ID3v2Parser extends TagParser {
       };
     }
 
-    if (mpegVersion == 3 && mpegLayer == 2) {
+    if (mpegVersion == 1 && mpegLayer == 2) {
       return switch (bitrateIndex) {
         0 => null,
         1 => 32000,
@@ -709,7 +731,7 @@ class ID3v2Parser extends TagParser {
       };
     }
 
-    if (mpegVersion == 3 && mpegLayer == 1) {
+    if (mpegVersion == 1 && mpegLayer == 3) {
       return switch (bitrateIndex) {
         0 => null,
         1 => 32000,
@@ -729,7 +751,7 @@ class ID3v2Parser extends TagParser {
         _ => null,
       };
     }
-    if (mpegVersion != 3 && mpegLayer == 3) {
+    if (mpegVersion == 2 && mpegLayer == 1) {
       return switch (bitrateIndex) {
         0 => null,
         1 => 32000,
@@ -749,7 +771,8 @@ class ID3v2Parser extends TagParser {
         _ => null,
       };
     }
-    if (mpegVersion != 3) {
+
+    if (mpegVersion == 2 && (mpegLayer == 2 || mpegLayer == 3)) {
       return switch (bitrateIndex) {
         0 => null,
         1 => 8000,
@@ -774,18 +797,18 @@ class ID3v2Parser extends TagParser {
   }
 
   int? _getSamplePerFrame(int mpegAudioVersion, int mpegLayer) {
-    if (mpegAudioVersion == 3) {
+    if (mpegAudioVersion == 1) {
       return switch (mpegLayer) {
-        3 => 384,
+        1 => 384,
         2 => 1152,
-        1 => 1152,
+        3 => 1152,
         _ => null,
       };
     } else if (mpegAudioVersion == 2) {
       return switch (mpegLayer) {
-        3 => 192,
+        1 => 192,
         2 => 1152,
-        1 => 576,
+        3 => 576,
         _ => null,
       };
     }

@@ -1,6 +1,9 @@
 ## 0.0.9
 
 - OGG : compute correctly the duration
+- ID3v2 : skip correctly the images if we don't want them
+- ID3v2 : take care of the extended header
+- ID3v4 : use the correct MPEG version and layer
 
 ## 0.0.8
 

@@ -32,4 +32,17 @@ void main() {
     expect(result.pictures.first.bytes,
         File("test/data/cover.png").readAsBytesSync());
   });
+
+  test("Check if we skip correctly the images", () {
+    final track = File("./test/mp3/caress-your-soul-cleaned.mp3");
+    final result = readMetadata(track, getImage: false);
+
+    expect(result.pictures.length, 0);
+    expect(result.album, "Caress Your Soul");
+    expect(result.title, "How to Fly");
+    expect(result.artist, "Sticky Fingers");
+    expect(result.year, DateTime(2013));
+    expect(result.duration, Duration(minutes: 3, seconds: 22));
+    expect(result.sampleRate, 44100);
+  });
 }

@@ -47,6 +47,26 @@ int getUint32LE(Uint8List data) =>
     ((data[2] & 0xFF) << 16) |
     ((data[3] & 0xFF) << 24);
 
+int getUint64LE(Uint8List data) =>
+    data[0] |
+    data[1] << 8 |
+    data[2] << 16 |
+    data[3] << 24 |
+    data[4] << 32 |
+    data[5] << 40 |
+    data[6] << 48 |
+    data[7] << 56;
+
+int getUint64BE(Uint8List data) =>
+    data[7] |
+    data[6] << 8 |
+    data[5] << 16 |
+    data[4] << 24 |
+    data[3] << 32 |
+    data[2] << 40 |
+    data[1] << 48 |
+    data[0] << 56;
+
 int getIntFromArbitraryBits(int data, int offset, int length) {
   return (data >> (64 - offset - length)) & ((1 << length) - 1);
 }

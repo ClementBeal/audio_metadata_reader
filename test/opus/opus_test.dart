@@ -15,7 +15,7 @@ void main() {
     expect(result.sampleRate, equals(48000));
     expect(result.title, equals("Title"));
     expect(result.trackNumber, equals(1));
-    // expect(result.duration, equals(Duration(seconds: 0)));
+    expect(result.duration, equals(Duration(seconds: 1)));
     expect(result.totalDisc, equals(1));
     expect(result.lyrics, equals("Lyrics"));
     expect(result.trackTotal, equals(10));
@@ -31,5 +31,12 @@ void main() {
     expect(result.pictures.first.pictureType, PictureType.coverFront);
     expect(result.pictures.first.bytes,
         File("test/data/cover.png").readAsBytesSync());
+  });
+
+  test("Correct duration", () {
+    final track = File('./test/opus/real_track_extract.opus');
+    final result = readMetadata(track);
+
+    expect(result.duration, Duration(minutes: 3, seconds: 15));
   });
 }

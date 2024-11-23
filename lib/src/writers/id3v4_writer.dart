@@ -24,11 +24,10 @@ class Id3v4Writer {
 
     final builder = BytesBuilder();
 
-    if (metadata.songName != null) {
-      _writeFrame(builder, "TIT2", metadata.songName!);
-    }
+    _writeFrames(builder, metadata);
 
     final finalBuilder = BytesBuilder();
+
     _writeHeader(finalBuilder, builder.length);
     finalBuilder.add(builder.toBytes());
 
@@ -40,6 +39,130 @@ class Id3v4Writer {
         ...finalBuilder.toBytes(),
         ...oldData,
       ]);
+    }
+  }
+
+  void _writeFrames(BytesBuilder builder, Mp3Metadata metadata) {
+    if (metadata.album != null) {
+      _writeFrame(builder, "TALB", metadata.album!);
+    }
+    if (metadata.bpm != null) {
+      _writeFrame(builder, "TBPM", metadata.bpm!);
+    }
+    if (metadata.composer != null) {
+      _writeFrame(builder, "TCOM", metadata.composer!);
+    }
+    if (metadata.contentType != null) {
+      _writeFrame(builder, "TCON", metadata.contentType!);
+    }
+    if (metadata.copyrightMessage != null) {
+      _writeFrame(builder, "TCOP", metadata.copyrightMessage!);
+    }
+    if (metadata.date != null) {
+      _writeFrame(builder, "TDAT", metadata.date!);
+    }
+
+    if (metadata.playlistDelay != null) {
+      _writeFrame(builder, "TDLY", metadata.playlistDelay!);
+    }
+    if (metadata.encodedBy != null) {
+      _writeFrame(builder, "TENC", metadata.encodedBy!);
+    }
+    if (metadata.textWriter != null) {
+      _writeFrame(builder, "TEXT", metadata.textWriter!);
+    }
+    if (metadata.fileType != null) {
+      _writeFrame(builder, "TFLT", metadata.fileType!);
+    }
+    if (metadata.time != null) {
+      _writeFrame(builder, "TIME", metadata.time!);
+    }
+    if (metadata.contentGroupDescription != null) {
+      _writeFrame(builder, "TIT1", metadata.contentGroupDescription!);
+    }
+    if (metadata.songName != null) {
+      _writeFrame(builder, "TIT2", metadata.songName!);
+    }
+
+    if (metadata.subtitle != null) {
+      _writeFrame(builder, "TIT3", metadata.subtitle!);
+    }
+    if (metadata.initialKey != null) {
+      _writeFrame(builder, "TKEY", metadata.initialKey!);
+    }
+    if (metadata.languages != null) {
+      _writeFrame(builder, "TLAN", metadata.languages!);
+    }
+    if (metadata.duration != null) {
+      final duration = metadata.duration!;
+      _writeFrame(builder, "TLEN", "${duration.inMilliseconds}}");
+    }
+    if (metadata.mediatype != null) {
+      _writeFrame(builder, "TMED", metadata.mediatype!);
+    }
+    if (metadata.originalAlbum != null) {
+      _writeFrame(builder, "TOAL", metadata.originalAlbum!);
+    }
+
+    if (metadata.originalFilename != null) {
+      _writeFrame(builder, "TOFN", metadata.originalFilename!);
+    }
+    if (metadata.originalTextWriter != null) {
+      _writeFrame(builder, "TOLY", metadata.originalTextWriter!);
+    }
+    if (metadata.originalArtist != null) {
+      _writeFrame(builder, "TOPE", metadata.originalArtist!);
+    }
+    if (metadata.originalReleaseYear != null) {
+      _writeFrame(builder, "TORY", metadata.originalReleaseYear!.toString());
+    }
+    if (metadata.fileOwner != null) {
+      _writeFrame(builder, "TOWN", metadata.fileOwner!);
+    }
+    if (metadata.leadPerformer != null) {
+      _writeFrame(builder, "TPE1", metadata.leadPerformer!);
+    }
+    if (metadata.bandOrOrchestra != null) {
+      _writeFrame(builder, "TPE2", metadata.bandOrOrchestra!);
+    }
+    if (metadata.conductor != null) {
+      _writeFrame(builder, "TPE3", metadata.conductor!);
+    }
+    if (metadata.interpreted != null) {
+      _writeFrame(builder, "TPE4", metadata.interpreted!);
+    }
+    if (metadata.partOfSet != null) {
+      _writeFrame(builder, "TPOS", metadata.partOfSet!);
+    }
+    if (metadata.publisher != null) {
+      _writeFrame(builder, "TPUB", metadata.publisher!);
+    }
+    if (metadata.trackNumber != null) {
+      if (metadata.trackTotal != null) {
+        _writeFrame(
+            builder, "TRCK", "${metadata.trackNumber}/${metadata.trackTotal}");
+      } else {}
+    }
+    if (metadata.recordingDates != null) {
+      _writeFrame(builder, "TRDA", metadata.recordingDates!);
+    }
+    if (metadata.internetRadioStationName != null) {
+      _writeFrame(builder, "TRSN", metadata.internetRadioStationName!);
+    }
+    if (metadata.internetRadioStationOwner != null) {
+      _writeFrame(builder, "TRSO", metadata.internetRadioStationOwner!);
+    }
+    if (metadata.size != null) {
+      _writeFrame(builder, "TSIZ", metadata.size!);
+    }
+    if (metadata.isrc != null) {
+      _writeFrame(builder, "TSRC", metadata.isrc!);
+    }
+    if (metadata.encoderSoftware != null) {
+      _writeFrame(builder, "TSSE", metadata.encoderSoftware!);
+    }
+    if (metadata.year != null) {
+      _writeFrame(builder, "TYER", metadata.year!.toString());
     }
   }
 

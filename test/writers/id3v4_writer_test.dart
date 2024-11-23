@@ -70,6 +70,37 @@ void main() {
           expect(resultMetadata.songName, equals(metadata.songName));
         },
       );
+
+      test(
+        "Write a bit more of metadata",
+        () {
+          final writer = Id3v4Writer();
+
+          final file = createTemporaryFile("test.mp3", mp3FrameHeaderCBR());
+          print(file.absolute.path);
+
+          final metadata = Mp3Metadata();
+          metadata.songName = "Only Ones Who Know";
+          metadata.originalArtist = "Arctic Monkeys";
+          metadata.album = "Favourite Worst Nightmare";
+          metadata.trackNumber = 6;
+          metadata.trackTotal = 12;
+          metadata.year = 2007;
+
+          writer.write(file, metadata);
+
+          final resultMetadata =
+              ID3v2Parser().parse(file.openSync()) as Mp3Metadata;
+
+          expect(resultMetadata.songName, equals(metadata.songName));
+          expect(
+              resultMetadata.originalArtist, equals(metadata.originalArtist));
+          expect(resultMetadata.album, equals(metadata.album));
+          expect(resultMetadata.trackNumber, equals(6));
+          expect(resultMetadata.trackTotal, equals(12));
+          expect(resultMetadata.year, equals(metadata.year));
+        },
+      );
     },
   );
 }

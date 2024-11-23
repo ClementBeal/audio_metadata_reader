@@ -1,9 +1,9 @@
-import 'dart:math';
 import 'dart:typed_data';
 
+import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/metadata/mp3_metadata.dart';
-import 'package:audio_metadata_reader/src/parser.dart';
 import 'package:audio_metadata_reader/src/parsers/id3v2.dart';
+import 'package:audio_metadata_reader/src/parsers/tag_parser.dart';
 import 'package:audio_metadata_reader/src/writers/id3v4_writer.dart';
 import 'package:test/test.dart';
 
@@ -77,7 +77,6 @@ void main() {
           final writer = Id3v4Writer();
 
           final file = createTemporaryFile("test.mp3", mp3FrameHeaderCBR());
-          print(file.absolute.path);
 
           final metadata = Mp3Metadata();
           metadata.songName = "Only Ones Who Know";
@@ -99,6 +98,33 @@ void main() {
           expect(resultMetadata.trackNumber, equals(6));
           expect(resultMetadata.trackTotal, equals(12));
           expect(resultMetadata.year, equals(metadata.year));
+        },
+      );
+
+      test(
+        "Write a picture",
+        () {
+          final writer = Id3v4Writer();
+
+          final file = createTemporaryFile("test.mp3", mp3FrameHeaderCBR());
+
+          final metadata = Mp3Metadata();
+          metadata.pictures = [
+            Picture(Uint8List.fromList([0, 1, 2, 3]), "image/jpeg",
+                PictureType.coverFront),
+          ];
+
+          writer.write(file, metadata);
+
+          final resultMetadata = ID3v2Parser(fetchImage: true)
+              .parse(file.openSync()) as Mp3Metadata;
+
+          expect(resultMetadata.pictures, hasLength(1));
+
+          final picture = resultMetadata.pictures[0];
+          expect(picture.mimetype, equals("image/jpeg"));
+          expect(picture.pictureType, equals(PictureType.coverFront));
+          expect(picture.bytes, equals([0, 1, 2, 3]));
         },
       );
     },

@@ -2,7 +2,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/metadata/mp3_metadata.dart';
+import 'package:audio_metadata_reader/src/parsers/tag_parser.dart';
 
 class TagHeader {
   final int majorVersion;
@@ -43,6 +45,10 @@ class Id3v4Writer {
   }
 
   void _writeFrames(BytesBuilder builder, Mp3Metadata metadata) {
+    if (metadata.pictures.isNotEmpty) {
+      _writePictures(builder, metadata.pictures);
+    }
+
     if (metadata.album != null) {
       _writeFrame(builder, "TALB", metadata.album!);
     }
@@ -175,6 +181,61 @@ class Id3v4Writer {
 
     builder.addByte(0x03);
     builder.add(utf8.encode(data));
+  }
+
+  void _writeFrameWithBytes(
+      BytesBuilder builder, String frameId, Uint8List data) {
+    builder.add(frameId.codeUnits);
+
+    builder.add(_encodeSynchsafeInteger(data.length + 1));
+    // flags
+    builder.add([0, 0]);
+
+    builder.addByte(0x03);
+    builder.add(data);
+  }
+
+  void _writePictures(BytesBuilder builder, List<Picture> pictures) {
+    for (final picture in pictures) {
+      final pictureBuilder = BytesBuilder();
+
+      // encoding
+      // pictureBuilder.addByte(4);
+      // mimetype
+      pictureBuilder.add([...utf8.encode(picture.mimetype), 0x00]);
+
+      // picture type
+      pictureBuilder.addByte(switch (picture.pictureType) {
+        PictureType.other => 0x0,
+        PictureType.fileIcon32x32 => 0x1,
+        PictureType.otherFileIcon => 0x2,
+        PictureType.coverFront => 0x3,
+        PictureType.coverBack => 0x4,
+        PictureType.leafletPage => 0x5,
+        PictureType.mediaLabelCD => 0x6,
+        PictureType.leadArtist => 0x7,
+        PictureType.artistPerformer => 0x8,
+        PictureType.conductor => 0x9,
+        PictureType.bandOrchestra => 0x0A,
+        PictureType.composer => 0x0B,
+        PictureType.lyricistTextWriter => 0x0C,
+        PictureType.recordingLocation => 0x0D,
+        PictureType.duringRecording => 0x0E,
+        PictureType.duringPerformance => 0x0F,
+        PictureType.movieVideoScreenCapture => 0x10,
+        PictureType.brightColouredFish => 0x11,
+        PictureType.illustration => 0x12,
+        PictureType.bandArtistLogotype => 0x13,
+        PictureType.publisherStudioLogotype => 0x14,
+      });
+
+      // description
+      pictureBuilder.addByte(0);
+
+      pictureBuilder.add(picture.bytes);
+
+      _writeFrameWithBytes(builder, "APIC", pictureBuilder.toBytes());
+    }
   }
 
   Uint8List _encodeSynchsafeInteger(int value) {

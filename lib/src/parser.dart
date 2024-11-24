@@ -1,21 +1,14 @@
 import 'dart:io';
 
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
-import 'package:audio_metadata_reader/src/metadata/mp3_metadata.dart';
-import 'package:audio_metadata_reader/src/metadata/mp4_metadata.dart';
-import 'package:audio_metadata_reader/src/metadata/vorbis_metadata.dart';
-import 'package:audio_metadata_reader/src/parsers/id3v1.dart';
-import 'package:audio_metadata_reader/src/parsers/id3v2.dart';
-import 'package:audio_metadata_reader/src/parsers/mp4.dart';
-import 'package:audio_metadata_reader/src/parsers/ogg.dart';
-import 'package:audio_metadata_reader/src/parsers/flac.dart';
+import 'package:audio_metadata_reader/src/metadata/base.dart';
 
 /// Parse the metadata of a file.
 ///
 /// It automatically detects the type of the file (`.mp3`, `.ogg`, `.flac` etc)
 /// and select the matching file parser.
 ///
-/// If there's no parser or an error, a `InvalidTag` instance should be returned.
+/// If there's no parser or an error, a `MetadataParserException` exception is raised.
 ///
 /// By default, it does not fetch the images of the file. Because some
 /// images/covers are sometimes huge (~5MB), it can drastically make the
@@ -131,8 +124,7 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
       newMetadata.pictures.addAll(oggMetadata.pictures);
 
       return newMetadata;
-    }
-    if (ID3v2Parser.isID3v1(reader)) {
+    } else if (ID3v2Parser.isID3v1(reader)) {
       final mp3Metadata = ID3v1Parser().parse(reader) as Mp3Metadata;
 
       final a = AudioMetadata(
@@ -159,6 +151,44 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
       a.genres = mp3Metadata.genres;
 
       return a;
+    }
+  } catch (e, trace) {
+    print(trace);
+    throw MetadataParserException(track: track, message: e.toString());
+  }
+
+  throw MetadataParserException(
+    track: track,
+    message:
+        "No available parser for this file. Please raise an issue in Github",
+  );
+}
+
+/// Parse the metadata of a file and return ALL the metadata. It contains more information
+/// than `readMetadata(...)` but you need more knowledges about the metadata specifications.
+///
+/// Use this one if you want to rewrite the metadata later.
+///
+/// It automatically detects the type of the file (`.mp3`, `.ogg`, `.flac` etc)
+/// and select the matching file parser.
+///
+/// If there's no parser or an error, a `MetadataParserException` exception is raised.
+///
+/// By default, it fetches the cover images
+ParserTag readAllMetadata(File track, {bool getImage = true}) {
+  final reader = track.openSync();
+
+  try {
+    if (ID3v2Parser.canUserParser(reader)) {
+      return ID3v2Parser(fetchImage: getImage).parse(reader);
+    } else if (FlacParser.canUserParser(reader)) {
+      return FlacParser(fetchImage: getImage).parse(reader);
+    } else if (MP4Parser.canUserParser(reader)) {
+      return MP4Parser(fetchImage: getImage).parse(reader);
+    } else if (OGGParser.canUserParser(reader)) {
+      return OGGParser(fetchImage: getImage).parse(reader);
+    } else if (ID3v2Parser.isID3v1(reader)) {
+      return ID3v1Parser().parse(reader);
     }
   } catch (e, trace) {
     print(trace);

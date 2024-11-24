@@ -12,6 +12,8 @@ It's still in development and there's some metadat format that I could implement
 
 ## Usage
 
+### Read
+
 ```dart
 import 'dart:io';
 
@@ -27,6 +29,32 @@ void main() {
   print(metadata.album);
 }
 ```
+
+### Write
+
+This use case is a bit more complicated. You have to manipulate the raw metadata and update the good field.
+
+```dart
+void main() {
+  final fullMetadata = readAllMetadata(track);
+
+  switch (fullMetadata) {
+    case Mp3Metadata m:
+      m.songName = "New title";
+      break;
+    case Mp4Metadata m:
+      m.title = "New title";
+      break;
+    case VorbisMetadata m:
+      m.title = ["New title"];
+      break;
+  }
+
+  writeMetadata(track, fullMetadata);
+}
+```
+
+Also, all the ID3v2 metadata will be written in the minor version 4.
 
 ## Performance
 

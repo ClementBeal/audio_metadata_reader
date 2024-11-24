@@ -19,8 +19,6 @@ class Picture {
   }
 }
 
-abstract class ParserTag {}
-
 /// A generic class to gather the metadata. To make it universal, some format-specific metadata
 /// are dropped.
 ///

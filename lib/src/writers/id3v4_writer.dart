@@ -3,7 +3,6 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/src/metadata/base.dart';
-import 'package:audio_metadata_reader/src/metadata/mp3_metadata.dart';
 import 'package:audio_metadata_reader/src/parsers/tag_parser.dart';
 
 class TagHeader {

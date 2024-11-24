@@ -1,15 +1,7 @@
 import 'dart:io';
 
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
-import 'package:audio_metadata_reader/src/metadata/mp3_metadata.dart';
-import 'package:audio_metadata_reader/src/metadata/mp4_metadata.dart';
-import 'package:audio_metadata_reader/src/metadata/vorbis_metadata.dart';
-import 'package:audio_metadata_reader/src/parsers/id3v1.dart';
-import 'package:audio_metadata_reader/src/parsers/id3v2.dart';
-import 'package:audio_metadata_reader/src/parsers/mp4.dart';
-import 'package:audio_metadata_reader/src/parsers/ogg.dart';
-import 'package:audio_metadata_reader/src/parsers/flac.dart';
-import 'package:audio_metadata_reader/src/parsers/tag_parser.dart';
+import 'package:audio_metadata_reader/src/metadata/base.dart';
 
 /// Parse the metadata of a file.
 ///

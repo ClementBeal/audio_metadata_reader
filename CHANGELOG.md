@@ -3,7 +3,8 @@
 - OGG : compute correctly the duration
 - ID3v2 : skip correctly the images if we don't want them
 - ID3v2 : take care of the extended header
-- ID3v4 : use the correct MPEG version and layer
+- ID3v2 : use the correct MPEG version and layer
+- ID3V2 : read correctly the lyric if we have UTF-16
 
 ## 0.0.8
 

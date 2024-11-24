@@ -578,7 +578,7 @@ class ID3v2Parser extends TagParser {
       offset++;
     }
 
-    final rest = reader.buffer.asUint8List(offset);
+    final rest = reader.buffer.asUint8List(offset - 2);
 
     switch (encoding) {
       case 0:
@@ -587,19 +587,7 @@ class ID3v2Parser extends TagParser {
             1, (nullCharacterPosition >= 0) ? nullCharacterPosition : null);
         return latin1Decoder.convert(informationBytes);
       case 1:
-        int nullCharacterPosition = -1;
-        int i = 1;
-        while (i + 1 < rest.length) {
-          if (rest[i] == 0 && rest[i + 1] == 0) {
-            nullCharacterPosition = i;
-          }
-          i += 2;
-        }
-
-        final informationBytes = rest.sublist(
-            1, (nullCharacterPosition >= 0) ? nullCharacterPosition : null);
-        return utf16Decoder.decodeUtf16Le(informationBytes);
-
+        return utf16Decoder.decodeUtf16Le(rest);
       case 2:
         int nullCharacterPosition = 1;
         bool zeroFound = false;

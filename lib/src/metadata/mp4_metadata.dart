@@ -1,4 +1,4 @@
-import 'package:audio_metadata_reader/src/parsers/tag_parser.dart';
+part of 'base.dart';
 
 class Mp4Metadata extends ParserTag {
   String? title;

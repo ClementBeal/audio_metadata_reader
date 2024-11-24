@@ -1,6 +1,4 @@
-import 'dart:collection';
-
-import 'package:audio_metadata_reader/src/parsers/tag_parser.dart';
+part of 'base.dart';
 
 // https://xiph.org/vorbis/doc/v-comment.html
 // https://exiftool.org/TagNames/Vorbis.html

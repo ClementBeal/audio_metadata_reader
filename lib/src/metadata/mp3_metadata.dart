@@ -1,8 +1,6 @@
 // https://teslabs.com/openplayer/docs/docs/specs/id3v2.3.0%20-%20ID3.org.pdf
 
-import 'dart:typed_data';
-
-import '../parsers/tag_parser.dart';
+part of 'base.dart';
 
 class Mp3Metadata extends ParserTag {
   String? album; // TALB

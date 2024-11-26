@@ -15,7 +15,7 @@ void main() {
     expect(result.sampleRate, equals(48000));
     expect(result.title, equals("Title"));
     expect(result.trackNumber, equals(1));
-    expect(result.duration, equals(Duration(seconds: 0)));
+    expect(result.duration, equals(Duration(seconds: 1)));
     expect(result.totalDisc, equals(1));
     expect(result.lyrics, equals("Lyrics"));
     expect(result.trackTotal, equals(10));

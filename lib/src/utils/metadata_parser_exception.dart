@@ -13,3 +13,15 @@ class MetadataParserException implements Exception {
   String toString() =>
       'MetadataParserException : error during the parsing of "${track.path}"\n${message}';
 }
+
+class NoMetadataParserException implements Exception {
+  final File track;
+
+  const NoMetadataParserException({
+    required this.track,
+  });
+
+  @override
+  String toString() =>
+      'NoMetadataParserException : no parser for "${track.path}"';
+}

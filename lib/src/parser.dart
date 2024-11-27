@@ -9,6 +9,7 @@ import 'package:audio_metadata_reader/src/parsers/id3v2.dart';
 import 'package:audio_metadata_reader/src/parsers/mp4.dart';
 import 'package:audio_metadata_reader/src/parsers/ogg.dart';
 import 'package:audio_metadata_reader/src/parsers/flac.dart';
+import 'package:audio_metadata_reader/src/utils/metadata_parser_exception.dart';
 
 /// Parse the metadata of a file.
 ///
@@ -165,9 +166,7 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
     throw MetadataParserException(track: track, message: e.toString());
   }
 
-  throw MetadataParserException(
+  throw NoMetadataParserException(
     track: track,
-    message:
-        "No available parser for this file. Please raise an issue in Github",
   );
 }

@@ -450,6 +450,10 @@ class ID3v2Parser extends TagParser {
           final content = buffer.read(size);
           final trackInfo = TextFrame(content);
 
+          if (trackInfo.isEmpty) {
+            return;
+          }
+
           final match = _trackRegex.firstMatch(trackInfo);
 
           if (match != null) {

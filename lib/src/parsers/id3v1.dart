@@ -18,11 +18,16 @@ class ID3v1Parser extends TagParser {
    */
   String _extract(Uint8List tagData, int start, int end) {
     int i = start;
+
     while (i < end && tagData[i] != 0) {
       i++;
     }
 
-    return utf8.decode(tagData.sublist(start, i));
+    if (tagData[i] == 0) {
+      return utf8.decode(tagData.sublist(start, i));
+    }
+
+    return latin1.decode(tagData.sublist(start, end));
   }
 
   @override

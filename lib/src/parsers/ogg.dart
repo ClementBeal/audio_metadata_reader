@@ -5,6 +5,7 @@ import 'package:audio_metadata_reader/src/metadata/vorbis_metadata.dart';
 import 'package:audio_metadata_reader/src/parsers/tag_parser.dart';
 import 'package:audio_metadata_reader/src/parsers/vorbis_comment.dart';
 import 'package:audio_metadata_reader/src/utils/bit_manipulator.dart';
+import 'package:audio_metadata_reader/src/utils/buffer.dart';
 
 class OggPage {
   final Uint8List data;
@@ -29,12 +30,16 @@ class OggPage {
 class OGGParser extends TagParser {
   OGGParser({required super.fetchImage});
 
+  late final Buffer buffer;
+
   int? currentPageId;
   int? lastGranulePosition;
 
   @override
   ParserTag parse(RandomAccessFile reader) {
     reader.setPositionSync(0);
+
+    buffer = Buffer(randomAccessFile: reader);
 
     // first page : useless
     final pages = [
@@ -124,7 +129,7 @@ class OGGParser extends TagParser {
 
     Uint8List headerData;
     try {
-      headerData = reader.readSync(27);
+      headerData = buffer.read(27);
     } catch (e) {
       // Handle end of file gracefully (return what we have or throw an error)
       if (data.isNotEmpty) {
@@ -152,11 +157,11 @@ class OGGParser extends TagParser {
 
     // define the total of segments in this page
     final totalSegments = headerData[26];
-    final segsizes = reader.readSync(totalSegments);
+    final segsizes = buffer.read(totalSegments);
     List<int> pageData = []; // Data for the current page
 
     for (final segsize in segsizes) {
-      pageData.addAll(reader.readSync(segsize));
+      pageData.addAll(buffer.read(segsize));
     }
 
     // Concatenate data from continuing pages if necessary
@@ -178,7 +183,7 @@ class OGGParser extends TagParser {
     while (true) {
       Uint8List headerData;
       try {
-        headerData = reader.readSync(27);
+        headerData = buffer.read(27);
       } catch (e) {
         // Handle end of file gracefully (return what we have or throw an error)
         if (data.isNotEmpty) {
@@ -226,11 +231,11 @@ class OGGParser extends TagParser {
 
       // define the total of segments in this page
       final totalSegments = headerData[26];
-      final segsizes = reader.readSync(totalSegments);
+      final segsizes = buffer.read(totalSegments);
       List<int> pageData = []; // Data for the current page
 
       for (final segsize in segsizes) {
-        pageData.addAll(reader.readSync(segsize));
+        pageData.addAll(buffer.read(segsize));
       }
 
       // Concatenate data from continuing pages if necessary

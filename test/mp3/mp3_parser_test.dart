@@ -22,6 +22,7 @@ void main() {
     expect(result.genres.length, equals(1));
     expect(result.genres.first, equals("Rock"));
   });
+
   test("Parse MP3 file and the cover", () {
     final track = File('./test/mp3/track.mp3');
     final result = readMetadata(track, getImage: true);

@@ -564,16 +564,13 @@ class ID3v2Parser extends TagParser {
   }
 
   String getUnsynchronisedLyric(Uint8List content) {
-    var offset = 1;
+    int offset = 1;
 
     final reader = ByteData.sublistView(content);
     final encoding = reader.getInt8(0);
 
-    [
-      reader.getInt8(offset++),
-      reader.getInt8(offset++),
-      reader.getInt8(offset++),
-    ]; // language
+    // skip language
+    offset += 3;
 
     final description = [reader.getInt8(offset)];
 
@@ -582,7 +579,11 @@ class ID3v2Parser extends TagParser {
       offset++;
     }
 
-    final rest = reader.buffer.asUint8List(offset - 2);
+    while (reader.getInt8(offset) == 0) {
+      offset++;
+    }
+
+    final rest = reader.buffer.asUint8List(offset);
 
     switch (encoding) {
       case 0:
@@ -591,6 +592,9 @@ class ID3v2Parser extends TagParser {
             1, (nullCharacterPosition >= 0) ? nullCharacterPosition : null);
         return latin1Decoder.convert(informationBytes);
       case 1:
+        if (encoding == 1 || encoding == 2) {
+          return utf16Decoder.decodeUtf16Le(rest, 0, rest.length - 2);
+        }
         return utf16Decoder.decodeUtf16Le(rest);
       case 2:
         int nullCharacterPosition = 1;

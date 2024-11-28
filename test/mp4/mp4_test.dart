@@ -13,13 +13,13 @@ void main() {
     expect(result.artist, equals("Artist"));
     expect(result.discNumber, equals(1));
     expect(result.sampleRate, equals(48000));
-    // expect(result.bitrate, equals(48000));
     expect(result.title, equals("Title"));
     expect(result.trackNumber, equals(1));
     expect(
-        result.duration!.inMicroseconds -
-            Duration(microseconds: 1021333).inMicroseconds,
-        lessThanOrEqualTo(1000000));
+      result.duration!.inMicroseconds -
+          Duration(microseconds: 1021333).inMicroseconds,
+      lessThanOrEqualTo(1000000),
+    );
     expect(result.totalDisc, equals(1));
     expect(result.lyrics, equals("Lyrics"));
     expect(result.trackTotal, equals(10));
@@ -35,5 +35,17 @@ void main() {
     expect(result.pictures.first.pictureType, PictureType.coverFront);
     expect(result.pictures.first.bytes,
         File("test/data/cover.png").readAsBytesSync());
+  });
+
+  test("Complex date", () {
+    final track = File('./test/mp4/ahah.m4a');
+    final result = readMetadata(track, getImage: true);
+
+    expect(result.title, "Sexy Ladies (Remix) [feat. 50 Cent]");
+    expect(result.album, "FutureSex/LoveSounds (Deluxe Edition)");
+    expect(result.artist, "Justin Timberlake");
+    expect(result.year, (DateTime.utc(2006, 9, 12)));
+    expect(result.trackNumber, 15);
+    expect(result.trackTotal, 15);
   });
 }

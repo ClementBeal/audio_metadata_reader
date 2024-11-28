@@ -73,7 +73,7 @@ class MP4Parser extends TagParser {
 
   @override
   ParserTag parse(RandomAccessFile reader) {
-    reader.setPositionSync(4);
+    reader.setPositionSync(0);
 
     final lengthFile = reader.lengthSync();
 

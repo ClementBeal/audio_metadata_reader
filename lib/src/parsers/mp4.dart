@@ -105,9 +105,18 @@ class MP4Parser extends TagParser {
     final parser = ByteData.sublistView(headerBytes);
 
     final boxSize = parser.getUint32(0);
-    final boxName = String.fromCharCodes(headerBytes.sublist(4));
+    final boxNameBytes = headerBytes.sublist(4);
 
-    return BoxHeader(boxSize, boxName);
+    // throw error if we don't have a correct box name
+    if (boxNameBytes[0] == 0 &&
+        boxNameBytes[1] == 0 &&
+        boxNameBytes[2] == 0 &&
+        boxNameBytes[3] == 0) {
+      throw MetadataParserException(
+          track: File(""), message: "malformed MP4 file");
+    }
+
+    return BoxHeader(boxSize, String.fromCharCodes(boxNameBytes));
   }
 
   ///

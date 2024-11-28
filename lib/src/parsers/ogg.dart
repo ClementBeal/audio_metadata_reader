@@ -32,16 +32,15 @@ class OGGParser extends TagParser {
 
   late final Buffer buffer;
 
-  int? currentPageId;
-  int? lastGranulePosition;
-
   @override
   ParserTag parse(RandomAccessFile reader) {
     reader.setPositionSync(0);
 
     buffer = Buffer(randomAccessFile: reader);
 
-    // first page : useless
+    // first page : contains samplerate and bitrate
+    // second page : contains the metadata
+    // it may not contains all the metadata so we would have to get them later
     final pages = [
       _parseUniquePage(reader),
       _parseUniquePage(reader),
@@ -115,10 +114,13 @@ class OGGParser extends TagParser {
 
     int totalLengthVorbis = 0;
 
+    // we want to know how long is the vorbis comment
     for (int i = 0; i < userCommentListLength; i++) {
       totalLengthVorbis += buffer.getUint32(offset, Endian.little);
     }
 
+    // and if the Vorbis comment length is greater than the current page
+    // we read new pages until we have the needed length
     while (builder.length < totalLengthVorbis) {
       builder.add(_parseUniquePage(reader).data);
     }
@@ -136,6 +138,7 @@ class OGGParser extends TagParser {
     return m;
   }
 
+  /// Check if the OGG parser can be use for a specific file
   static bool canUserParser(RandomAccessFile reader) {
     reader.setPositionSync(0);
 
@@ -145,7 +148,8 @@ class OGGParser extends TagParser {
     return capturePattern == "OggS";
   }
 
-  // Only parse a unique OGG page
+  /// Parse a unique OGG page
+  /// It means from the OggS magic word to the last segment
   OggPage _parseUniquePage(RandomAccessFile reader) {
     // for the spec, see: https://wiki.xiph.org/Ogg
     List<int> data = []; //  contains data from previous (continuing) pages
@@ -197,7 +201,8 @@ class OGGParser extends TagParser {
     );
   }
 
-  // Only parse a unique OGG page
+  /// Parse the header of an OGG page
+  /// We also skip the content of the page to be synchronized
   OggPage _parseUniquePageHeader(RandomAccessFile reader) {
     Uint8List headerData;
 

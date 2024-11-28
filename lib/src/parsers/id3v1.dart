@@ -10,12 +10,10 @@ import 'package:audio_metadata_reader/src/utils/buffer.dart';
 class ID3v1Parser extends TagParser {
   final Mp3Metadata metadata = Mp3Metadata();
 
-  ID3v1Parser({fetchImage = false}) : super(fetchImage: fetchImage);
+  ID3v1Parser({super.fetchImage = false});
 
-  /**
-   * Extract the part text between the [start] and the [end]
-   * until we reach a "\x00" character
-   */
+  ///  Extract the part text between the [start] and the [end]
+  ///  until we reach a "\x00" character
   String _extract(Uint8List tagData, int start, int end) {
     int i = start;
 
@@ -112,11 +110,9 @@ class ID3v1Parser extends TagParser {
     return metadata;
   }
 
-  ///
   /// To detect if this file can be parsed with this parser,
   /// We have to check the 128 last bytes
   /// And if the first 3 are "TAG", it's ID3v1
-  ///
   static bool canUserParser(RandomAccessFile reader) {
     reader.setPositionSync(reader.lengthSync() - 128);
 

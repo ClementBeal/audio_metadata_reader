@@ -9,6 +9,8 @@ import 'package:audio_metadata_reader/src/utils/buffer.dart';
 
 import '../utils/bit_manipulator.dart';
 
+/// The different reserved block types that are defined
+/// for this format
 enum BlockType {
   streamInfo,
   padding,
@@ -44,7 +46,7 @@ class FlacParser extends TagParser {
   final metadata = VorbisMetadata();
   late final Buffer buffer;
 
-  FlacParser({fetchImage = false}) : super(fetchImage: fetchImage);
+  FlacParser({super.fetchImage = false});
 
   @override
   ParserTag parse(RandomAccessFile reader) {
@@ -136,23 +138,19 @@ class FlacParser extends TagParser {
     return block;
   }
 
-  ///
   /// To detect if this parser can be used to parse this file, the 4 first bytes
   /// must be equal to `fLaC`
-  ///
   static bool canUserParser(RandomAccessFile reader) {
     reader.setPositionSync(0);
     final vendorName = String.fromCharCodes(reader.readSync(4));
     return vendorName == "fLaC";
   }
 
-  ///
   /// Parse a Vorbis comment. All the number are little-endian coded.
   /// A comment has this structure `<name>=<DATA>`
   /// There may be multiple comments of the same kind
   ///
   /// https://xiph.org/vorbis/doc/v-comment.html
-  ///
   void _parseVorbisComment(Uint8List bytes) {
     int offset = 0;
 

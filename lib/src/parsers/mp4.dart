@@ -195,10 +195,13 @@ class MP4Parser extends TagParser {
           break;
 
         case "covr":
-          tags.picture = Picture(
-              bytes.sublist(16),
-              lookupMimeType("no path", headerBytes: bytes.sublist(16)) ?? "",
-              PictureType.coverFront);
+          if (fetchImage) {
+            final imageData = bytes.sublist(16);
+            tags.picture = Picture(
+                imageData,
+                lookupMimeType("no path", headerBytes: imageData) ?? "",
+                PictureType.coverFront);
+          }
         case "trkn":
           final a = getUint16(bytes.sublist(18, 20));
           final totalTracks = getUint16(bytes.sublist(20, 22));

@@ -1,7 +1,7 @@
 ## 0.0.11
 
 - OGG : fix performance
-- OGG :
+- ID3v2 : read the lyrics correctly for UTF8-LE
 - MP4 : reset the reader when we start the parsing
 
 ## 0.0.10

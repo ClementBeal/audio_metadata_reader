@@ -21,7 +21,7 @@ void parseVorbisComment(
 
   final commentName = utf8.decode(commentBytes);
 
-  dynamic value;
+  String value;
   value = utf8.decode(bytes.sublist(i));
 
   switch (commentName.toUpperCase()) {
@@ -30,7 +30,7 @@ void parseVorbisComment(
         return;
       }
 
-      final imageValue = value = base64Decode(value);
+      final imageValue = base64Decode(value);
       final buffer = ByteData.sublistView(imageValue);
       int offset = 0;
 

@@ -112,6 +112,19 @@ class OGGParser extends TagParser {
     final userCommentListLength = buffer.getUint32(offset, Endian.little);
     offset += 4;
 
+    int totalLengthVorbis = 0;
+
+    // we want to know how long is the vorbis comment
+    for (int i = 0; i < userCommentListLength; i++) {
+      totalLengthVorbis += buffer.getUint32(offset, Endian.little);
+    }
+
+    // and if the Vorbis comment length is greater than the current page
+    // we read new pages until we have the needed length
+    while (builder.length < totalLengthVorbis) {
+      builder.add(_parseUniquePage(reader).data);
+    }
+
     for (int i = 0; i < userCommentListLength; i++) {
       final commentLength = buffer.getUint32(offset, Endian.little);
       offset += 4;

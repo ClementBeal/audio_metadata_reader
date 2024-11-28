@@ -9,7 +9,7 @@ VorbisMetadata parseVorbisComment(
   Uint8List bytes,
   VorbisMetadata metadata,
 ) {
-  var i = 0;
+  int i = 0;
   final commentBytes = <int>[];
 
   while (bytes[i] != 0x3D) {

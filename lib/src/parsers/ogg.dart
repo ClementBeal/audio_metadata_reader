@@ -44,7 +44,7 @@ class OGGParser extends TagParser {
     // first page : useless
     final pages = [
       _parseUniquePage(reader),
-      _parsePages(reader),
+      _parseUniquePage(reader),
     ];
 
     VorbisMetadata m = VorbisMetadata();
@@ -56,12 +56,12 @@ class OGGParser extends TagParser {
         m.sampleRate = getUint32LE(content.sublist(12, 16));
         m.bitrate = getUint32LE(content.sublist(13, 17));
       } else if (String.fromCharCodes(content.sublist(0, 8)) == "OpusTags") {
-        m = _parseVorbisComment(content, 8, m);
+        m = _parseVorbisComment(content, 8, m, reader);
       } else if (String.fromCharCodes(content.sublist(0, 7)) ==
           String.fromCharCodes(
               [0x03, 0x76, 0x6F, 0x72, 0x62, 0x69, 0x73])) // "\x03vorbis"
       {
-        m = _parseVorbisComment(content, 7, m);
+        m = _parseVorbisComment(content, 7, m, reader);
       } else if (String.fromCharCodes(content.sublist(0, 7)) ==
           String.fromCharCodes(
               [0x01, 0x76, 0x6F, 0x72, 0x62, 0x69, 0x73])) // "\x01vorbis"
@@ -78,8 +78,14 @@ class OGGParser extends TagParser {
 
     if ((m.duration == null || m.duration == Duration.zero) &&
         m.sampleRate != null) {
+      OggPage? page;
+
+      while (page?.headerType != 0x04) {
+        page = _parseUniquePageHeader(reader);
+      }
+
       m.duration = Duration(
-        seconds: (lastGranulePosition! - pages.first.granulePosition) ~/
+        seconds: (page!.granulePosition - pages.first.granulePosition) ~/
             m.sampleRate!,
       );
     }
@@ -90,7 +96,14 @@ class OGGParser extends TagParser {
   }
 
   VorbisMetadata _parseVorbisComment(
-      Uint8List page, int headerOffset, VorbisMetadata m) {
+    Uint8List page,
+    int headerOffset,
+    VorbisMetadata m,
+    RandomAccessFile reader,
+  ) {
+    final builder = BytesBuilder(copy: false);
+    builder.add(page);
+
     int offset = headerOffset;
     final buffer = ByteData.sublistView(page);
     final vendorLength = buffer.getUint32(offset, Endian.little);
@@ -99,6 +112,16 @@ class OGGParser extends TagParser {
 
     final userCommentListLength = buffer.getUint32(offset, Endian.little);
     offset += 4;
+
+    int totalLengthVorbis = 0;
+
+    for (int i = 0; i < userCommentListLength; i++) {
+      totalLengthVorbis += buffer.getUint32(offset, Endian.little);
+    }
+
+    while (builder.length < totalLengthVorbis) {
+      builder.add(_parseUniquePage(reader).data);
+    }
 
     for (int i = 0; i < userCommentListLength; i++) {
       final commentLength = buffer.getUint32(offset, Endian.little);
@@ -174,89 +197,21 @@ class OGGParser extends TagParser {
     );
   }
 
-  // Parse multiple OGG pages and merge their content
-  // Only stop whem the header type is equal 0x04
-  OggPage _parsePages(RandomAccessFile reader) {
-    // for the spec, see: https://wiki.xiph.org/Ogg
-    List<int> data = []; //  contains data from previous (continuing) pages
+  // Only parse a unique OGG page
+  OggPage _parseUniquePageHeader(RandomAccessFile reader) {
+    Uint8List headerData;
 
-    while (true) {
-      Uint8List headerData;
-      try {
-        headerData = buffer.read(27);
-      } catch (e) {
-        // Handle end of file gracefully (return what we have or throw an error)
-        if (data.isNotEmpty) {
-          return OggPage(
-            data: Uint8List.fromList(data),
-            granulePosition: 0, // Or handle this differently
-            headerType: 0x04, // Treat as end of stream
-            bitstreamSerialNumber: -1,
-          );
-        } else {
-          // EOF reached
-          rethrow;
-        }
-      }
+    headerData = buffer.read(27);
 
-      if (headerData.length < 27) {
-        break;
-      }
-
-      final oggs = headerData.sublist(0, 4);
-      final version = headerData[4];
-      final headerType = headerData[5];
-      final granulePosition = getUint64LE(headerData.sublist(6, 14));
-      final bitstreamSerialNumber = getUint32LE(headerData.sublist(14, 18));
-
-      lastGranulePosition = granulePosition;
-
-      if (currentPageId == null) {
-        currentPageId = bitstreamSerialNumber;
-      }
-
-      // if we have change of page id
-      if (currentPageId != bitstreamSerialNumber) {
-        return OggPage(
-          data: Uint8List.fromList(data),
-          granulePosition: granulePosition,
-          headerType: headerType,
-          bitstreamSerialNumber: bitstreamSerialNumber,
-        );
-      }
-
-      if (String.fromCharCodes(oggs) != 'OggS' || version != 0) {
-        throw Exception('Not a valid ogg file!');
-      }
-
-      // define the total of segments in this page
-      final totalSegments = headerData[26];
-      final segsizes = buffer.read(totalSegments);
-      List<int> pageData = []; // Data for the current page
-
-      for (final segsize in segsizes) {
-        pageData.addAll(buffer.read(segsize));
-      }
-
-      // Concatenate data from continuing pages if necessary
-
-      if (headerType == 0x04) {
-        return OggPage(
-          data: Uint8List.fromList(data),
-          granulePosition: granulePosition,
-          headerType: headerType,
-          bitstreamSerialNumber: bitstreamSerialNumber,
-        );
-      } else {
-        data.addAll(pageData);
-      }
-    }
+    final headerType = headerData[5];
+    final granulePosition = getUint64LE(headerData.sublist(6, 14));
+    final bitstreamSerialNumber = getUint32LE(headerData.sublist(14, 18));
 
     return OggPage(
       data: Uint8List(0),
-      granulePosition: -1,
-      headerType: 0x04,
-      bitstreamSerialNumber: -1,
+      headerType: headerType,
+      granulePosition: granulePosition,
+      bitstreamSerialNumber: bitstreamSerialNumber,
     );
   }
 }

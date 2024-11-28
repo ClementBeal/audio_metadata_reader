@@ -24,7 +24,7 @@ class ID3v3Frame {
 ///
 /// Metadata frame defined in the ID3 tag
 ///
-String TextFrame(Uint8List information) {
+String getTextFromFrame(Uint8List information) {
   final encoding = information.first;
 
   switch (encoding) {
@@ -285,19 +285,19 @@ class ID3v2Parser extends TagParser {
         },
       "TALB" => () {
           final content = buffer.read(size);
-          metadata.album = TextFrame(content);
+          metadata.album = getTextFromFrame(content);
         },
       "TBPM" => () {
           final content = buffer.read(size);
-          metadata.bpm = TextFrame(content);
+          metadata.bpm = getTextFromFrame(content);
         },
       "TCOP" => () {
           final content = buffer.read(size);
-          metadata.copyrightMessage = TextFrame(content);
+          metadata.copyrightMessage = getTextFromFrame(content);
         },
       "TCON" => () {
           final content = buffer.read(size);
-          metadata.contentType = TextFrame(content);
+          metadata.contentType = getTextFromFrame(content);
           final regex = RegExp(r"(\d+).*");
           final containRegex = RegExp(r";|/|\||,");
 
@@ -316,51 +316,51 @@ class ID3v2Parser extends TagParser {
         },
       "TCOM" => () {
           final content = buffer.read(size);
-          metadata.composer = TextFrame(content);
+          metadata.composer = getTextFromFrame(content);
         },
       "TDAT" => () {
           final content = buffer.read(size);
-          metadata.date = TextFrame(content);
+          metadata.date = getTextFromFrame(content);
         },
       "TDLY" => () {
           final content = buffer.read(size);
-          metadata.playlistDelay = TextFrame(content);
+          metadata.playlistDelay = getTextFromFrame(content);
         },
       "TENC" => () {
           final content = buffer.read(size);
-          metadata.encodedBy = TextFrame(content);
+          metadata.encodedBy = getTextFromFrame(content);
         },
       "TFLT" => () {
           final content = buffer.read(size);
-          metadata.fileType = TextFrame(content);
+          metadata.fileType = getTextFromFrame(content);
         },
       "TIME" => () {
           final content = buffer.read(size);
-          metadata.time = TextFrame(content);
+          metadata.time = getTextFromFrame(content);
         },
       "TIT1" => () {
           final content = buffer.read(size);
-          metadata.contentGroupDescription = TextFrame(content);
+          metadata.contentGroupDescription = getTextFromFrame(content);
         },
       "TIT2" => () {
           final content = buffer.read(size);
-          metadata.songName = TextFrame(content);
+          metadata.songName = getTextFromFrame(content);
         },
       "TIT3" => () {
           final content = buffer.read(size);
-          metadata.subtitle = TextFrame(content);
+          metadata.subtitle = getTextFromFrame(content);
         },
       "TKEY" => () {
           final content = buffer.read(size);
-          metadata.initialKey = TextFrame(content);
+          metadata.initialKey = getTextFromFrame(content);
         },
       "TLAN" => () {
           final content = buffer.read(size);
-          metadata.languages = TextFrame(content);
+          metadata.languages = getTextFromFrame(content);
         },
       "TLEN" => () {
           final content = buffer.read(size);
-          final time = int.parse(TextFrame(content));
+          final time = int.parse(getTextFromFrame(content));
 
           if ((time / 1000) < 1) {
             metadata.duration = Duration(seconds: time);
@@ -370,67 +370,67 @@ class ID3v2Parser extends TagParser {
         },
       "TMED" => () {
           final content = buffer.read(size);
-          metadata.mediatype = TextFrame(content);
+          metadata.mediatype = getTextFromFrame(content);
         },
       "TOAL" => () {
           final content = buffer.read(size);
-          metadata.originalAlbum = TextFrame(content);
+          metadata.originalAlbum = getTextFromFrame(content);
         },
       "TOFN" => () {
           final content = buffer.read(size);
-          metadata.originalFilename = TextFrame(content);
+          metadata.originalFilename = getTextFromFrame(content);
         },
       "TOLY" => () {
           final content = buffer.read(size);
-          metadata.originalTextWriter = TextFrame(content);
+          metadata.originalTextWriter = getTextFromFrame(content);
         },
       "TOPE" => () {
           final content = buffer.read(size);
-          metadata.originalArtist = TextFrame(content);
+          metadata.originalArtist = getTextFromFrame(content);
         },
       "TORY" => () {
           final content = buffer.read(size);
-          metadata.originalReleaseYear = _parseYear(TextFrame(content));
+          metadata.originalReleaseYear = _parseYear(getTextFromFrame(content));
         },
       "TOWN" => () {
           final content = buffer.read(size);
-          metadata.fileOwner == TextFrame(content);
+          metadata.fileOwner == getTextFromFrame(content);
         },
       "TDRC" => () {
           final content = buffer.read(size);
-          metadata.year = _parseYear(TextFrame(content));
+          metadata.year = _parseYear(getTextFromFrame(content));
         },
       "TYER" => () {
           final content = buffer.read(size);
-          metadata.year = _parseYear(TextFrame(content));
+          metadata.year = _parseYear(getTextFromFrame(content));
         },
       "TRDA" => () {
           final content = buffer.read(size);
-          metadata.year = _parseYear(TextFrame(content));
+          metadata.year = _parseYear(getTextFromFrame(content));
         },
       "TPE1" => () {
           final content = buffer.read(size);
-          metadata.leadPerformer = TextFrame(content);
+          metadata.leadPerformer = getTextFromFrame(content);
         },
       "TPE2" => () {
           final content = buffer.read(size);
-          metadata.bandOrOrchestra = TextFrame(content);
+          metadata.bandOrOrchestra = getTextFromFrame(content);
         },
       "TPE3" => () {
           final content = buffer.read(size);
-          metadata.conductor = TextFrame(content);
+          metadata.conductor = getTextFromFrame(content);
         },
       "TPE4" => () {
           final content = buffer.read(size);
-          metadata.interpreted = TextFrame(content);
+          metadata.interpreted = getTextFromFrame(content);
         },
       "TEXT" => () {
           final content = buffer.read(size);
-          metadata.textWriter = TextFrame(content);
+          metadata.textWriter = getTextFromFrame(content);
         },
       "TPOS" || "TPA" => () {
           final content = buffer.read(size);
-          final value = TextFrame(content);
+          final value = getTextFromFrame(content);
           metadata.partOfSet = value;
 
           final match = _discRegex.firstMatch(value);
@@ -444,11 +444,11 @@ class ID3v2Parser extends TagParser {
         },
       "TPUB" => () {
           final content = buffer.read(size);
-          metadata.publisher = TextFrame(content);
+          metadata.publisher = getTextFromFrame(content);
         },
       "TRCK" => () {
           final content = buffer.read(size);
-          final trackInfo = TextFrame(content);
+          final trackInfo = getTextFromFrame(content);
 
           if (trackInfo.isEmpty) {
             return;
@@ -465,19 +465,19 @@ class ID3v2Parser extends TagParser {
         },
       "TRSN" => () {
           final content = buffer.read(size);
-          metadata.internetRadioStationName = TextFrame(content);
+          metadata.internetRadioStationName = getTextFromFrame(content);
         },
       "TRSO" => () {
           final content = buffer.read(size);
-          metadata.internetRadioStationOwner = TextFrame(content);
+          metadata.internetRadioStationOwner = getTextFromFrame(content);
         },
       "TSIZ" => () {
           final content = buffer.read(size);
-          metadata.size = TextFrame(content);
+          metadata.size = getTextFromFrame(content);
         },
       "TSRC" => () {
           final content = buffer.read(size);
-          metadata.isrc = TextFrame(content);
+          metadata.isrc = getTextFromFrame(content);
         },
       "TXXX" => () {
           final content = buffer.read(size);
@@ -490,7 +490,7 @@ class ID3v2Parser extends TagParser {
         },
       "TSSE" => () {
           final content = buffer.read(size);
-          metadata.encoderSoftware = TextFrame(content);
+          metadata.encoderSoftware = getTextFromFrame(content);
         },
       _ => () {
           buffer.skip(size);

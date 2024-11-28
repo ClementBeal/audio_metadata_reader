@@ -113,7 +113,7 @@ class MP4Parser extends TagParser {
         boxNameBytes[2] == 0 &&
         boxNameBytes[3] == 0) {
       throw MetadataParserException(
-          track: File(""), message: "malformed MP4 file");
+          track: File(""), message: "Malformed MP4 file");
     }
 
     return BoxHeader(boxSize, String.fromCharCodes(boxNameBytes));

@@ -207,6 +207,16 @@ class OGGParser extends TagParser {
     final granulePosition = getUint64LE(headerData.sublist(6, 14));
     final bitstreamSerialNumber = getUint32LE(headerData.sublist(14, 18));
 
+    final totalSegments = headerData[26];
+    final segsizes = buffer.read(totalSegments);
+    int total = 0;
+
+    for (final segsize in segsizes) {
+      total += segsize;
+    }
+
+    buffer.skip(total);
+
     return OggPage(
       data: Uint8List(0),
       headerType: headerType,

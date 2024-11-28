@@ -1,14 +1,23 @@
+## 0.0.11
+
+- OGG : fix performance
+- OGG :
+- MP4 : reset the reader when we start the parsing
+
+## 0.0.10
+
+- ID3v2 : read correctly the lyric if we have UTF-16
+- Opus  : performance improvement. Back to a few ms per file
+- ID3v1 : fix the metadata if we have ASCII
+- Add a new exception to differenciate a parse error from an non-implemented parser
+- ID3v2 : fix the track number. Seems that it can be defined but empty
+
 ## 0.0.9
 
 - OGG   : compute correctly the duration
 - ID3v2 : skip correctly the images if we don't want them
 - ID3v2 : take care of the extended header
 - ID3v2 : use the correct MPEG version and layer
-- ID3v2 : read correctly the lyric if we have UTF-16
-- Opus  : performance improvement. Back to a few ms per file
-- ID3v1 : fix the metadata if we have ASCII
-- Add a new exception to differenciate a parse error from an non-implemented parser
-- ID3v2 : fix the track number. Seems that it can be defined but empty
 
 ## 0.0.8
 

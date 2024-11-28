@@ -131,8 +131,7 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
       newMetadata.pictures.addAll(oggMetadata.pictures);
 
       return newMetadata;
-    }
-    if (ID3v2Parser.isID3v1(reader)) {
+    } else if (ID3v1Parser.canUserParser(reader)) {
       final mp3Metadata = ID3v1Parser().parse(reader) as Mp3Metadata;
 
       final a = AudioMetadata(

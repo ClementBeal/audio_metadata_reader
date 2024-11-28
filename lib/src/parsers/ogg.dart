@@ -129,7 +129,11 @@ class OGGParser extends TagParser {
       final commentLength = buffer.getUint32(offset, Endian.little);
       offset += 4;
 
-      final comment = buffer.buffer.asUint8List(offset, commentLength);
+      while (offset + commentLength >= builder.length) {
+        builder.add(_parseUniquePage(reader).data);
+      }
+
+      final comment = builder.toBytes().sublist(offset, offset + commentLength);
       offset += commentLength;
 
       parseVorbisComment(comment, m, fetchImage);

@@ -1,3 +1,9 @@
+## 0.0.11
+
+- OGG : fix performance
+- OGG :
+- MP4 : reset the reader when we start the parsing
+
 ## 0.0.10
 
 - ID3v2 : read correctly the lyric if we have UTF-16

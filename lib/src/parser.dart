@@ -159,9 +159,12 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
 
       return a;
     }
-  } catch (e, trace) {
-    print(trace);
-    throw MetadataParserException(track: track, message: e.toString());
+  } on MetadataParserException catch (e, s) {
+    Error.throwWithStackTrace(
+        MetadataParserException(track: track, message: e.message), s);
+  } catch (e, s) {
+    Error.throwWithStackTrace(
+        MetadataParserException(track: track, message: e.toString()), s);
   }
 
   throw NoMetadataParserException(

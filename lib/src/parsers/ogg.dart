@@ -56,12 +56,12 @@ class OGGParser extends TagParser {
         m.sampleRate = getUint32LE(content.sublist(12, 16));
         m.bitrate = getUint32LE(content.sublist(13, 17));
       } else if (String.fromCharCodes(content.sublist(0, 8)) == "OpusTags") {
-        m = _parseVorbisComment(content, 8, m, reader);
+        _parseVorbisComment(content, 8, m, reader);
       } else if (String.fromCharCodes(content.sublist(0, 7)) ==
           String.fromCharCodes(
               [0x03, 0x76, 0x6F, 0x72, 0x62, 0x69, 0x73])) // "\x03vorbis"
       {
-        m = _parseVorbisComment(content, 7, m, reader);
+        _parseVorbisComment(content, 7, m, reader);
       } else if (String.fromCharCodes(content.sublist(0, 7)) ==
           String.fromCharCodes(
               [0x01, 0x76, 0x6F, 0x72, 0x62, 0x69, 0x73])) // "\x01vorbis"
@@ -130,7 +130,7 @@ class OGGParser extends TagParser {
       final comment = buffer.buffer.asUint8List(offset, commentLength);
       offset += commentLength;
 
-      m = parseVorbisComment(comment, m);
+      parseVorbisComment(comment, m, fetchImage);
     }
 
     return m;

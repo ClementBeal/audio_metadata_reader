@@ -5,9 +5,10 @@ import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/metadata/vorbis_metadata.dart';
 import 'package:audio_metadata_reader/src/parsers/tag_parser.dart';
 
-VorbisMetadata parseVorbisComment(
+void parseVorbisComment(
   Uint8List bytes,
   VorbisMetadata metadata,
+  bool fetchImage,
 ) {
   int i = 0;
   final commentBytes = <int>[];
@@ -25,6 +26,10 @@ VorbisMetadata parseVorbisComment(
 
   switch (commentName.toUpperCase()) {
     case 'METADATA_BLOCK_PICTURE':
+      if (!fetchImage) {
+        return;
+      }
+
       final imageValue = value = base64Decode(value);
       final buffer = ByteData.sublistView(imageValue);
       int offset = 0;
@@ -173,6 +178,4 @@ VorbisMetadata parseVorbisComment(
       metadata.unknowns[commentName.toUpperCase()] = value;
       break;
   }
-
-  return metadata;
 }

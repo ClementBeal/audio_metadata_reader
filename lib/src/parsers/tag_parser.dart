@@ -45,8 +45,15 @@ class AudioMetadata {
   /// The language of the track
   String? language;
 
-  ///
+  /// The main artist of the track
+  /// For classical music, it would be the composer
+  /// In popular music this is usually the performing band or singer
   String? artist;
+
+  /// The artists that are on a track but are not consired as the main artist
+  /// For instance with `Dr. Dre - Still D.R.E. ft. Snoop Dogg`, Snoop Dogg is
+  /// a performer
+  final List<String> performers = [];
 
   /// The track's title
   String? title;

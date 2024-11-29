@@ -85,39 +85,45 @@ class TXXXFrame {
   late final String information;
 
   TXXXFrame(Uint8List information) {
-    encoding = information.first;
+    int offset = 0;
+    encoding = information[offset++];
 
-    final nullCharacterPositionDescription = information.indexOf(0, 1);
-    final informationBytesDescription = information.sublist(
-        1,
-        (nullCharacterPositionDescription >= 0)
-            ? nullCharacterPositionDescription
-            : null);
+    final descriptionData = <int>[];
+
+    if (encoding == 1 || encoding == 2) {
+      while (!(information[offset] == 0 && information[offset + 1] == 0)) {
+        descriptionData.add(information[offset]);
+        descriptionData.add(information[offset + 1]);
+        offset += 2;
+      }
+    } else {
+      while (information[offset] != 0) {
+        descriptionData.add(information[offset++]);
+      }
+    }
+
+    final rest = information.buffer.asUint8List(offset);
 
     switch (encoding) {
       case 0:
-        description = latin1Decoder.convert(informationBytesDescription);
+        description = latin1Decoder.convert(descriptionData);
 
-        this.information = latin1Decoder
-            .convert(information.sublist(nullCharacterPositionDescription));
+        this.information = latin1Decoder.convert(rest);
         break;
       case 1:
-        description = utf16Decoder.decodeUtf16Le(informationBytesDescription);
+        description = utf16Decoder.decodeUtf16Le(descriptionData);
 
-        this.information = utf16Decoder.decodeUtf16Le(
-            information.sublist(nullCharacterPositionDescription));
+        this.information = utf16Decoder.decodeUtf16Le(rest);
         break;
       case 2:
-        description = utf16Decoder.decodeUtf16Le(informationBytesDescription);
+        description = utf16Decoder.decodeUtf16Be(descriptionData);
 
-        this.information = utf16Decoder.decodeUtf16Le(
-            information.sublist(nullCharacterPositionDescription));
+        this.information = utf16Decoder.decodeUtf16Be(rest);
         break;
       case 3:
-        description = utf8Decoder.convert(informationBytesDescription);
+        description = utf8Decoder.convert(descriptionData);
 
-        this.information = utf8Decoder
-            .convert(information.sublist(nullCharacterPositionDescription));
+        this.information = utf8Decoder.convert(rest);
         break;
     }
   }

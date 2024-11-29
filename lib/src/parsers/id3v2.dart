@@ -75,49 +75,74 @@ String getTextFromFrame(Uint8List information) {
   return "";
 }
 
-///
 /// Custom metadata frame
 /// Can be used my MusicBrainz for instance
-///
 class TXXXFrame {
   late final int encoding;
   late final String description;
   late final String information;
 
   TXXXFrame(Uint8List information) {
-    encoding = information.first;
+    int offset = 0;
+    encoding = information[offset++];
 
-    final nullCharacterPositionDescription = information.indexOf(0, 1);
-    final informationBytesDescription = information.sublist(
-        1,
-        (nullCharacterPositionDescription >= 0)
-            ? nullCharacterPositionDescription
-            : null);
+    final descriptionData = <int>[];
+    bool isUTF16 = encoding == 1 || encoding == 2;
+
+    if (isUTF16) {
+      while (!(information[offset] == 0 && information[offset + 1] == 0)) {
+        descriptionData.add(information[offset]);
+        descriptionData.add(information[offset + 1]);
+        offset += 2;
+      }
+
+      // we pass the final zeros
+      while (information[offset] == 0) {
+        offset++;
+      }
+    } else {
+      while (information[offset] != 0) {
+        descriptionData.add(information[offset++]);
+      }
+    }
+
+    int lastCharPosition = information.length - 1;
+
+    // can be 00 for utf16 or 0 for other
+    bool hasTerminalEmptyCharacter = information[lastCharPosition] == 0 &&
+        information[lastCharPosition - 1] == 0;
+
+    // we need to remove the empty character at the end
+    // it's a single or double zero
+    final length = information.length -
+        offset -
+        (hasTerminalEmptyCharacter
+            ? isUTF16
+                ? 2
+                : 1
+            : 0);
+    final rest = information.buffer.asUint8List(offset, length);
 
     switch (encoding) {
       case 0:
-        description = latin1Decoder.convert(informationBytesDescription);
+        description = latin1Decoder.convert(descriptionData);
 
-        this.information = latin1Decoder
-            .convert(information.sublist(nullCharacterPositionDescription));
+        this.information = latin1Decoder.convert(rest);
         break;
       case 1:
-        description = utf16Decoder.decodeUtf16Le(informationBytesDescription);
+        description = utf16Decoder.decodeUtf16Le(descriptionData);
 
-        this.information = utf16Decoder.decodeUtf16Le(
-            information.sublist(nullCharacterPositionDescription));
+        this.information = utf16Decoder.decodeUtf16Le(rest);
         break;
       case 2:
-        description = utf16Decoder.decodeUtf16Le(informationBytesDescription);
+        description = utf16Decoder.decodeUtf16Be(descriptionData);
 
-        this.information = utf16Decoder.decodeUtf16Le(
-            information.sublist(nullCharacterPositionDescription));
+        this.information = utf16Decoder.decodeUtf16Be(rest);
         break;
       case 3:
-        description = utf8Decoder.convert(informationBytesDescription);
+        description = utf8Decoder.convert(descriptionData);
 
-        this.information = utf8Decoder
-            .convert(information.sublist(nullCharacterPositionDescription));
+        this.information = utf8Decoder.convert(rest);
         break;
     }
   }

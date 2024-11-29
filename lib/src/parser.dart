@@ -51,6 +51,12 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
       a.pictures = mp3Metadata.pictures;
       a.genres = mp3Metadata.genres;
 
+      final guestArtistFrame = mp3Metadata.customMetadata["GUEST ARTIST"];
+
+      if (guestArtistFrame != null) {
+        a.performers.addAll(guestArtistFrame.split("/"));
+      }
+
       return a;
     } else if (FlacParser.canUserParser(reader)) {
       final vorbisMetadata =
@@ -75,13 +81,14 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
 
       newMetadata.genres = vorbisMetadata.genres;
       newMetadata.pictures = vorbisMetadata.pictures;
+      newMetadata.performers.addAll(vorbisMetadata.performer);
 
       return newMetadata;
     } else if (MP4Parser.canUserParser(reader)) {
       final mp4Metadata =
           MP4Parser(fetchImage: getImage).parse(reader) as Mp4Metadata;
 
-      final a = AudioMetadata(
+      final newMetadata = AudioMetadata(
         file: track,
         album: mp4Metadata.album,
         artist: mp4Metadata.artist,
@@ -99,14 +106,14 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
       );
 
       if (mp4Metadata.picture != null) {
-        a.pictures.add(mp4Metadata.picture!);
+        newMetadata.pictures.add(mp4Metadata.picture!);
       }
 
       if (mp4Metadata.genre != null) {
-        a.genres.add(mp4Metadata.genre!);
+        newMetadata.genres.add(mp4Metadata.genre!);
       }
 
-      return a;
+      return newMetadata;
     } else if (OGGParser.canUserParser(reader)) {
       final oggMetadata =
           OGGParser(fetchImage: getImage).parse(reader) as VorbisMetadata;
@@ -129,12 +136,13 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
       );
       newMetadata.genres = oggMetadata.genres;
       newMetadata.pictures.addAll(oggMetadata.pictures);
+      newMetadata.performers.addAll(oggMetadata.performer);
 
       return newMetadata;
     } else if (ID3v1Parser.canUserParser(reader)) {
       final mp3Metadata = ID3v1Parser().parse(reader) as Mp3Metadata;
 
-      final a = AudioMetadata(
+      final newMetadata = AudioMetadata(
         file: track,
         album: mp3Metadata.album,
         artist: mp3Metadata.bandOrOrchestra ??
@@ -154,10 +162,10 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
         discNumber: mp3Metadata.discNumber,
       );
 
-      a.pictures = mp3Metadata.pictures;
-      a.genres = mp3Metadata.genres;
+      newMetadata.pictures = mp3Metadata.pictures;
+      newMetadata.genres = mp3Metadata.genres;
 
-      return a;
+      return newMetadata;
     }
   } on MetadataParserException catch (e, s) {
     Error.throwWithStackTrace(

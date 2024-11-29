@@ -75,10 +75,8 @@ String getTextFromFrame(Uint8List information) {
   return "";
 }
 
-///
 /// Custom metadata frame
 /// Can be used my MusicBrainz for instance
-///
 class TXXXFrame {
   late final int encoding;
   late final String description;
@@ -89,12 +87,18 @@ class TXXXFrame {
     encoding = information[offset++];
 
     final descriptionData = <int>[];
+    bool isUTF16 = encoding == 1 || encoding == 2;
 
-    if (encoding == 1 || encoding == 2) {
+    if (isUTF16) {
       while (!(information[offset] == 0 && information[offset + 1] == 0)) {
         descriptionData.add(information[offset]);
         descriptionData.add(information[offset + 1]);
         offset += 2;
+      }
+
+      // we pass the final zeros
+      while (information[offset] == 0) {
+        offset++;
       }
     } else {
       while (information[offset] != 0) {
@@ -102,7 +106,22 @@ class TXXXFrame {
       }
     }
 
-    final rest = information.buffer.asUint8List(offset);
+    int lastCharPosition = information.length - 1;
+
+    // can be 00 for utf16 or 0 for other
+    bool hasTerminalEmptyCharacter = information[lastCharPosition] == 0 &&
+        information[lastCharPosition - 1] == 0;
+
+    // we need to remove the empty character at the end
+    // it's a single or double zero
+    final length = information.length -
+        offset -
+        (hasTerminalEmptyCharacter
+            ? isUTF16
+                ? 2
+                : 1
+            : 0);
+    final rest = information.buffer.asUint8List(offset, length);
 
     switch (encoding) {
       case 0:

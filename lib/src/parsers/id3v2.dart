@@ -573,11 +573,10 @@ class ID3v2Parser extends TagParser {
 
     offset++;
 
-    final description = [reader.getInt8(offset)];
+    final description = [reader.getInt8(offset++)];
 
     while (description.last != 0) {
-      description.add(reader.getInt8(offset));
-      offset++;
+      description.add(reader.getInt8(offset++));
     }
 
     if (encoding == 1 || encoding == 2) {

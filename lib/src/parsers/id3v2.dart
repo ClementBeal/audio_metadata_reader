@@ -556,9 +556,10 @@ class ID3v2Parser extends TagParser {
   }
 
   Picture getPicture(Uint8List content) {
-    var offset = 1;
+    int offset = 0;
 
     final reader = ByteData.sublistView(content);
+    final encoding = reader.getUint8(offset++);
 
     final mimetype = [reader.getUint8(offset++)];
 
@@ -572,13 +573,17 @@ class ID3v2Parser extends TagParser {
 
     offset++;
 
-    final description = [reader.getUint8(offset)];
-    offset += 1;
+    final description = [reader.getInt8(offset)];
 
     while (description.last != 0) {
-      final a = reader.getUint8(offset);
-      description.add(a);
+      description.add(reader.getInt8(offset));
       offset++;
+    }
+
+    if (encoding == 1 || encoding == 2) {
+      while (reader.getInt8(offset) == 0) {
+        offset++;
+      }
     }
 
     return Picture(

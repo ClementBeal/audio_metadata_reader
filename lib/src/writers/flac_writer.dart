@@ -106,12 +106,12 @@ class FlacWriter {
     headerBytes.add(intToUint32(0)); // No color depth for now
     headerBytes.add(intToUint32(0)); // No color number for now
     headerBytes.add(intToUint32(picture.bytes.length));
+    headerBytes.add(picture.bytes);
 
-    final blockLength = headerBytes.length + picture.bytes.length;
+    final blockLength = headerBytes.length;
 
     _writeBlockHeader(builder, 6, blockLength, false);
     builder.add(headerBytes.toBytes());
-    builder.add(picture.bytes);
   }
 
   void _writeVorbisComments(BytesBuilder builder, VorbisMetadata metadata) {

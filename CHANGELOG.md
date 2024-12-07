@@ -4,6 +4,19 @@
 - ID3v2 : read the lyrics correctly for UTF8-LE
 - MP4 : reset the reader when we start the parsing
 
+## [1.1.0](https://github.com/ClementBeal/audio_metadata_reader/compare/v1.0.0...v1.1.0) (2024-12-07)
+
+
+### Features
+
+* support album artist ([#39](https://github.com/ClementBeal/audio_metadata_reader/issues/39)) ([97c84cb](https://github.com/ClementBeal/audio_metadata_reader/commit/97c84cb9aede651eb8957e27e84047e467ec4e54))
+
+
+### Bug Fixes
+
+* ID3v2 wasn't parsing description as UTF-16 ([#42](https://github.com/ClementBeal/audio_metadata_reader/issues/42)) ([78e8c79](https://github.com/ClementBeal/audio_metadata_reader/commit/78e8c79d3240e38c60c5f6d91cec12d4642cdf72))
+* parse correctly the null character ([#43](https://github.com/ClementBeal/audio_metadata_reader/issues/43)) ([7dda538](https://github.com/ClementBeal/audio_metadata_reader/commit/7dda538f2caf865153086556db28259923184daf))
+
 ## 1.0.0 (2024-11-28)
 
 

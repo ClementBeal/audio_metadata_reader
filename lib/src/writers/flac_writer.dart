@@ -1,0 +1,157 @@
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:audio_metadata_reader/src/metadata/base.dart';
+import 'package:audio_metadata_reader/src/parsers/flac.dart';
+import 'package:audio_metadata_reader/src/utils/bit_manipulator.dart';
+
+class FlacWriter {
+  void write(File file, VorbisMetadata metadata) {
+    final builder = BytesBuilder();
+
+    final reader = file.openSync();
+
+    reader.setPositionSync(0);
+
+    builder.add(reader.readSync(4));
+
+    _writeVorbisComments(builder, metadata);
+
+    // for (var picture in metadata.pictures) {
+    //   _writePictureBlock(builder, picture);
+    // }
+
+    bool isLastBlock = false;
+    while (!isLastBlock) {
+      final block = _parseMetadataBlock(reader, builder, metadata);
+      isLastBlock = block.isLastBlock;
+    }
+
+    reader.closeSync();
+    file.writeAsBytesSync(builder.toBytes());
+  }
+
+  MetadataBlockHeader _parseMetadataBlock(
+      RandomAccessFile buffer, BytesBuilder builder, VorbisMetadata metadata) {
+    final bytes = buffer.readSync(4);
+    final byteNumber = bytes[0];
+
+    final MetadataBlockHeader block = (
+      isLastBlock: byteNumber >> 7 == 1, // 0: not last block - 1: last block
+      type: byteNumber & 0x7F, // keep the 7 next bits (0XXXXXXX)
+      length: bytes[3] | bytes[2] << 8 | bytes[1] << 16,
+    );
+
+    // we skip the metadata blocks because we rewrite them
+    // block 4 -> Vorbis comment
+    // block 6 -> picture
+    switch (block.type) {
+      case 4:
+      case 6:
+        buffer.setPositionSync(buffer.positionSync() + block.length);
+
+        break;
+      default:
+        // _writeBlock(
+        //   builder,
+        //   buffer.readSync(block.length),
+        //   block.type,
+        //   block.isLastBlock,
+        // );
+        buffer.setPositionSync(buffer.positionSync() + block.length);
+
+        break;
+    }
+
+    return block;
+  }
+
+  void _writeBlockHeader(
+      BytesBuilder builder, int blockType, int length, bool isLastBlock) {
+    int firstByte = isLastBlock ? (1 << 7) : 0;
+    firstByte = (firstByte | blockType);
+
+    builder.addByte(firstByte);
+    builder.add(intToUint24(length));
+  }
+
+  void _writeBlock(
+      BytesBuilder builder, Uint8List data, int blockId, bool isLastBlock) {
+    int firstByte = (isLastBlock) ? 255 | blockId : blockId & 255;
+
+    builder.addByte(firstByte);
+    builder.add(intToUint24(data.length));
+
+    builder.add(data);
+  }
+
+  // void _writePictureBlock(BytesBuilder builder, Picture picture) {
+  //   final headerBytes = BytesBuilder();
+
+  //   headerBytes.add(intToUint32(picture.pictureType.index));
+  //   headerBytes.add(intToUint32(picture.mimetype.length));
+  //   headerBytes.add(utf16.encode(picture.mimetype));
+  //   headerBytes.add(intToUint32(0)); // No Description for now
+  //   headerBytes.add(intToUint32(0)); // No width for now
+  //   headerBytes.add(intToUint32(0)); // No height for now
+  //   headerBytes.add(intToUint32(0)); // No color depth for now
+  //   headerBytes.add(intToUint32(0)); // No color number for now
+
+  //   final blockLength = headerBytes.length + picture.bytes.length;
+
+  //   _writeBlockHeader(builder, 6, blockLength, false);
+  //   builder.add(headerBytes.toBytes());
+  //   builder.add(picture.bytes);
+  // }
+
+  void _writeVorbisComments(BytesBuilder builder, VorbisMetadata metadata) {
+    final mainBuilder = BytesBuilder();
+    final commentsBuilder = BytesBuilder();
+
+    // vendor length
+    // I don't know what to use. The library name? The user selects the name he wants?
+    mainBuilder.add(intToUint32LE(0));
+
+    int i = 0;
+
+    void _writeComment(String name, List<String> data) {
+      if (data.isNotEmpty) {
+        for (var d in data) {
+          i++;
+          final toWrite = utf8.encode("$name=$d");
+          commentsBuilder.add(intToUint32LE(toWrite.length));
+          commentsBuilder.add(toWrite);
+        }
+      }
+    }
+
+    _writeComment("TITLE", metadata.title);
+    _writeComment("VERSION", metadata.version);
+    _writeComment("ALBUM", metadata.album);
+    _writeComment(
+        "TRACKNUMBER", metadata.trackNumber.map((e) => e.toString()).toList());
+    _writeComment("ARTIST", metadata.artist);
+    _writeComment("PERFORMER", metadata.performer);
+    _writeComment("COPYRIGHT", metadata.copyright);
+    _writeComment("LICENSE", metadata.license);
+    _writeComment("ORGANIZATION", metadata.organization);
+    _writeComment("DESCRIPTION", metadata.description);
+    _writeComment("GENRE", metadata.genres);
+    _writeComment(
+        "DATE",
+        metadata.date
+            .map((d) =>
+                "${d.year}/${d.month.toString().padLeft(2, "0")}/${d.day.toString().padLeft(2, "0")}")
+            .toList());
+    _writeComment("LOCATION", metadata.location);
+    _writeComment("CONTACT", metadata.contact);
+    _writeComment("ISRC", metadata.isrc);
+
+    mainBuilder.add(intToUint32LE(i));
+    mainBuilder.add(commentsBuilder.toBytes());
+
+    _writeBlockHeader(builder, 4, mainBuilder.length, true);
+    builder.add(mainBuilder.takeBytes());
+  }
+}

@@ -205,7 +205,6 @@ class ID3v2Parser extends TagParser {
 
       // 10 -> frame header
       offset = offset + 10 + frame.size;
-
       processFrame(frame.id, frame.size);
     }
 
@@ -674,13 +673,13 @@ class ID3v2Parser extends TagParser {
     return tagIdentity == "TAG";
   }
 
-  int _parseYear(String year) {
+  int? _parseYear(String year) {
     if (year.contains("-")) {
-      return int.parse(year.split("-").first);
+      return int.tryParse(year.split("-").first);
     } else if (year.contains("/")) {
-      return int.parse(year.split("/").first);
+      return int.tryParse(year.split("/").first);
     } else {
-      return int.parse(year);
+      return int.tryParse(year);
     }
   }
 

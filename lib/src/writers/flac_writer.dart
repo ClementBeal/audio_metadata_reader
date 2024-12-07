@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/parsers/flac.dart';
 import 'package:audio_metadata_reader/src/utils/bit_manipulator.dart';
@@ -16,15 +17,15 @@ class FlacWriter {
 
     builder.add(reader.readSync(4));
 
-    // for (var picture in metadata.pictures) {
-    //   _writePictureBlock(builder, picture);
-    // }
-
     bool isLastBlock = false;
     int i = 0;
     while (!isLastBlock) {
       if (i == 1) {
         _writeVorbisComments(builder, metadata);
+
+        for (var picture in metadata.pictures) {
+          _writePictureBlock(builder, picture);
+        }
       }
 
       final block = _parseMetadataBlock(reader, builder, metadata);
@@ -93,24 +94,25 @@ class FlacWriter {
     builder.add(data);
   }
 
-  // void _writePictureBlock(BytesBuilder builder, Picture picture) {
-  //   final headerBytes = BytesBuilder();
+  void _writePictureBlock(BytesBuilder builder, Picture picture) {
+    final headerBytes = BytesBuilder();
 
-  //   headerBytes.add(intToUint32(picture.pictureType.index));
-  //   headerBytes.add(intToUint32(picture.mimetype.length));
-  //   headerBytes.add(utf16.encode(picture.mimetype));
-  //   headerBytes.add(intToUint32(0)); // No Description for now
-  //   headerBytes.add(intToUint32(0)); // No width for now
-  //   headerBytes.add(intToUint32(0)); // No height for now
-  //   headerBytes.add(intToUint32(0)); // No color depth for now
-  //   headerBytes.add(intToUint32(0)); // No color number for now
+    headerBytes.add(intToUint32(picture.pictureType.index));
+    headerBytes.add(intToUint32(picture.mimetype.length));
+    headerBytes.add(ascii.encode(picture.mimetype));
+    headerBytes.add(intToUint32(0)); // No Description for now
+    headerBytes.add(intToUint32(0)); // No width for now
+    headerBytes.add(intToUint32(0)); // No height for now
+    headerBytes.add(intToUint32(0)); // No color depth for now
+    headerBytes.add(intToUint32(0)); // No color number for now
+    headerBytes.add(intToUint32(picture.bytes.length));
 
-  //   final blockLength = headerBytes.length + picture.bytes.length;
+    final blockLength = headerBytes.length + picture.bytes.length;
 
-  //   _writeBlockHeader(builder, 6, blockLength, false);
-  //   builder.add(headerBytes.toBytes());
-  //   builder.add(picture.bytes);
-  // }
+    _writeBlockHeader(builder, 6, blockLength, false);
+    builder.add(headerBytes.toBytes());
+    builder.add(picture.bytes);
+  }
 
   void _writeVorbisComments(BytesBuilder builder, VorbisMetadata metadata) {
     final mainBuilder = BytesBuilder();
@@ -158,7 +160,7 @@ class FlacWriter {
     mainBuilder.add(intToUint32LE(i));
     mainBuilder.add(commentsBuilder.toBytes());
 
-    _writeBlockHeader(builder, 4, mainBuilder.length, true);
+    _writeBlockHeader(builder, 4, mainBuilder.length, false);
     builder.add(mainBuilder.takeBytes());
   }
 }

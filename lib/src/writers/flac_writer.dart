@@ -16,17 +16,24 @@ class FlacWriter {
 
     builder.add(reader.readSync(4));
 
-    _writeVorbisComments(builder, metadata);
-
     // for (var picture in metadata.pictures) {
     //   _writePictureBlock(builder, picture);
     // }
 
     bool isLastBlock = false;
+    int i = 0;
     while (!isLastBlock) {
+      if (i == 1) {
+        _writeVorbisComments(builder, metadata);
+      }
+
       final block = _parseMetadataBlock(reader, builder, metadata);
       isLastBlock = block.isLastBlock;
+      i++;
     }
+
+    final rest = reader.lengthSync() - reader.positionSync();
+    builder.add(reader.readSync(rest));
 
     reader.closeSync();
     file.writeAsBytesSync(builder.toBytes());
@@ -47,19 +54,19 @@ class FlacWriter {
     // block 4 -> Vorbis comment
     // block 6 -> picture
     switch (block.type) {
+      case 3:
       case 4:
       case 6:
         buffer.setPositionSync(buffer.positionSync() + block.length);
 
         break;
       default:
-        // _writeBlock(
-        //   builder,
-        //   buffer.readSync(block.length),
-        //   block.type,
-        //   block.isLastBlock,
-        // );
-        buffer.setPositionSync(buffer.positionSync() + block.length);
+        _writeBlock(
+          builder,
+          buffer.readSync(block.length),
+          block.type,
+          block.isLastBlock,
+        );
 
         break;
     }

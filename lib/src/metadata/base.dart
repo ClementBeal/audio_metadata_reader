@@ -1,3 +1,14 @@
+import 'dart:collection';
+import 'dart:typed_data';
+
+import 'package:audio_metadata_reader/audio_metadata_reader.dart';
+
+part 'mp3_metadata.dart';
+part 'mp4_metadata.dart';
+part 'vorbis_metadata.dart';
+
+sealed class ParserTag {}
+
 enum PictureType {
   other,
   fileIcon32x32,

@@ -12,3 +12,6 @@ export 'src/parsers/mp4.dart' show MP4Parser;
 export 'src/parsers/ogg.dart' show OGGParser;
 
 export 'src/writers/id3v4_writer.dart' show Id3v4Writer;
+export 'src/utils/metadata_parser_exception.dart'
+    show MetadataParserException, NoMetadataParserException;
+export 'src/parser.dart' show readMetadata;

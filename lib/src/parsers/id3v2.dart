@@ -23,7 +23,7 @@ class ID3v3Frame {
 ///
 /// Metadata frame defined in the ID3 tag
 ///
-String TextFrame(Uint8List information) {
+String getTextFromFrame(Uint8List information) {
   final encoding = information.first;
 
   switch (encoding) {
@@ -74,49 +74,74 @@ String TextFrame(Uint8List information) {
   return "";
 }
 
-///
 /// Custom metadata frame
 /// Can be used my MusicBrainz for instance
-///
 class TXXXFrame {
   late final int encoding;
   late final String description;
   late final String information;
 
   TXXXFrame(Uint8List information) {
-    encoding = information.first;
+    int offset = 0;
+    encoding = information[offset++];
 
-    final nullCharacterPositionDescription = information.indexOf(0, 1);
-    final informationBytesDescription = information.sublist(
-        1,
-        (nullCharacterPositionDescription >= 0)
-            ? nullCharacterPositionDescription
-            : null);
+    final descriptionData = <int>[];
+    bool isUTF16 = encoding == 1 || encoding == 2;
+
+    if (isUTF16) {
+      while (!(information[offset] == 0 && information[offset + 1] == 0)) {
+        descriptionData.add(information[offset]);
+        descriptionData.add(information[offset + 1]);
+        offset += 2;
+      }
+
+      // we pass the final zeros
+      while (information[offset] == 0) {
+        offset++;
+      }
+    } else {
+      while (information[offset] != 0) {
+        descriptionData.add(information[offset++]);
+      }
+    }
+
+    int lastCharPosition = information.length - 1;
+
+    // can be 00 for utf16 or 0 for other
+    bool hasTerminalEmptyCharacter = information[lastCharPosition] == 0 &&
+        information[lastCharPosition - 1] == 0;
+
+    // we need to remove the empty character at the end
+    // it's a single or double zero
+    final length = information.length -
+        offset -
+        (hasTerminalEmptyCharacter
+            ? isUTF16
+                ? 2
+                : 1
+            : 0);
+    final rest = information.buffer.asUint8List(offset, length);
 
     switch (encoding) {
       case 0:
-        description = latin1Decoder.convert(informationBytesDescription);
+        description = latin1Decoder.convert(descriptionData);
 
-        this.information = latin1Decoder
-            .convert(information.sublist(nullCharacterPositionDescription));
+        this.information = latin1Decoder.convert(rest);
         break;
       case 1:
-        description = utf16Decoder.decodeUtf16Le(informationBytesDescription);
+        description = utf16Decoder.decodeUtf16Le(descriptionData);
 
-        this.information = utf16Decoder.decodeUtf16Le(
-            information.sublist(nullCharacterPositionDescription));
+        this.information = utf16Decoder.decodeUtf16Le(rest);
         break;
       case 2:
-        description = utf16Decoder.decodeUtf16Le(informationBytesDescription);
+        description = utf16Decoder.decodeUtf16Be(descriptionData);
 
-        this.information = utf16Decoder.decodeUtf16Le(
-            information.sublist(nullCharacterPositionDescription));
+        this.information = utf16Decoder.decodeUtf16Be(rest);
         break;
       case 3:
-        description = utf8Decoder.convert(informationBytesDescription);
+        description = utf8Decoder.convert(descriptionData);
 
-        this.information = utf8Decoder
-            .convert(information.sublist(nullCharacterPositionDescription));
+        this.information = utf8Decoder.convert(rest);
         break;
     }
   }
@@ -179,7 +204,6 @@ class ID3v2Parser extends TagParser {
 
       // 10 -> frame header
       offset = offset + 10 + frame.size;
-
       processFrame(frame.id, frame.size);
     }
 
@@ -284,19 +308,19 @@ class ID3v2Parser extends TagParser {
         },
       "TALB" => () {
           final content = buffer.read(size);
-          metadata.album = TextFrame(content);
+          metadata.album = getTextFromFrame(content);
         },
       "TBPM" => () {
           final content = buffer.read(size);
-          metadata.bpm = TextFrame(content);
+          metadata.bpm = getTextFromFrame(content);
         },
       "TCOP" => () {
           final content = buffer.read(size);
-          metadata.copyrightMessage = TextFrame(content);
+          metadata.copyrightMessage = getTextFromFrame(content);
         },
       "TCON" => () {
           final content = buffer.read(size);
-          metadata.contentType = TextFrame(content);
+          metadata.contentType = getTextFromFrame(content);
           final regex = RegExp(r"(\d+).*");
           final containRegex = RegExp(r";|/|\||,");
 
@@ -315,51 +339,51 @@ class ID3v2Parser extends TagParser {
         },
       "TCOM" => () {
           final content = buffer.read(size);
-          metadata.composer = TextFrame(content);
+          metadata.composer = getTextFromFrame(content);
         },
       "TDAT" => () {
           final content = buffer.read(size);
-          metadata.date = TextFrame(content);
+          metadata.date = getTextFromFrame(content);
         },
       "TDLY" => () {
           final content = buffer.read(size);
-          metadata.playlistDelay = TextFrame(content);
+          metadata.playlistDelay = getTextFromFrame(content);
         },
       "TENC" => () {
           final content = buffer.read(size);
-          metadata.encodedBy = TextFrame(content);
+          metadata.encodedBy = getTextFromFrame(content);
         },
       "TFLT" => () {
           final content = buffer.read(size);
-          metadata.fileType = TextFrame(content);
+          metadata.fileType = getTextFromFrame(content);
         },
       "TIME" => () {
           final content = buffer.read(size);
-          metadata.time = TextFrame(content);
+          metadata.time = getTextFromFrame(content);
         },
       "TIT1" => () {
           final content = buffer.read(size);
-          metadata.contentGroupDescription = TextFrame(content);
+          metadata.contentGroupDescription = getTextFromFrame(content);
         },
       "TIT2" => () {
           final content = buffer.read(size);
-          metadata.songName = TextFrame(content);
+          metadata.songName = getTextFromFrame(content);
         },
       "TIT3" => () {
           final content = buffer.read(size);
-          metadata.subtitle = TextFrame(content);
+          metadata.subtitle = getTextFromFrame(content);
         },
       "TKEY" => () {
           final content = buffer.read(size);
-          metadata.initialKey = TextFrame(content);
+          metadata.initialKey = getTextFromFrame(content);
         },
       "TLAN" => () {
           final content = buffer.read(size);
-          metadata.languages = TextFrame(content);
+          metadata.languages = getTextFromFrame(content);
         },
       "TLEN" => () {
           final content = buffer.read(size);
-          final time = int.parse(TextFrame(content));
+          final time = int.parse(getTextFromFrame(content));
 
           if ((time / 1000) < 1) {
             metadata.duration = Duration(seconds: time);
@@ -369,67 +393,67 @@ class ID3v2Parser extends TagParser {
         },
       "TMED" => () {
           final content = buffer.read(size);
-          metadata.mediatype = TextFrame(content);
+          metadata.mediatype = getTextFromFrame(content);
         },
       "TOAL" => () {
           final content = buffer.read(size);
-          metadata.originalAlbum = TextFrame(content);
+          metadata.originalAlbum = getTextFromFrame(content);
         },
       "TOFN" => () {
           final content = buffer.read(size);
-          metadata.originalFilename = TextFrame(content);
+          metadata.originalFilename = getTextFromFrame(content);
         },
       "TOLY" => () {
           final content = buffer.read(size);
-          metadata.originalTextWriter = TextFrame(content);
+          metadata.originalTextWriter = getTextFromFrame(content);
         },
       "TOPE" => () {
           final content = buffer.read(size);
-          metadata.originalArtist = TextFrame(content);
+          metadata.originalArtist = getTextFromFrame(content);
         },
       "TORY" => () {
           final content = buffer.read(size);
-          metadata.originalReleaseYear = _parseYear(TextFrame(content));
+          metadata.originalReleaseYear = _parseYear(getTextFromFrame(content));
         },
       "TOWN" => () {
           final content = buffer.read(size);
-          metadata.fileOwner == TextFrame(content);
+          metadata.fileOwner == getTextFromFrame(content);
         },
       "TDRC" => () {
           final content = buffer.read(size);
-          metadata.year = _parseYear(TextFrame(content));
+          metadata.year = _parseYear(getTextFromFrame(content));
         },
       "TYER" => () {
           final content = buffer.read(size);
-          metadata.year = _parseYear(TextFrame(content));
+          metadata.year = _parseYear(getTextFromFrame(content));
         },
       "TRDA" => () {
           final content = buffer.read(size);
-          metadata.year = _parseYear(TextFrame(content));
+          metadata.year = _parseYear(getTextFromFrame(content));
         },
       "TPE1" => () {
           final content = buffer.read(size);
-          metadata.leadPerformer = TextFrame(content);
+          metadata.leadPerformer = getTextFromFrame(content);
         },
       "TPE2" => () {
           final content = buffer.read(size);
-          metadata.bandOrOrchestra = TextFrame(content);
+          metadata.bandOrOrchestra = getTextFromFrame(content);
         },
       "TPE3" => () {
           final content = buffer.read(size);
-          metadata.conductor = TextFrame(content);
+          metadata.conductor = getTextFromFrame(content);
         },
       "TPE4" => () {
           final content = buffer.read(size);
-          metadata.interpreted = TextFrame(content);
+          metadata.interpreted = getTextFromFrame(content);
         },
       "TEXT" => () {
           final content = buffer.read(size);
-          metadata.textWriter = TextFrame(content);
+          metadata.textWriter = getTextFromFrame(content);
         },
       "TPOS" || "TPA" => () {
           final content = buffer.read(size);
-          final value = TextFrame(content);
+          final value = getTextFromFrame(content);
           metadata.partOfSet = value;
 
           final match = _discRegex.firstMatch(value);
@@ -443,11 +467,15 @@ class ID3v2Parser extends TagParser {
         },
       "TPUB" => () {
           final content = buffer.read(size);
-          metadata.publisher = TextFrame(content);
+          metadata.publisher = getTextFromFrame(content);
         },
       "TRCK" => () {
           final content = buffer.read(size);
-          final trackInfo = TextFrame(content);
+          final trackInfo = getTextFromFrame(content);
+
+          if (trackInfo.isEmpty) {
+            return;
+          }
 
           final match = _trackRegex.firstMatch(trackInfo);
 
@@ -460,19 +488,19 @@ class ID3v2Parser extends TagParser {
         },
       "TRSN" => () {
           final content = buffer.read(size);
-          metadata.internetRadioStationName = TextFrame(content);
+          metadata.internetRadioStationName = getTextFromFrame(content);
         },
       "TRSO" => () {
           final content = buffer.read(size);
-          metadata.internetRadioStationOwner = TextFrame(content);
+          metadata.internetRadioStationOwner = getTextFromFrame(content);
         },
       "TSIZ" => () {
           final content = buffer.read(size);
-          metadata.size = TextFrame(content);
+          metadata.size = getTextFromFrame(content);
         },
       "TSRC" => () {
           final content = buffer.read(size);
-          metadata.isrc = TextFrame(content);
+          metadata.isrc = getTextFromFrame(content);
         },
       "TXXX" => () {
           final content = buffer.read(size);
@@ -485,7 +513,7 @@ class ID3v2Parser extends TagParser {
         },
       "TSSE" => () {
           final content = buffer.read(size);
-          metadata.encoderSoftware = TextFrame(content);
+          metadata.encoderSoftware = getTextFromFrame(content);
         },
       _ => () {
           buffer.skip(size);
@@ -526,9 +554,10 @@ class ID3v2Parser extends TagParser {
   }
 
   Picture getPicture(Uint8List content) {
-    var offset = 1;
+    int offset = 0;
 
     final reader = ByteData.sublistView(content);
+    final encoding = reader.getUint8(offset++);
 
     final mimetype = [reader.getUint8(offset++)];
 
@@ -542,13 +571,16 @@ class ID3v2Parser extends TagParser {
 
     offset++;
 
-    final description = [reader.getUint8(offset)];
-    offset += 1;
+    final description = [reader.getInt8(offset++)];
 
     while (description.last != 0) {
-      final a = reader.getUint8(offset);
-      description.add(a);
-      offset++;
+      description.add(reader.getInt8(offset++));
+    }
+
+    if (encoding == 1 || encoding == 2) {
+      while (reader.getInt8(offset) == 0) {
+        offset++;
+      }
     }
 
     return Picture(
@@ -559,22 +591,25 @@ class ID3v2Parser extends TagParser {
   }
 
   String getUnsynchronisedLyric(Uint8List content) {
-    var offset = 1;
+    int offset = 1;
 
     final reader = ByteData.sublistView(content);
     final encoding = reader.getInt8(0);
 
-    [
-      reader.getInt8(offset++),
-      reader.getInt8(offset++),
-      reader.getInt8(offset++),
-    ]; // language
+    // skip language
+    offset += 3;
 
     final description = [reader.getInt8(offset)];
 
     while (description.last != 0) {
       description.add(reader.getInt8(offset));
       offset++;
+    }
+
+    if (encoding == 1 || encoding == 2) {
+      while (reader.getInt8(offset) == 0) {
+        offset++;
+      }
     }
 
     final rest = reader.buffer.asUint8List(offset);
@@ -586,19 +621,10 @@ class ID3v2Parser extends TagParser {
             1, (nullCharacterPosition >= 0) ? nullCharacterPosition : null);
         return latin1Decoder.convert(informationBytes);
       case 1:
-        int nullCharacterPosition = -1;
-        int i = 1;
-        while (i + 1 < rest.length) {
-          if (rest[i] == 0 && rest[i + 1] == 0) {
-            nullCharacterPosition = i;
-          }
-          i += 2;
+        if (encoding == 1 || encoding == 2) {
+          return utf16Decoder.decodeUtf16Le(rest, 0, rest.length - 2);
         }
-
-        final informationBytes = rest.sublist(
-            1, (nullCharacterPosition >= 0) ? nullCharacterPosition : null);
-        return utf16Decoder.decodeUtf16Le(informationBytes);
-
+        return utf16Decoder.decodeUtf16Le(rest);
       case 2:
         int nullCharacterPosition = 1;
         bool zeroFound = false;
@@ -646,13 +672,13 @@ class ID3v2Parser extends TagParser {
     return tagIdentity == "TAG";
   }
 
-  int _parseYear(String year) {
+  int? _parseYear(String year) {
     if (year.contains("-")) {
-      return int.parse(year.split("-").first);
+      return int.tryParse(year.split("-").first);
     } else if (year.contains("/")) {
-      return int.parse(year.split("/").first);
+      return int.tryParse(year.split("/").first);
     } else {
-      return int.parse(year);
+      return int.tryParse(year);
     }
   }
 

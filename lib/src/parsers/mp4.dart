@@ -105,9 +105,18 @@ class MP4Parser extends TagParser {
     final parser = ByteData.sublistView(headerBytes);
 
     final boxSize = parser.getUint32(0);
-    final boxName = String.fromCharCodes(headerBytes.sublist(4));
+    final boxNameBytes = headerBytes.sublist(4);
 
-    return BoxHeader(boxSize, boxName);
+    // throw error if we don't have a correct box name
+    if (boxNameBytes[0] == 0 &&
+        boxNameBytes[1] == 0 &&
+        boxNameBytes[2] == 0 &&
+        boxNameBytes[3] == 0) {
+      throw MetadataParserException(
+          track: File(""), message: "Malformed MP4 file");
+    }
+
+    return BoxHeader(boxSize, String.fromCharCodes(boxNameBytes));
   }
 
   ///
@@ -186,10 +195,13 @@ class MP4Parser extends TagParser {
           break;
 
         case "covr":
-          tags.picture = Picture(
-              bytes.sublist(16),
-              lookupMimeType("no path", headerBytes: bytes.sublist(16)) ?? "",
-              PictureType.coverFront);
+          if (fetchImage) {
+            final imageData = bytes.sublist(16);
+            tags.picture = Picture(
+                imageData,
+                lookupMimeType("no path", headerBytes: imageData) ?? "",
+                PictureType.coverFront);
+          }
         case "trkn":
           final a = getUint16(bytes.sublist(18, 20));
           final totalTracks = getUint16(bytes.sublist(20, 22));

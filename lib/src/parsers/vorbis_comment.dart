@@ -4,11 +4,12 @@ import 'dart:typed_data';
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/parsers/tag_parser.dart';
 
-VorbisMetadata parseVorbisComment(
+void parseVorbisComment(
   Uint8List bytes,
   VorbisMetadata metadata,
+  bool fetchImage,
 ) {
-  var i = 0;
+  int i = 0;
   final commentBytes = <int>[];
 
   while (bytes[i] != 0x3D) {
@@ -19,22 +20,18 @@ VorbisMetadata parseVorbisComment(
 
   final commentName = utf8.decode(commentBytes);
 
-  dynamic value;
-  // if (commentName == "METADATA_BLOCK_PICTURE") {
-  //   final a = utf8.decode(bytes);
-  //   final imageValue = value = base64Decode(a);
-
-  //   metadata.pictures
-  //       .add(Picture(imageValue, "image/jpeg", PictureType.coverFront));
-  // } else {
+  String value;
   value = utf8.decode(bytes.sublist(i));
-  // }
 
   switch (commentName.toUpperCase()) {
     case 'METADATA_BLOCK_PICTURE':
-      final imageValue = value = base64Decode(value);
+      if (!fetchImage) {
+        return;
+      }
+
+      final imageValue = base64Decode(value);
       final buffer = ByteData.sublistView(imageValue);
-      var offset = 0;
+      int offset = 0;
 
       final pictureType = buffer.getUint32(offset);
       offset += 4;
@@ -180,6 +177,4 @@ VorbisMetadata parseVorbisComment(
       metadata.unknowns[commentName.toUpperCase()] = value;
       break;
   }
-
-  return metadata;
 }

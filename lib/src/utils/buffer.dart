@@ -1,5 +1,8 @@
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
+
+import '../../audio_metadata_reader.dart';
 
 class Buffer {
   final RandomAccessFile randomAccessFile;
@@ -8,6 +11,11 @@ class Buffer {
   int _bufferedBytes = 0; // Track how many bytes are actually in the buffer
   static final int _bufferSize = 16384;
 
+  /// The number of bytes remaining to be read from the file.
+  int get remainingBytes =>
+      (_bufferedBytes - _cursor) +
+      (randomAccessFile.lengthSync() - randomAccessFile.positionSync());
+
   Buffer({required this.randomAccessFile}) : _buffer = Uint8List(_bufferSize) {
     _fill();
   }
@@ -15,6 +23,19 @@ class Buffer {
   void _fill() {
     _bufferedBytes = randomAccessFile.readIntoSync(_buffer);
     _cursor = 0;
+  }
+
+  /// Throws a [MetadataParserException] if a previous call to [_fill]
+  /// was unable to read any data from the file.
+  ///
+  /// Once the end of the file is reached, subsequent reads from
+  /// [RandomAccessFile] will read 0 bytes without failing. This
+  /// can cause [read] below to infinite loop.
+  void _throwOnNoData() {
+    if (_bufferedBytes == 0) {
+      throw MetadataParserException(
+          track: File(""), message: "Expected more data in file");
+    }
   }
 
   Uint8List read(int size) {
@@ -61,10 +82,22 @@ class Buffer {
         // Fill buffer again if more data is needed
         if (filled < size) {
           _fill();
+          // Avoid infinite loops if we are trying to read
+          // more data than there is left in the file.
+          _throwOnNoData();
         }
       }
       return result;
     }
+  }
+
+  /// Reads at most [size] bytes from the file.
+  ///
+  /// May return a smaller list if [remainingBytes] is
+  /// less than [size].
+  Uint8List readAtMost(int size) {
+    final readSize = min(size, remainingBytes);
+    return read(readSize);
   }
 
   void setPositionSync(int position) {

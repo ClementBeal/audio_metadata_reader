@@ -246,15 +246,16 @@ class ID3v2Parser extends TagParser {
       metadata.bitrate = _getBitrate(mpegVersion, mpegLayer, bitrateIndex);
 
       // arbitrary choice.  Usually the `Xing` header is located after ~30 bytes
-      // then the header size is about ~150 bytes
-      final possibleXingHeader = buffer.read(1500);
+      // then the header size is about ~150 bytes.
+      final possibleXingHeader = buffer.readAtMost(1500);
 
       int i = 0;
-      while (possibleXingHeader[i] == 0) {
+      while (i < possibleXingHeader.length && possibleXingHeader[i] == 0) {
         i++;
       }
 
-      if (possibleXingHeader[i] == 0x58 &&
+      if ((i < possibleXingHeader.length - 11) &&
+          possibleXingHeader[i] == 0x58 &&
           possibleXingHeader[i + 1] == 0X69 &&
           possibleXingHeader[i + 2] == 0x6E &&
           possibleXingHeader[i + 3] == 0x67) {

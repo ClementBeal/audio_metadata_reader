@@ -15,7 +15,7 @@ void main() {
     expect(result.sampleRate, equals(44100));
     expect(result.title, equals("Title"));
     expect(result.trackNumber, equals(1));
-    expect(result.duration, equals(Duration(seconds: 1)));
+    expect(result.duration!.inMilliseconds, closeTo(1130, 10));
     expect(result.totalDisc, equals(1));
     expect(result.lyrics, equals("Lyrics"));
     expect(result.trackTotal, equals(10));
@@ -43,7 +43,8 @@ void main() {
     expect(result.title, "How to Fly");
     expect(result.artist, "Sticky Fingers");
     expect(result.year, DateTime(2013));
-    expect(result.duration, Duration(minutes: 3, seconds: 22));
+    expect(
+        result.duration, Duration(minutes: 3, seconds: 22, milliseconds: 240));
     expect(result.sampleRate, 44100);
   });
 
@@ -59,5 +60,13 @@ void main() {
     expect(result.artist, "Sticky Fingers");
     expect(result.year, DateTime(2013));
     expect(result.sampleRate, 44100);
+  });
+
+  test("Round duration to microseconds", () {
+    final track = File("./test/mp3/generated_under_one_second.mp3");
+    final result = readMetadata(track, getImage: false);
+    expect(result.pictures.length, 0);
+    expect(result.duration, isNotNull);
+    expect(result.duration!.inMilliseconds, closeTo(310, 5));
   });
 }

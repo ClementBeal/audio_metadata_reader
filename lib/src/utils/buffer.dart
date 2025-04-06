@@ -7,8 +7,18 @@ import '../../audio_metadata_reader.dart';
 class Buffer {
   final RandomAccessFile randomAccessFile;
   final Uint8List _buffer;
+
+  /// It's like positionSync() but adapted with the buffer
+  int fileCursor = 0;
+
+  /// Position of the cursor in the buffer of size [_bufferSize]
   int _cursor = 0;
-  int _bufferedBytes = 0; // Track how many bytes are actually in the buffer
+
+  /// Track how many bytes are actually in the buffer
+  int _bufferedBytes = 0;
+
+  /// The buffer size is always a power of 2.
+  /// To reach good performance, we need at least 4096
   static final int _bufferSize = 16384;
 
   /// The number of bytes remaining to be read from the file.
@@ -39,6 +49,8 @@ class Buffer {
   }
 
   Uint8List read(int size) {
+    fileCursor += size;
+
     // if we read something big (~100kb), we can read it directly from file
     // it makes the read faster
     // no need to use the buffer
@@ -101,6 +113,7 @@ class Buffer {
   }
 
   void setPositionSync(int position) {
+    fileCursor = position;
     randomAccessFile.setPositionSync(position);
     _fill();
   }
@@ -110,11 +123,14 @@ class Buffer {
     final remainingInBuffer = _bufferedBytes - _cursor;
 
     if (length <= remainingInBuffer) {
+      fileCursor += length;
+
       // If we can skip within the current buffer, just move the cursor
       _cursor += length;
     } else {
       // Calculate the actual file position we need to skip to
       int currentPosition = randomAccessFile.positionSync() - remainingInBuffer;
+      fileCursor += currentPosition;
       // Skip to the new position
       randomAccessFile.setPositionSync(currentPosition + length);
       // Refill the buffer at the new position

@@ -152,6 +152,9 @@ class MP4Parser extends TagParser {
             .contains(box.type)) {
       final metadataValue = buffer.read(box.size - 8);
 
+      // sometimes the data is stored inside another box called `data`
+      // we try to find out if the data contains the box type "data" (0:4 is the box size)
+      // otherwise we just skip the Apple's tag of 4 chars
       final data = (String.fromCharCodes(metadataValue.sublist(4, 8)) == "data")
           ? metadataValue.sublist(16)
           : metadataValue.sublist(4);

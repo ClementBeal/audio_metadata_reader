@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/src/metadata/mp4_metadata.dart';
 import 'package:audio_metadata_reader/src/parsers/tag_parser.dart';
+import 'package:audio_metadata_reader/src/utils/buffer.dart';
 import 'package:mime/mime.dart';
 
 import '../../audio_metadata_reader.dart';
@@ -68,24 +69,26 @@ final supportedBox = [
 ///
 class MP4Parser extends TagParser {
   Mp4Metadata tags = Mp4Metadata();
+  late final Buffer buffer;
 
   MP4Parser({fetchImage = false}) : super(fetchImage: fetchImage);
 
   @override
   ParserTag parse(RandomAccessFile reader) {
     reader.setPositionSync(0);
+    buffer = Buffer(randomAccessFile: reader);
 
     final lengthFile = reader.lengthSync();
 
-    while (reader.positionSync() < lengthFile) {
-      final box = _readBox(reader);
+    while (buffer.fileCursor < lengthFile) {
+      final box = _readBox(buffer);
 
       if (supportedBox.contains(box.type)) {
-        processBox(reader, box);
+        processBox(buffer, box);
       } else {
         // We substract 8 to the box size because we already read the data for
         // the box header
-        reader.setPositionSync(reader.positionSync() + box.size - 8);
+        buffer.skip(box.size - 8);
       }
     }
 
@@ -100,8 +103,8 @@ class MP4Parser extends TagParser {
   /// [0...3] -> box size (header + body)
   /// [4...7] -> box name (ASCII)
   ///
-  BoxHeader _readBox(RandomAccessFile reader) {
-    final headerBytes = reader.readSync(8);
+  BoxHeader _readBox(Buffer buffer) {
+    final headerBytes = buffer.read(8);
     final parser = ByteData.sublistView(headerBytes);
 
     final boxSize = parser.getUint32(0);
@@ -119,17 +122,15 @@ class MP4Parser extends TagParser {
     return BoxHeader(boxSize, String.fromCharCodes(boxNameBytes));
   }
 
-  ///
   /// Parse a box
   ///
   /// The metadata are inside special boxes. We only read data when we need it
   /// otherwise we skip them
-  ///
-  void processBox(RandomAccessFile reader, BoxHeader box) {
+  void processBox(Buffer buffer, BoxHeader box) {
     if (box.type == "moov") {
-      parseRecurvise(reader, box);
+      parseRecurvise(buffer, box);
     } else if (box.type == "mvhd") {
-      final bytes = reader.readSync(100);
+      final bytes = buffer.read(100);
 
       final timeScale = getUint32(bytes.sublist(12, 16));
       final timeUnit = getUint32(bytes.sublist(16, 20));
@@ -137,25 +138,29 @@ class MP4Parser extends TagParser {
       double microseconds = (timeUnit / timeScale) * 1000000;
       tags.duration = Duration(microseconds: microseconds.toInt());
     } else if (box.type == "udta") {
-      parseRecurvise(reader, box);
+      parseRecurvise(buffer, box);
     } else if (box.type == "ilst") {
-      parseRecurvise(reader, box);
+      parseRecurvise(buffer, box);
     } else if (["trak", "mdia", "minf", "stbl", "stsd"].contains(box.type)) {
-      parseRecurvise(reader, box);
+      parseRecurvise(buffer, box);
     } else if (box.type == "meta") {
-      reader.readSync(4);
+      buffer.read(4);
 
-      parseRecurvise(reader, box);
+      parseRecurvise(buffer, box);
     } else if (box.type[0] == "©" ||
         ["gnre", "trkn", "disk", "tmpo", "cpil", "too", "covr", "pgap", "gen"]
             .contains(box.type)) {
-      final bytes = reader.readSync(box.size - 8);
+      final metadataValue = buffer.read(box.size - 8);
+
+      final data = (String.fromCharCodes(metadataValue.sublist(4, 8)) == "data")
+          ? metadataValue.sublist(16)
+          : metadataValue.sublist(4);
 
       String value;
       try {
-        value = const Utf8Decoder().convert(bytes.sublist(16));
+        value = utf8.decode(data);
       } catch (e) {
-        value = String.fromCharCodes(bytes.sublist(16));
+        value = latin1.decode(data);
       }
 
       final boxName = (box.type[0] == "©") ? box.type.substring(1) : box.type;
@@ -184,27 +189,28 @@ class MP4Parser extends TagParser {
           if (intDay != null) {
             tags.year = DateTime(intDay);
           } else {
+            print(value);
             tags.year = DateTime.tryParse(value);
           }
           break;
         case "too":
           break;
         case "disk":
-          tags.discNumber = getUint16(bytes.sublist(18, 20));
-          tags.totalDiscs = getUint16(bytes.sublist(20, 22));
+          tags.discNumber = getUint16(data.sublist(2, 4));
+          tags.totalDiscs = getUint16(data.sublist(4, 6));
           break;
 
         case "covr":
           if (fetchImage) {
-            final imageData = bytes.sublist(16);
+            final imageData = data;
             tags.picture = Picture(
                 imageData,
                 lookupMimeType("no path", headerBytes: imageData) ?? "",
                 PictureType.coverFront);
           }
         case "trkn":
-          final a = getUint16(bytes.sublist(18, 20));
-          final totalTracks = getUint16(bytes.sublist(20, 22));
+          final a = getUint16(data.sublist(2, 4));
+          final totalTracks = getUint16(data.sublist(4, 6));
           tags.totalTracks = totalTracks;
           if (a > 0) {
             tags.trackNumber = a;
@@ -212,15 +218,15 @@ class MP4Parser extends TagParser {
           break;
       }
     } else if (box.type == "----") {
-      final mean = _readBox(reader);
-      String.fromCharCodes(reader.readSync(mean.size - 8)); // mean value
+      final mean = _readBox(buffer);
+      String.fromCharCodes(buffer.read(mean.size - 8)); // mean value
 
-      final name = _readBox(reader);
+      final name = _readBox(buffer);
 
       final nameValue =
-          String.fromCharCodes(reader.readSync(name.size - 8).sublist(4));
-      final dataBox = _readBox(reader);
-      final data = reader.readSync(dataBox.size - 8);
+          String.fromCharCodes(buffer.read(name.size - 8).sublist(4));
+      final dataBox = _readBox(buffer);
+      final data = buffer.read(dataBox.size - 8);
       final finalValue = String.fromCharCodes(data.sublist(8));
 
       switch (nameValue) {
@@ -233,19 +239,17 @@ class MP4Parser extends TagParser {
         default:
       }
     } else if (box.type == "mp4a") {
-      final bytes = reader.readSync(box.size - 8);
+      final bytes = buffer.read(box.size - 8);
 
       // tags.bitrate = timeScale;
       tags.sampleRate = getUint32(bytes.sublist(22, 26));
     } else {
-      reader.setPositionSync(reader.positionSync() + box.size - 8);
+      buffer.setPositionSync(buffer.fileCursor + box.size - 8);
     }
   }
 
-  ///
   /// Parse a box with multiple sub boxes.
-  ///
-  void parseRecurvise(RandomAccessFile reader, BoxHeader box) {
+  void parseRecurvise(Buffer buffer, BoxHeader box) {
     final limit = box.size - 8;
     int offset = 0;
 
@@ -254,26 +258,24 @@ class MP4Parser extends TagParser {
       offset += 4;
     } else if (box.type == "stsd") {
       offset += 8;
-      reader.readSync(8);
+      buffer.read(8);
     }
 
     while (offset < limit) {
-      final newBox = _readBox(reader);
+      final newBox = _readBox(buffer);
 
       if (supportedBox.contains(newBox.type)) {
-        processBox(reader, newBox);
+        processBox(buffer, newBox);
       } else {
-        reader.setPositionSync(reader.positionSync() + newBox.size - 8);
+        buffer.skip(newBox.size - 8);
       }
 
       offset += newBox.size;
     }
   }
 
-  ///
   /// To detect if this parser can be used to parse this file, we need to detect
   /// the first box. It should be a `ftyp` box
-  ///
   static bool canUserParser(RandomAccessFile reader) {
     reader.setPositionSync(4);
 

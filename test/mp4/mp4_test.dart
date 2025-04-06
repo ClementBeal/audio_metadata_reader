@@ -44,8 +44,17 @@ void main() {
     expect(result.title, "Sexy Ladies (Remix) [feat. 50 Cent]");
     expect(result.album, "FutureSex/LoveSounds (Deluxe Edition)");
     expect(result.artist, "Justin Timberlake");
-    expect(result.year, (DateTime.utc(2006, 9, 12)));
+    expect(result.year, DateTime.utc(2006, 9, 12));
     expect(result.trackNumber, 15);
     expect(result.trackTotal, 15);
+  });
+
+  test("Should work with .mov file", () {
+    final track = File('./test/mp4/track.mov');
+    final result = readMetadata(track, getImage: false);
+
+    expect(result.title, "Blue Test Pattern");
+    expect(result.artist, "FFmpeg Generator");
+    expect(result.year, (DateTime(2023, 10, 27)));
   });
 }

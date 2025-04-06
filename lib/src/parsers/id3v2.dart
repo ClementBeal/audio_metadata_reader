@@ -211,18 +211,12 @@ class ID3v2Parser extends TagParser {
     if (metadata.duration == null || metadata.duration == Duration.zero) {
       buffer.setPositionSync(size + 10);
 
-      // List<int> mp3FrameHeader = [...buffer.read(4)];
-      Uint8List mp3FrameHeader = Uint8List(4);
-      mp3FrameHeader[0] = buffer.read(1)[0];
+      final mp3FrameHeader = _findFirstMp3Frame(buffer);
 
-      // CHECK : may have performance issues
-      while (mp3FrameHeader.first != 0xff) {
-        mp3FrameHeader[0] = buffer.read(1)[0];
+      if (mp3FrameHeader == null) {
+        reader.closeSync();
+        return metadata;
       }
-
-      mp3FrameHeader[1] = buffer.read(1)[0];
-      mp3FrameHeader[2] = buffer.read(1)[0];
-      mp3FrameHeader[3] = buffer.read(1)[0];
 
       final mpegVersion = switch ((mp3FrameHeader[1] >> 3) & 0x3) {
         0x00 => 3,
@@ -261,9 +255,6 @@ class ID3v2Parser extends TagParser {
           possibleXingHeader[i + 3] == 0x67) {
         // it's a VBR file (Variable Bit Rate)
         final xingFrameFlag = possibleXingHeader[i + 7] & 0x1;
-        // final xingBytesFlag = possibleXingHeader[7] >> 1 & 0x1;
-        // final xingTOCFlag = possibleXingHeader[7] >> 2 & 0x1;
-        // final xingVBRScaleFlag = possibleXingHeader[7] >> 3 & 0x1;
 
         if (xingFrameFlag == 1) {
           final numberOfFrames =
@@ -283,9 +274,6 @@ class ID3v2Parser extends TagParser {
         }
       } else {
         // it's a CBR file (Constant Bit Rate)
-
-        print("CBR");
-        print(metadata.bitrate);
         if (metadata.bitrate != null && metadata.bitrate! > 0) {
           final fileSizeWithoutMetadata = reader.lengthSync() - size;
           final durationInSeconds =
@@ -300,6 +288,66 @@ class ID3v2Parser extends TagParser {
 
     reader.closeSync();
     return metadata;
+  }
+
+  /**
+   * Search and return the first MP3 frame header.
+   * Returns null if none has been found.
+   * 
+   * The MP3 frame has a magic word : 0xFFF or 0xFFE
+   * 
+   * Sometimes the MP3 files contains blocks of 0x00 or 0xFF and relying on the magic word 
+   * is not reliable anymore. 
+   * 
+   * To prevent false positives, we need to verify that the bytes after the potential
+   * valid word are correct. The MP3 specs specify several flags that must be set or not.
+   * 
+   * Credit to [exiftool](https://github.com/exiftool/exiftool/blob/master/lib/Image/ExifTool/MPEG.pm#L464)
+   */
+  Uint8List? _findFirstMp3Frame(Buffer buffer) {
+    Uint8List frameHeader = buffer.readAtMost(4);
+
+    while (frameHeader.length == 4) {
+      // Look for frame sync (0xFF followed by 3 bytes)
+      if (frameHeader[0] == 0xFF) {
+        int word = (frameHeader[0] << 24) |
+            (frameHeader[1] << 16) |
+            (frameHeader[2] << 8) |
+            (frameHeader[3]);
+
+        if ((word & 0xFFE00000) != 0xFFE00000) {
+          frameHeader[0] = frameHeader[1];
+          frameHeader[1] = frameHeader[2];
+          frameHeader[2] = frameHeader[3];
+          frameHeader[3] = buffer.read(1)[0];
+          continue;
+        }
+
+        // Check for invalid MPEG version (01), layer (00), bitrate index (0000 or 1111),
+        // reserved sampling frequency (11), reserved emphasis (10), and not Layer III if MP3
+        if ((word & 0x180000) == 0x080000 || // reserved version ID
+            (word & 0x060000) == 0x000000 || // reserved layer
+            (word & 0x00F000) == 0x000000 || // free bitrate
+            (word & 0x00F000) == 0x00F000 || // bad bitrate
+            (word & 0x000C00) == 0x000C00 || // reserved sampling rate
+            (word & 0x000003) == 0x000002) {
+          frameHeader[0] = frameHeader[1];
+          frameHeader[1] = frameHeader[2];
+          frameHeader[2] = frameHeader[3];
+          frameHeader[3] = buffer.read(1)[0];
+          continue;
+        }
+
+        return frameHeader;
+      }
+
+      frameHeader[0] = frameHeader[1];
+      frameHeader[1] = frameHeader[2];
+      frameHeader[2] = frameHeader[3];
+      frameHeader[3] = buffer.read(1)[0];
+    }
+
+    return null;
   }
 
   /// Process a frame.

@@ -192,7 +192,6 @@ class MP4Parser extends TagParser {
           if (intDay != null) {
             tags.year = DateTime(intDay);
           } else {
-            print(value);
             tags.year = DateTime.tryParse(value);
           }
           break;

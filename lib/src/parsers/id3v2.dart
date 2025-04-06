@@ -259,18 +259,29 @@ class ID3v2Parser extends TagParser {
         if (xingFrameFlag == 1) {
           final numberOfFrames =
               getUint32(possibleXingHeader.sublist(i + 8, i + 12));
-          metadata.duration = Duration(
-              seconds: numberOfFrames *
-                  (_getSamplePerFrame(mpegVersion, mpegLayer) ?? 0) ~/
-                  metadata.samplerate!);
+          final samplesPerFrame =
+              _getSamplePerFrame(mpegVersion, mpegLayer) ?? 0;
+          final sampleRate = metadata.samplerate;
+
+          if (sampleRate != null && sampleRate > 0 && samplesPerFrame > 0) {
+            final totalSamples = numberOfFrames * samplesPerFrame;
+            final durationInSeconds = totalSamples / sampleRate;
+
+            final durationInMicroseconds =
+                (durationInSeconds * 1000000).toInt();
+            metadata.duration = Duration(microseconds: durationInMicroseconds);
+          }
         }
       } else {
         // it's a CBR file (Constant Bit Rate)
         if (metadata.bitrate != null && metadata.bitrate! > 0) {
           final fileSizeWithoutMetadata = reader.lengthSync() - size;
-          metadata.duration = Duration(
-              seconds:
-                  (8 * fileSizeWithoutMetadata / metadata.bitrate!).round());
+          final durationInSeconds =
+              (8 * fileSizeWithoutMetadata) / metadata.bitrate!;
+
+          // Convert to microseconds
+          final durationInMicroseconds = (durationInSeconds * 1000000).toInt();
+          metadata.duration = Duration(microseconds: durationInMicroseconds);
         }
       }
     }

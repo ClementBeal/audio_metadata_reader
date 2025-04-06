@@ -290,20 +290,18 @@ class ID3v2Parser extends TagParser {
     return metadata;
   }
 
-  /**
-   * Search and return the first MP3 frame header.
-   * Returns null if none has been found.
-   * 
-   * The MP3 frame has a magic word : 0xFFF or 0xFFE
-   * 
-   * Sometimes the MP3 files contains blocks of 0x00 or 0xFF and relying on the magic word 
-   * is not reliable anymore. 
-   * 
-   * To prevent false positives, we need to verify that the bytes after the potential
-   * valid word are correct. The MP3 specs specify several flags that must be set or not.
-   * 
-   * Credit to [exiftool](https://github.com/exiftool/exiftool/blob/master/lib/Image/ExifTool/MPEG.pm#L464)
-   */
+  /// Search and return the first MP3 frame header.
+  /// Returns null if none has been found.
+  ///
+  /// The MP3 frame has a magic word : 0xFFF or 0xFFE
+  ///
+  /// Sometimes the MP3 files contains blocks of 0x00 or 0xFF and relying on the magic word
+  /// is not reliable anymore.
+  ///
+  /// To prevent false positives, we need to verify that the bytes after the potential
+  /// valid word are correct. The MP3 specs specify several flags that must be set or not.
+  ///
+  /// Credit to [exiftool](https://github.com/exiftool/exiftool/blob/master/lib/Image/ExifTool/MPEG.pm#L464)
   Uint8List? _findFirstMp3Frame(Buffer buffer) {
     Uint8List frameHeader = buffer.readAtMost(4);
 

@@ -4,6 +4,15 @@
 - ID3v2 : read the lyrics correctly for UTF8-LE
 - MP4 : reset the reader when we start the parsing
 
+## [1.1.1](https://github.com/ClementBeal/audio_metadata_reader/compare/v1.1.0...v1.1.1) (2025-04-06)
+
+
+### Bug Fixes
+
+* calculate ID3v2 duration at the microsecond ([#54](https://github.com/ClementBeal/audio_metadata_reader/issues/54)) ([5eedca0](https://github.com/ClementBeal/audio_metadata_reader/commit/5eedca0a5d91f537dce7a846210730f008d8651c))
+* find correctly the first MP3 frame ([#52](https://github.com/ClementBeal/audio_metadata_reader/issues/52)) ([ed6322c](https://github.com/ClementBeal/audio_metadata_reader/commit/ed6322c65c1371247f2cb5ab0dee17882d6deb71))
+* MP4 parser is more robust ([#55](https://github.com/ClementBeal/audio_metadata_reader/issues/55)) ([1d0f7bf](https://github.com/ClementBeal/audio_metadata_reader/commit/1d0f7bf080886a17ec5a3c3bd03859b4cf45873f))
+
 ## [1.1.0](https://github.com/ClementBeal/audio_metadata_reader/compare/v1.0.0...v1.1.0) (2024-12-07)
 
 

@@ -113,22 +113,24 @@ class Buffer {
   }
 
   void setPositionSync(int position) {
+    fileCursor = position;
     randomAccessFile.setPositionSync(position);
     _fill();
   }
 
   void skip(int length) {
-    fileCursor += length;
-
     // Calculate how many bytes we can skip in the current buffer
     final remainingInBuffer = _bufferedBytes - _cursor;
 
     if (length <= remainingInBuffer) {
+      fileCursor += length;
+
       // If we can skip within the current buffer, just move the cursor
       _cursor += length;
     } else {
       // Calculate the actual file position we need to skip to
       int currentPosition = randomAccessFile.positionSync() - remainingInBuffer;
+      fileCursor += currentPosition;
       // Skip to the new position
       randomAccessFile.setPositionSync(currentPosition + length);
       // Refill the buffer at the new position

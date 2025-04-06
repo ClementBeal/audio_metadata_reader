@@ -46,4 +46,18 @@ void main() {
     expect(result.duration, Duration(minutes: 3, seconds: 22));
     expect(result.sampleRate, 44100);
   });
+
+  test("Parses from truncated mp3 file", () {
+    // The caress-your-soul-truncated-cleaned.mp3 file is truncated
+    // immediately before the Xing header. We should still be able
+    // to read the ID3 tag data.
+    final track = File("./test/mp3/caress-your-soul-cleaned-truncated.mp3");
+    final result = readMetadata(track, getImage: false);
+    expect(result.pictures.length, 0);
+    expect(result.album, "Caress Your Soul");
+    expect(result.title, "How to Fly");
+    expect(result.artist, "Sticky Fingers");
+    expect(result.year, DateTime(2013));
+    expect(result.sampleRate, 44100);
+  });
 }

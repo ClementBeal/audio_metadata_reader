@@ -42,8 +42,8 @@ class OGGParser extends TagParser {
     // second page : contains the metadata
     // it may not contains all the metadata so we would have to get them later
     final pages = [
-      _parseUniquePage(reader),
-      _parseUniquePage(reader),
+      _parseUniquePage(),
+      _parseUniquePage(),
     ];
 
     VorbisMetadata m = VorbisMetadata();
@@ -55,12 +55,12 @@ class OGGParser extends TagParser {
         m.sampleRate = getUint32LE(content.sublist(12, 16));
         m.bitrate = getUint32LE(content.sublist(13, 17));
       } else if (String.fromCharCodes(content.sublist(0, 8)) == "OpusTags") {
-        _parseVorbisComment(content, 8, m, reader);
+        _parseVorbisComment(content, 8, m);
       } else if (String.fromCharCodes(content.sublist(0, 7)) ==
           String.fromCharCodes(
               [0x03, 0x76, 0x6F, 0x72, 0x62, 0x69, 0x73])) // "\x03vorbis"
       {
-        _parseVorbisComment(content, 7, m, reader);
+        _parseVorbisComment(content, 7, m);
       } else if (String.fromCharCodes(content.sublist(0, 7)) ==
           String.fromCharCodes(
               [0x01, 0x76, 0x6F, 0x72, 0x62, 0x69, 0x73])) // "\x01vorbis"
@@ -80,7 +80,7 @@ class OGGParser extends TagParser {
       OggPage? page;
 
       while (page?.headerType != 0x04) {
-        page = _parseUniquePageHeader(reader);
+        page = _parseUniquePageHeader();
       }
 
       m.duration = Duration(
@@ -98,45 +98,28 @@ class OGGParser extends TagParser {
     Uint8List page,
     int headerOffset,
     VorbisMetadata m,
-    RandomAccessFile reader,
   ) {
-    final builder = BytesBuilder(copy: false);
-    builder.add(page);
+    final dataBuffer = List<int>.from(page.sublist(headerOffset));
+    int offset = 0;
 
-    int offset = headerOffset;
-    final buffer = ByteData.sublistView(page);
-    final vendorLength = buffer.getUint32(offset, Endian.little);
+    final vendorLength = getUint32LE(dataBuffer.sublist(offset, offset + 4));
     offset += 4;
     offset += vendorLength;
 
-    final userCommentListLength = buffer.getUint32(offset, Endian.little);
+    final userCommentListLength =
+        getUint32LE(dataBuffer.sublist(offset, offset + 4));
     offset += 4;
 
-    int totalLengthVorbis = 0;
-
-    // we want to know how long is the vorbis comment
     for (int i = 0; i < userCommentListLength; i++) {
-      totalLengthVorbis += buffer.getUint32(offset, Endian.little);
-    }
-
-    // and if the Vorbis comment length is greater than the current page
-    // we read new pages until we have the needed length
-    while (builder.length < totalLengthVorbis) {
-      builder.add(_parseUniquePage(reader).data);
-    }
-
-    for (int i = 0; i < userCommentListLength; i++) {
-      final commentLength = buffer.getUint32(offset, Endian.little);
+      final commentLength = getUint32LE(dataBuffer.sublist(offset, offset + 4));
       offset += 4;
 
-      while (offset + commentLength >= builder.length) {
-        builder.add(_parseUniquePage(reader).data);
+      while (dataBuffer.length - offset < commentLength) {
+        dataBuffer.addAll(_parseUniquePage().data);
       }
-
-      final comment = builder.toBytes().sublist(offset, offset + commentLength);
+      final commentData = dataBuffer.sublist(offset, offset + commentLength);
       offset += commentLength;
-
-      parseVorbisComment(comment, m, fetchImage);
+      parseVorbisComment(commentData, m, fetchImage);
     }
 
     return m;
@@ -154,7 +137,7 @@ class OGGParser extends TagParser {
 
   /// Parse a unique OGG page
   /// It means from the OggS magic word to the last segment
-  OggPage _parseUniquePage(RandomAccessFile reader) {
+  OggPage _parseUniquePage() {
     // for the spec, see: https://wiki.xiph.org/Ogg
     List<int> data = []; //  contains data from previous (continuing) pages
 
@@ -207,7 +190,7 @@ class OGGParser extends TagParser {
 
   /// Parse the header of an OGG page
   /// We also skip the content of the page to be synchronized
-  OggPage _parseUniquePageHeader(RandomAccessFile reader) {
+  OggPage _parseUniquePageHeader() {
     Uint8List headerData;
 
     headerData = buffer.read(27);

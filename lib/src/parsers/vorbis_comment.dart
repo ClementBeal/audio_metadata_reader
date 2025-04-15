@@ -6,7 +6,7 @@ import 'package:audio_metadata_reader/src/metadata/vorbis_metadata.dart';
 import 'package:audio_metadata_reader/src/parsers/tag_parser.dart';
 
 void parseVorbisComment(
-  Uint8List bytes,
+  List<int> bytes,
   VorbisMetadata metadata,
   bool fetchImage,
 ) {

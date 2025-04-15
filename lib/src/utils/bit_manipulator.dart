@@ -21,33 +21,33 @@ int synchsafe(input) {
 }
 
 /// Transform an array of 1 byte into a Integer8
-int getInt8(Uint8List data) {
+int getInt8(List<int> data) {
   return data[0];
 }
 
 /// Transform an array of 2 bytes into a Integer16
-int getUint16(Uint8List data) {
+int getUint16(List<int> data) {
   return data[0] << 8 | data[1];
 }
 
 /// Transform an array of 3 bytes into a Integer24
-int getUint24(Uint8List data) {
+int getUint24(List<int> data) {
   return data[0] << 16 | data[1] << 8 | data[2];
 }
 
 /// Transform an array of 4 bytes into a Integer32
-int getUint32(Uint8List data) {
+int getUint32(List<int> data) {
   return data[0] << 24 | data[1] << 16 | data[2] << 8 | data[3];
 }
 
 /// Transform an array of Little-Endian 4 bytes into a Integer32
-int getUint32LE(Uint8List data) =>
+int getUint32LE(List<int> data) =>
     (data[0] & 0xFF) |
     ((data[1] & 0xFF) << 8) |
     ((data[2] & 0xFF) << 16) |
     ((data[3] & 0xFF) << 24);
 
-int getUint64LE(Uint8List data) =>
+int getUint64LE(List<int> data) =>
     data[0] |
     data[1] << 8 |
     data[2] << 16 |
@@ -57,7 +57,7 @@ int getUint64LE(Uint8List data) =>
     data[6] << 48 |
     data[7] << 56;
 
-int getUint64BE(Uint8List data) =>
+int getUint64BE(List<int> data) =>
     data[7] |
     data[6] << 8 |
     data[5] << 16 |

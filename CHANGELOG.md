@@ -4,6 +4,13 @@
 - ID3v2 : read the lyrics correctly for UTF8-LE
 - MP4 : reset the reader when we start the parsing
 
+## [1.1.2](https://github.com/ClementBeal/audio_metadata_reader/compare/v1.1.1...v1.1.2) (2025-04-15)
+
+
+### Bug Fixes
+
+* OGG parsing was overflowing ([#58](https://github.com/ClementBeal/audio_metadata_reader/issues/58)) ([4d8d00f](https://github.com/ClementBeal/audio_metadata_reader/commit/4d8d00faf6364210bb181d2f9fdbe65bec0a8b4a))
+
 ## [1.1.1](https://github.com/ClementBeal/audio_metadata_reader/compare/v1.1.0...v1.1.1) (2025-04-06)
 
 

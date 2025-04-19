@@ -62,3 +62,11 @@ void main() {
   print(end.difference(init));
 }
 ```
+
+## Anonymise a music track
+
+If you need to send a track to an issue or in a test, you have to anonymize it. It means that you need to convert the actual track into random noise. For that, you can use `ffmpeg`.
+
+```bash
+ffmpeg -i <your_track> -f lavfi -t 5 -i "anoisesrc=color=white:duration=5" -map_metadata 0 -map 1:a -t 5 <output_track>
+```

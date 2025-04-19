@@ -63,9 +63,9 @@ void main() {
 }
 ```
 
-## Anonymise a music track
+## Anonymize a Music Track
 
-If you need to send a track to an issue or in a test, you have to anonymize it. It means that you need to convert the actual track into random noise. For that, you can use `ffmpeg`.
+If you need to send a track for issue reporting or testing, you should anonymize it. This means converting the actual track into random noise. You can use `ffmpeg` for this purpose.
 
 ```bash
 ffmpeg -i <your_track> -f lavfi -t 5 -i "anoisesrc=color=white:duration=5" -map_metadata 0 -map 1:a -t 5 <output_track>

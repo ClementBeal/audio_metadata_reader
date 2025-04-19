@@ -4,6 +4,13 @@
 - ID3v2 : read the lyrics correctly for UTF8-LE
 - MP4 : reset the reader when we start the parsing
 
+## [1.2.0](https://github.com/ClementBeal/audio_metadata_reader/compare/v1.1.2...v1.2.0) (2025-04-19)
+
+
+### Features
+
+* add RIFF parser ([#60](https://github.com/ClementBeal/audio_metadata_reader/issues/60)) ([cf9d686](https://github.com/ClementBeal/audio_metadata_reader/commit/cf9d6865a46293218dcaa96eb6b8bda5925672c5))
+
 ## [1.1.2](https://github.com/ClementBeal/audio_metadata_reader/compare/v1.1.1...v1.1.2) (2025-04-15)
 
 

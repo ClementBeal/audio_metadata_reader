@@ -3,12 +3,14 @@ import 'dart:io';
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 import 'package:audio_metadata_reader/src/metadata/mp3_metadata.dart';
 import 'package:audio_metadata_reader/src/metadata/mp4_metadata.dart';
+import 'package:audio_metadata_reader/src/metadata/riff_metadata.dart';
 import 'package:audio_metadata_reader/src/metadata/vorbis_metadata.dart';
 import 'package:audio_metadata_reader/src/parsers/id3v1.dart';
 import 'package:audio_metadata_reader/src/parsers/id3v2.dart';
 import 'package:audio_metadata_reader/src/parsers/mp4.dart';
 import 'package:audio_metadata_reader/src/parsers/ogg.dart';
 import 'package:audio_metadata_reader/src/parsers/flac.dart';
+import 'package:audio_metadata_reader/src/parsers/riff.dart';
 
 /// Parse the metadata of a file.
 ///
@@ -137,6 +139,31 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
       newMetadata.genres = oggMetadata.genres;
       newMetadata.pictures.addAll(oggMetadata.pictures);
       newMetadata.performers.addAll(oggMetadata.performer);
+
+      return newMetadata;
+    } else if (RiffParser.canUserParser(reader)) {
+      final riffMetadata = RiffParser().parse(reader) as RiffMetadata;
+
+      final newMetadata = AudioMetadata(
+        file: track,
+        album: riffMetadata.album,
+        artist: riffMetadata.artist,
+        bitrate: riffMetadata.bitrate,
+        duration: riffMetadata.duration,
+        language: null,
+        lyrics: null,
+        sampleRate: riffMetadata.samplerate,
+        title: riffMetadata.title,
+        totalDisc: null,
+        trackNumber: riffMetadata.trackNumber,
+        trackTotal: null,
+        year: riffMetadata.year,
+        discNumber: null,
+      );
+
+      newMetadata.pictures = riffMetadata.pictures;
+      newMetadata.genres =
+          (riffMetadata.genre != null) ? [riffMetadata.genre!] : [];
 
       return newMetadata;
     } else if (ID3v1Parser.canUserParser(reader)) {

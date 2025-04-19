@@ -1,4 +1,4 @@
-import '../parsers/tag_parser.dart';
+part of 'base.dart';
 
 class RiffMetadata extends ParserTag {
   String? title;

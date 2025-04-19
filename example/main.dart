@@ -29,6 +29,8 @@ void main() {
     case VorbisMetadata m:
       m.title = ["New title"];
       break;
+    case RiffMetadata m:
+      m.title = "New title";
   }
 
   writeMetadata(track, fullMetadata);

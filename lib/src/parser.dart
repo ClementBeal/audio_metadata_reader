@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
-import 'package:audio_metadata_reader/src/metadata/riff_metadata.dart';
 import 'package:audio_metadata_reader/src/parsers/riff.dart';
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 

@@ -6,6 +6,7 @@ import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 part 'mp3_metadata.dart';
 part 'mp4_metadata.dart';
 part 'vorbis_metadata.dart';
+part 'riff_metadata.dart';
 
 sealed class ParserTag {}
 

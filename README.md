@@ -7,6 +7,7 @@ A pure-Dart package for reading and writing metadata for different audio format
 | FLAC        | `Vorbis Comments`               | ✅   | ❌    |
 | OGG         | `Vorbis Comments`               | ✅   | ❌    |
 | Opus        | `Vorbis Comments`               | ✅   | ❌    |
+| WAV         | `RIFF`                          | ✅   | ❌    |
 
 It's still in development and there's some metadat format that I could implement or some information the library could return. Just open an issue for that.
 

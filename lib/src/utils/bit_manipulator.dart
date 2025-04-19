@@ -71,6 +71,14 @@ int getIntFromArbitraryBits(int data, int offset, int length) {
   return (data >> (64 - offset - length)) & ((1 << length) - 1);
 }
 
+/// Transform an integer into a Big-Endian 2 bytes array
+Uint8List intToUint16(int value) {
+  Uint8List result = Uint8List(2);
+  result[0] = (value >> 8) & 0xFF;
+  result[1] = value & 0xFF;
+  return result;
+}
+
 /// Transform an integer into a Big-Endian 3 bytes array
 Uint8List intToUint24(int value) {
   Uint8List result = Uint8List(3);

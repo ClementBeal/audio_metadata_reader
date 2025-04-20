@@ -29,6 +29,6 @@ void writeMetadata(File track, ParserTag metadata) {
   } else if (RiffParser.canUserParser(reader)) {
     RiffWriter().write(track, metadata as RiffMetadata);
   } else if (ID3v1Parser.canUserParser(reader)) {
-    Id3v1Writer().write(track, metadata as Mp3Metadata);
+    ID3v1Writer().write(track, metadata as Mp3Metadata);
   }
 }

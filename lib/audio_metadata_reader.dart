@@ -17,7 +17,7 @@ export 'src/parsers/ogg.dart' show OGGParser;
 
 export 'src/writers/id3v4_writer.dart' show Id3v4Writer;
 export 'src/writers/flac_writer.dart' show FlacWriter;
-export 'src/writers/id3v1_writer.dart' show Id3v1Writer;
+export 'src/writers/id3v1_writer.dart' show ID3v1Writer;
 export 'src/writers/mp4_writer.dart' show Mp4Writer;
 export 'src/writers/riff_writer.dart' show RiffWriter;
 

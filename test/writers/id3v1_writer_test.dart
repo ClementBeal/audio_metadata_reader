@@ -21,7 +21,7 @@ void main() {
       ..album = 'Test Album'
       ..year = 2023;
 
-    Id3v1Writer().write(tempFile, metadata);
+    ID3v1Writer().write(tempFile, metadata);
 
     final fileBytes = tempFile.readAsBytesSync();
     final id3v1Bytes = fileBytes.sublist(fileBytes.length - 128);

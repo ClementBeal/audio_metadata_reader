@@ -22,7 +22,7 @@ void main() {
 
   print("Now we are going to rewrite the metadata");
 
-  // Use the switch if you want to update metadata for a
+  // Use the switch if you want to update metadata for a specific format
   updateMetadata(
     track,
     (metadata) {
@@ -48,9 +48,8 @@ void main() {
     (metadata) {
       metadata.setTitle("New title");
       metadata.setArtist("New artist");
-      metadata.setAlbum("New artist");
+      metadata.setAlbum("New album");
       metadata.setTrackNumber(1);
-      metadata.setTrackNumber(12);
       metadata.setYear(DateTime(2014));
       metadata.setLyrics("I'm singing");
       metadata.setGenres(["Rock", "Metal", "Salsa"]);

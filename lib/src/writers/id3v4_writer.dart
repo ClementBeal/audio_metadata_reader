@@ -102,7 +102,7 @@ class Id3v4Writer extends BaseMetadataWriter<Mp3Metadata> {
     }
     if (metadata.duration != null) {
       final duration = metadata.duration!;
-      _writeFrame(builder, "TLEN", "${duration.inMilliseconds}}");
+      _writeFrame(builder, "TLEN", "${duration.inMilliseconds}");
     }
     if (metadata.mediatype != null) {
       _writeFrame(builder, "TMED", metadata.mediatype!);
@@ -148,7 +148,9 @@ class Id3v4Writer extends BaseMetadataWriter<Mp3Metadata> {
       if (metadata.trackTotal != null) {
         _writeFrame(
             builder, "TRCK", "${metadata.trackNumber}/${metadata.trackTotal}");
-      } else {}
+      } else {
+        _writeFrame(builder, "TRCK", "${metadata.trackNumber}");
+      }
     }
     if (metadata.recordingDates != null) {
       _writeFrame(builder, "TRDA", metadata.recordingDates!);

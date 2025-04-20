@@ -4,6 +4,19 @@
 - ID3v2 : read the lyrics correctly for UTF8-LE
 - MP4 : reset the reader when we start the parsing
 
+## [1.4.0](https://github.com/ClementBeal/audio_metadata_reader/compare/v1.3.1...v1.4.0) (2025-04-20)
+
+
+### Features
+
+* add toString method to all metadata classes ([#71](https://github.com/ClementBeal/audio_metadata_reader/issues/71)) ([6d9a9e8](https://github.com/ClementBeal/audio_metadata_reader/commit/6d9a9e8792fcd9a8a51598975e589da33468947f))
+
+
+### Bug Fixes
+
+* **MP4:** use the mdhv version for the duration calculation ([#73](https://github.com/ClementBeal/audio_metadata_reader/issues/73)) ([d78ae23](https://github.com/ClementBeal/audio_metadata_reader/commit/d78ae233e621d8c2d833054e24d9dccaeadec8fd))
+* write CD and genres for MP3 ([#70](https://github.com/ClementBeal/audio_metadata_reader/issues/70)) ([1d7c01c](https://github.com/ClementBeal/audio_metadata_reader/commit/1d7c01c47904a68d1330bde7848810713983de05))
+
 ## [1.3.1](https://github.com/ClementBeal/audio_metadata_reader/compare/v1.3.0...v1.3.1) (2025-04-20)
 
 

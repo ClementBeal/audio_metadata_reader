@@ -102,7 +102,7 @@ class Id3v4Writer extends BaseMetadataWriter<Mp3Metadata> {
     }
     if (metadata.duration != null) {
       final duration = metadata.duration!;
-      _writeFrame(builder, "TLEN", "${duration.inMilliseconds}}");
+      _writeFrame(builder, "TLEN", "${duration.inMilliseconds}");
     }
     if (metadata.mediatype != null) {
       _writeFrame(builder, "TMED", metadata.mediatype!);

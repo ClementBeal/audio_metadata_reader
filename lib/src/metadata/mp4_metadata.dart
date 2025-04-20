@@ -32,4 +32,24 @@ class Mp4Metadata extends ParserTag {
     this.totalTracks,
     this.totalDiscs,
   });
+
+  @override
+  String toString() {
+    return 'Mp4Metadata(\n'
+        '  title: $title,\n'
+        '  artist: $artist,\n'
+        '  album: $album,\n'
+        '  year: $year,\n'
+        '  trackNumber: $trackNumber,\n'
+        '  duration: $duration,\n'
+        '  picture: $picture,\n'
+        '  bitrate: $bitrate,\n'
+        '  discNumber: $discNumber,\n'
+        '  lyrics: $lyrics,\n'
+        '  genre: $genre,\n'
+        '  sampleRate: $sampleRate,\n'
+        '  totalTracks: $totalTracks,\n'
+        '  totalDiscs: $totalDiscs\n'
+        ')';
+  }
 }

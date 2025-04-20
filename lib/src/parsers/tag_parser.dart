@@ -106,6 +106,28 @@ class AudioMetadata {
     genres = [];
     pictures = [];
   }
+
+  @override
+  String toString() {
+    return 'AudioMetadata(\n'
+        '  album: $album,\n'
+        '  year: $year,\n'
+        '  language: $language,\n'
+        '  artist: $artist,\n'
+        '  title: $title,\n'
+        '  trackNumber: $trackNumber,\n'
+        '  trackTotal: $trackTotal,\n'
+        '  duration: $duration,\n'
+        '  genres: $genres,\n'
+        '  discNumber: $discNumber,\n'
+        '  totalDisc: $totalDisc,\n'
+        '  lyrics: $lyrics,\n'
+        '  bitrate: $bitrate,\n'
+        '  sampleRate: $sampleRate,\n'
+        '  pictures: $pictures,\n'
+        '  file: $file\n'
+        ')';
+  }
 }
 
 abstract class TagParser {

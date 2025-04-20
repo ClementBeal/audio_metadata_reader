@@ -3,11 +3,12 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
-import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/parsers/flac.dart';
 import 'package:audio_metadata_reader/src/utils/bit_manipulator.dart';
+import 'package:audio_metadata_reader/src/writers/base_writer.dart';
 
-class FlacWriter {
+class FlacWriter extends BaseMetadataWriter<VorbisMetadata> {
+  @override
   void write(File file, VorbisMetadata metadata) {
     final builder = BytesBuilder();
 

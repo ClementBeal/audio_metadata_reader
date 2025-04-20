@@ -4,6 +4,16 @@
 - ID3v2 : read the lyrics correctly for UTF8-LE
 - MP4 : reset the reader when we start the parsing
 
+## [1.3.1](https://github.com/ClementBeal/audio_metadata_reader/compare/v1.3.0...v1.3.1) (2025-04-20)
+
+
+### Bug Fixes
+
+* remove a forgotten `}` for TLEN frame ([56593cb](https://github.com/ClementBeal/audio_metadata_reader/commit/56593cb02daf79b65e1b4ba3628c7a5df46b5f18))
+* TLEN parser can fail if the content is not an integer ([d7ff5db](https://github.com/ClementBeal/audio_metadata_reader/commit/d7ff5dbf903d372b62dcef7c9ba55e9c2a34894e))
+* write and read number in MP3 ([5441412](https://github.com/ClementBeal/audio_metadata_reader/commit/5441412ef650fa63d7bfde63c23ceb7e00b66fb2))
+* write track number if it's alone ([6d2836e](https://github.com/ClementBeal/audio_metadata_reader/commit/6d2836e052d77dadb7fb959a4f22bf8300297158))
+
 ## [1.3.0](https://github.com/ClementBeal/audio_metadata_reader/compare/v1.2.0...v1.3.0) (2025-04-20)
 
 

@@ -263,4 +263,26 @@ extension CommonMetadataSetters on ParserTag {
         break;
     }
   }
+
+  /// Has no effect on RIFF metadata (`.wav`)
+  void setCD(int? cdNumber, int? discTotal) {
+    switch (this) {
+      case Mp3Metadata m:
+        if (cdNumber != null && discTotal == null)
+          m.partOfSet = "$cdNumber";
+        else if (cdNumber != null && discTotal != null)
+          m.partOfSet = "$cdNumber/$discTotal";
+        break;
+      case Mp4Metadata m:
+        m.discNumber = cdNumber;
+        m.totalDiscs = discTotal;
+        break;
+      case VorbisMetadata m:
+        m.discNumber = cdNumber;
+        m.discTotal = discTotal;
+        break;
+      case RiffMetadata():
+        break;
+    }
+  }
 }

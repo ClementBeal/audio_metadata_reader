@@ -148,7 +148,9 @@ class Id3v4Writer extends BaseMetadataWriter<Mp3Metadata> {
       if (metadata.trackTotal != null) {
         _writeFrame(
             builder, "TRCK", "${metadata.trackNumber}/${metadata.trackTotal}");
-      } else {}
+      } else {
+        _writeFrame(builder, "TRCK", "${metadata.trackNumber}");
+      }
     }
     if (metadata.recordingDates != null) {
       _writeFrame(builder, "TRDA", metadata.recordingDates!);

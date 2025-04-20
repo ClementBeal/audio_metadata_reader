@@ -443,12 +443,14 @@ class ID3v2Parser extends TagParser {
         },
       "TLEN" => () {
           final content = buffer.read(size);
-          final time = int.parse(getTextFromFrame(content));
+          final time = int.tryParse(getTextFromFrame(content));
 
-          if ((time / 1000) < 1) {
-            metadata.duration = Duration(seconds: time);
-          } else {
-            metadata.duration = Duration(milliseconds: time);
+          if (time != null) {
+            if ((time / 1000) < 1) {
+              metadata.duration = Duration(seconds: time);
+            } else {
+              metadata.duration = Duration(milliseconds: time);
+            }
           }
         },
       "TMED" => () {

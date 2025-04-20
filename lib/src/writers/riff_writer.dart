@@ -5,11 +5,13 @@ import 'dart:typed_data';
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/utils/bit_manipulator.dart';
 import 'package:audio_metadata_reader/src/utils/buffer.dart';
+import 'package:audio_metadata_reader/src/writers/base_writer.dart';
 
-class RiffWriter {
+class RiffWriter extends BaseMetadataWriter<RiffMetadata> {
   late RiffMetadata metadata;
   late final Buffer buffer;
 
+  @override
   void write(File file, RiffMetadata metadata) {
     this.metadata = metadata;
     final builder = BytesBuilder();

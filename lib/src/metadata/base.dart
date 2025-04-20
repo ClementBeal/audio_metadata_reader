@@ -107,3 +107,160 @@ PictureType getPictureTypeEnum(int value) {
       return PictureType.other;
   }
 }
+
+extension CommonMetadataSetters on ParserTag {
+  void setTitle(String? title) {
+    switch (this) {
+      case Mp3Metadata m:
+        m.songName = title;
+        break;
+      case Mp4Metadata m:
+        m.title = title;
+        break;
+      case VorbisMetadata m:
+        m.title = title == null ? [] : [title];
+        break;
+      case RiffMetadata m:
+        m.title = title;
+        break;
+    }
+  }
+
+  void setArtist(String? artist) {
+    switch (this) {
+      case Mp3Metadata m:
+        m.bandOrOrchestra = artist;
+        break;
+      case Mp4Metadata m:
+        m.artist = artist;
+        break;
+      case VorbisMetadata m:
+        m.artist = artist == null ? m.artist : [artist];
+        break;
+      case RiffMetadata m:
+        m.artist = artist;
+        break;
+    }
+  }
+
+  void setAlbum(String? album) {
+    switch (this) {
+      case Mp3Metadata m:
+        m.album = album;
+        break;
+      case Mp4Metadata m:
+        m.album = album;
+        break;
+      case VorbisMetadata m:
+        m.album = album == null ? [] : [album];
+        break;
+      case RiffMetadata m:
+        m.album = album;
+        break;
+    }
+  }
+
+  void setYear(DateTime? year) {
+    switch (this) {
+      case Mp3Metadata m:
+        m.year = year?.year;
+        break;
+      case Mp4Metadata m:
+        m.year = year;
+        break;
+      case VorbisMetadata m:
+        m.date = year == null ? [] : [year];
+        break;
+      case RiffMetadata m:
+        m.year = year;
+        break;
+    }
+  }
+
+  void setPictures(List<Picture> pictures) {
+    switch (this) {
+      case Mp3Metadata m:
+        m.pictures = pictures;
+        break;
+      case Mp4Metadata m:
+        m.picture = pictures.firstOrNull;
+        break;
+      case VorbisMetadata m:
+        m.pictures = pictures;
+        break;
+      case RiffMetadata m:
+        m.pictures = pictures;
+        break;
+    }
+  }
+
+  void setTrackNumber(int? trackNumber) {
+    switch (this) {
+      case Mp3Metadata m:
+        m.trackNumber = trackNumber;
+        break;
+      case Mp4Metadata m:
+        m.trackNumber = trackNumber;
+        break;
+      case VorbisMetadata m:
+        m.trackNumber = trackNumber == null ? [] : [trackNumber];
+        break;
+      case RiffMetadata m:
+        m.trackNumber = trackNumber;
+        break;
+    }
+  }
+
+  void setTrackTotal(int? trackTotal) {
+    switch (this) {
+      case Mp3Metadata m:
+        m.trackTotal = trackTotal;
+        break;
+      case Mp4Metadata m:
+        m.totalTracks = trackTotal;
+        break;
+      case VorbisMetadata m:
+        m.trackTotal = trackTotal;
+        break;
+      case RiffMetadata m:
+        m.trackNumber = trackTotal;
+        break;
+    }
+  }
+
+  /// Update the lyrics.
+  ///
+  /// Has no effect on RIFF metadata (`.wav`)
+  void setLyrics(String? lyric) {
+    switch (this) {
+      case Mp3Metadata m:
+        m.lyric = lyric;
+        break;
+      case Mp4Metadata m:
+        m.lyrics = lyric;
+        break;
+      case VorbisMetadata m:
+        m.lyric = lyric;
+        break;
+      case RiffMetadata():
+        break;
+    }
+  }
+
+  void setGenres(List<String> genres) {
+    switch (this) {
+      case Mp3Metadata m:
+        m.genres = genres;
+        break;
+      case Mp4Metadata m:
+        m.genre = genres.firstOrNull;
+        break;
+      case VorbisMetadata m:
+        m.genres = genres;
+        break;
+      case RiffMetadata m:
+        m.genre = genres.firstOrNull;
+        break;
+    }
+  }
+}

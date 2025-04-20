@@ -1,15 +1,18 @@
 import 'dart:io';
 import 'dart:convert';
 
-import 'package:audio_metadata_reader/audio_metadata_reader.dart'; // For encoding strings to bytes
+import 'package:audio_metadata_reader/src/metadata/base.dart';
+import 'package:audio_metadata_reader/src/writers/base_writer.dart'; // For encoding strings to bytes
 
-class Id3v1Writer {
-  void write(RandomAccessFile writer, AudioMetadata metadata) {
+class Id3v1Writer extends BaseMetadataWriter<Mp3Metadata> {
+  @override
+  void write(File file, Mp3Metadata metadata) {
+    final reader = file.openSync();
     // 1. Seek to the ID3v1 tag position (128 bytes from the end)
-    writer.setPositionSync(writer.lengthSync());
+    reader.setPositionSync(reader.lengthSync());
 
     // 2. Write "TAG" identifier
-    writer.writeStringSync("TAG");
+    reader.writeStringSync("TAG");
 
     // 3. Helper function for writing fixed-length strings
     void writeFixedString(String str, int length) {
@@ -21,16 +24,16 @@ class Id3v1Writer {
         bytes += List.filled(
             length - bytes.length, 0); // Pad with null bytes if too short
       }
-      writer.writeFromSync(bytes);
+      reader.writeFromSync(bytes);
     }
 
     // 4. Write title, artist, album (fixed-length 30)
-    writeFixedString(metadata.title ?? "", 30);
-    writeFixedString(metadata.artist ?? "", 30);
+    writeFixedString(metadata.songName ?? "", 30);
+    writeFixedString(metadata.bandOrOrchestra ?? "", 30);
     writeFixedString(metadata.album ?? "", 30);
 
     // 5. Write year (fixed-length 4)
-    String yearString = (metadata.year?.year ?? 0)
+    String yearString = (metadata.year ?? 0)
         .toString()
         .padLeft(4, '0'); // Pad with leading zeros
     writeFixedString(yearString, 4);
@@ -40,8 +43,8 @@ class Id3v1Writer {
         "", 30); // You can replace this with a comment if you have one
 
     // 7. Write genre byte (default to 255 if not provided)
-    writer.writeByteSync(255);
+    reader.writeByteSync(255);
 
-    writer.closeSync();
+    reader.closeSync();
   }
 }

@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/parsers/tag_parser.dart';
+import 'package:audio_metadata_reader/src/writers/base_writer.dart';
 
 class TagHeader {
   final int majorVersion;
@@ -18,7 +19,8 @@ class TagHeader {
   int get version => majorVersion * 100 + minorVersion;
 }
 
-class Id3v4Writer {
+class Id3v4Writer extends BaseMetadataWriter<Mp3Metadata> {
+  @override
   void write(File file, Mp3Metadata metadata) {
     // check if the file has an ID3 metadata
     final size = file.lengthSync();

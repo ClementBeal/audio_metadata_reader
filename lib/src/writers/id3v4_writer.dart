@@ -173,6 +173,12 @@ class Id3v4Writer extends BaseMetadataWriter<Mp3Metadata> {
     if (metadata.year != null) {
       _writeFrame(builder, "TYER", metadata.year!.toString());
     }
+    if (metadata.genres.isNotEmpty) {
+      final genresString = metadata.genres.join('/');
+      _writeFrame(builder, "TCON", genresString);
+    } else if (metadata.contentType != null) {
+      _writeFrame(builder, "TCON", metadata.contentType!);
+    }
   }
 
   void _writeFrame(BytesBuilder builder, String frameId, String data) {

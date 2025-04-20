@@ -130,10 +130,22 @@ class MP4Parser extends TagParser {
     if (box.type == "moov") {
       parseRecurvise(buffer, box);
     } else if (box.type == "mvhd") {
-      final bytes = buffer.read(100);
+      final version = buffer.read(1)[0];
 
-      final timeScale = getUint32(bytes.sublist(12, 16));
-      final timeUnit = getUint32(bytes.sublist(16, 20));
+      // version 0 has 100 bytes
+      // version 1 has 112 bytes
+      final bytes = buffer.read(version == 1 ? 111 : 99);
+
+      int timeScale = 0;
+      int timeUnit = 0;
+
+      if (version == 0) {
+        timeScale = getUint32(bytes.sublist(11, 15));
+        timeUnit = getUint32(bytes.sublist(15, 19));
+      } else {
+        timeScale = getUint32(bytes.sublist(19, 23));
+        timeUnit = getUint64BE(bytes.sublist(23, 31));
+      }
 
       double microseconds = (timeUnit / timeScale) * 1000000;
       tags.duration = Duration(microseconds: microseconds.toInt());

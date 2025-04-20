@@ -31,4 +31,24 @@ class RiffMetadata extends ParserTag {
     this.duration,
     this.samplerate,
   });
+
+  @override
+  String toString() {
+    return 'RiffMetadata(\n'
+        '  title: $title,\n'
+        '  artist: $artist,\n'
+        '  album: $album,\n'
+        '  year: $year,\n'
+        '  comment: $comment,\n'
+        '  genre: $genre,\n'
+        '  trackNumber: $trackNumber,\n'
+        '  encoder: $encoder,\n'
+        '  publisher: $publisher,\n'
+        '  copyright: $copyright,\n'
+        '  bitrate: $bitrate,\n'
+        '  samplerate: $samplerate,\n'
+        '  duration: $duration,\n'
+        '  pictures: $pictures\n'
+        ')';
+  }
 }

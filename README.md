@@ -1,27 +1,30 @@
-A pure-Dart package for reading and writing metadata for different audio format
+# Audio Metadata Reader
 
-| File Format | Metadata Format(s)  | Read | Write |
-| ----------- | ------------------- | ---- | ----- |
-| MP3         | `ID3v1` `ID3v2`     | ✅   | ❌    |
-| MP4         | `iTunes-style ilst` | ✅   | ❌    |
-| FLAC        | `Vorbis Comments`   | ✅   | ❌    |
-| OGG         | `Vorbis Comments`   | ✅   | ❌    |
-| Opus        | `Vorbis Comments`   | ✅   | ❌    |
-| WAV         | `RIFF`              | ✅   | ❌    |
+A pure Dart package for reading and writing metadata in various audio formats.
 
-It's still in development and there's some metadat format that I could implement or some information the library could return. Just open an issue for that.
+| File Format | Metadata Format(s)    | Read | Write |
+|-------------|------------------------|------|-------|
+| MP3         | `ID3v1`, `ID3v2`        | ✅   | ✅    |
+| MP4         | `iTunes-style ilst`     | ✅   | ✅    |
+| FLAC        | `Vorbis Comments`       | ✅   | ✅    |
+| OGG         | `Vorbis Comments`       | ✅   | ❌    |
+| Opus        | `Vorbis Comments`       | ✅   | ❌    |
+| WAV         | `RIFF`                  | ✅   | ✅    |
+
+This package is still under active development. If there's a metadata format you'd like to see supported or specific information you’d like the library to expose, feel free to open an issue.
 
 ## Usage
 
+### Read
+
 ```dart
 import 'dart:io';
-
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 
 void main() {
   final track = File("Pieces.mp3");
 
-  // Getting the image of a track can be heavy and slow the reading
+  // Fetching images can slow down metadata reading
   final metadata = readMetadata(track, getImage: false);
 
   print(metadata.title);
@@ -29,43 +32,85 @@ void main() {
 }
 ```
 
+### Write
+
+```dart
+void main() {
+  // Use a switch if you want to update metadata based on the file type
+  updateMetadata(
+    track,
+    (metadata) {
+      switch (metadata) {
+        case Mp3Metadata m:
+          m.songName = "New title";
+          break;
+        case Mp4Metadata m:
+          m.title = "New title";
+          break;
+        case VorbisMetadata m:
+          m.title = ["New title"];
+          break;
+        case RiffMetadata m:
+          m.title = "New title";
+      }
+    },
+  );
+
+  // Or use extension methods for common metadata updates
+  updateMetadata(
+    track,
+    (metadata) {
+      metadata.setTitle("New title");
+      metadata.setArtist("New artist");
+      metadata.setAlbum("New album");
+      metadata.setTrackNumber(1);
+      metadata.setYear(DateTime(2014));
+      metadata.setLyrics("I'm singing");
+      metadata.setGenres(["Rock", "Metal", "Salsa"]);
+      metadata.setPictures([
+        Picture(Uint8List.fromList([]), "image/png", PictureType.coverFront)
+      ]);
+    },
+  );
+}
+```
+
 ## Performance
 
-By running the following code on my laptop with a SSD, it ables to get the metadata of 3392 tracks in less than 200ms (if we don't fetch the covers). With the covers, about 400ms.
+On my laptop with an SSD, the library can process metadata from **3,392 tracks in under 200ms** — assuming covers aren't fetched. With covers, it's around **400ms**.
 
 ```dart
 import 'dart:io';
-
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 
 void main() {
   final folder = Directory(r"music folder")
       .listSync(recursive: true)
       .whereType<File>()
-      .where((element) =>
-          element.path.contains("mp4") ||
-          element.path.contains("m4a") ||
-          element.path.contains("mp3") ||
-          element.path.contains("flac"))
+      .where((file) =>
+          file.path.endsWith(".mp4") ||
+          file.path.endsWith(".m4a") ||
+          file.path.endsWith(".mp3") ||
+          file.path.endsWith(".flac"))
       .toList();
 
   print("Number of tracks: ${folder.length}");
 
-  final init = DateTime.now();
+  final start = DateTime.now();
 
-  for(final file in folder) {
+  for (final file in folder) {
     readMetadata(file, getImage: false);
   }
 
   final end = DateTime.now();
-
-  print(end.difference(init));
+  print("Duration: ${end.difference(start)}");
 }
 ```
 
+
 ## Anonymize a Music Track
 
-If you need to send a track for issue reporting or testing, you should anonymize it. This means converting the actual track into random noise. You can use `ffmpeg` for this purpose.
+If you need to report an issue or test the library without sharing private audio, you can anonymize a track by replacing its audio with white noise using `ffmpeg`:
 
 ```bash
 ffmpeg -i <your_track> -f lavfi -t 5 -i "anoisesrc=color=white:duration=5" -map_metadata 0 -map 1:a -t 5 <output_track>

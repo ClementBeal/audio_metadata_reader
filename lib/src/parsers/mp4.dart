@@ -162,6 +162,13 @@ class MP4Parser extends TagParser {
     } else if (box.type[0] == "©" ||
         ["gnre", "trkn", "disk", "tmpo", "cpil", "too", "covr", "pgap", "gen"]
             .contains(box.type)) {
+      final boxName = (box.type[0] == "©") ? box.type.substring(1) : box.type;
+
+      if (boxName == "covr" && !fetchImage) {
+        buffer.skip(box.size - 8);
+        return;
+      }
+
       final metadataValue = buffer.read(box.size - 8);
 
       // sometimes the data is stored inside another box called `data`
@@ -177,8 +184,6 @@ class MP4Parser extends TagParser {
       } catch (e) {
         value = latin1.decode(data);
       }
-
-      final boxName = (box.type[0] == "©") ? box.type.substring(1) : box.type;
 
       switch (boxName) {
         case "nam":
@@ -215,13 +220,12 @@ class MP4Parser extends TagParser {
           break;
 
         case "covr":
-          if (fetchImage) {
-            final imageData = data;
-            tags.picture = Picture(
-                imageData,
-                lookupMimeType("no path", headerBytes: imageData) ?? "",
-                PictureType.coverFront);
-          }
+          final imageData = data;
+          tags.picture = Picture(
+              imageData,
+              lookupMimeType("no path", headerBytes: imageData) ?? "",
+              PictureType.coverFront);
+          break;
         case "trkn":
           final a = getUint16(data.sublist(2, 4));
           final totalTracks = getUint16(data.sublist(4, 6));

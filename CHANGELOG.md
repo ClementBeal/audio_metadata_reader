@@ -4,6 +4,13 @@
 - ID3v2 : read the lyrics correctly for UTF8-LE
 - MP4 : reset the reader when we start the parsing
 
+## [1.4.1](https://github.com/ClementBeal/audio_metadata_reader/compare/v1.4.0...v1.4.1) (2025-04-29)
+
+
+### Bug Fixes
+
+* MP4 should be able to skip the images ([#75](https://github.com/ClementBeal/audio_metadata_reader/issues/75)) ([8923c67](https://github.com/ClementBeal/audio_metadata_reader/commit/8923c67342038d0408dad359a1461df50f2386f4))
+
 ## [1.4.0](https://github.com/ClementBeal/audio_metadata_reader/compare/v1.3.1...v1.4.0) (2025-04-20)
 
 

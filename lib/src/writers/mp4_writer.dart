@@ -37,7 +37,7 @@ class Mp4Writer extends BaseMetadataWriter<Mp4Metadata> {
 
     reader.closeSync();
 
-    File("a_new.mp4").writeAsBytesSync(byteBuilder.toBytes());
+    file.writeAsBytesSync(byteBuilder.toBytes());
   }
 
   Uint8List _processBox(Uint8List data) {

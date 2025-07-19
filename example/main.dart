@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
+import 'package:audio_metadata_reader/src/metadata/base.dart';
 
 void main() {
   final track = File("Pieces.mp3");
@@ -38,6 +39,8 @@ void main() {
           break;
         case RiffMetadata m:
           m.title = "New title";
+        case ApeMetadata m:
+          m.title = "New title";
       }
     },
   );
@@ -53,9 +56,7 @@ void main() {
       metadata.setYear(DateTime(2014));
       metadata.setLyrics("I'm singing");
       metadata.setGenres(["Rock", "Metal", "Salsa"]);
-      metadata.setPictures([
-        Picture(Uint8List.fromList([]), "image/png", PictureType.coverFront)
-      ]);
+      metadata.setPictures([Picture(Uint8List.fromList([]), "image/png", PictureType.coverFront)]);
     },
   );
 }

@@ -10,6 +10,7 @@ A pure Dart package for reading and writing metadata in various audio formats.
 | OGG         | `Vorbis Comments`       | ✅   | ❌    |
 | Opus        | `Vorbis Comments`       | ✅   | ❌    |
 | WAV         | `RIFF`                  | ✅   | ✅    |
+| APE         | `APEv2`                 | ✅   | ❌    |
 
 This package is still under active development. If there's a metadata format you'd like to see supported or specific information you’d like the library to expose, feel free to open an issue.
 
@@ -91,7 +92,8 @@ void main() {
           file.path.endsWith(".mp4") ||
           file.path.endsWith(".m4a") ||
           file.path.endsWith(".mp3") ||
-          file.path.endsWith(".flac"))
+          file.path.endsWith(".flac")||
+          file.path.endsWith(".ape"))
       .toList();
 
   print("Number of tracks: ${folder.length}");

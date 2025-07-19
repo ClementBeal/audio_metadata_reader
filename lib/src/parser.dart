@@ -1,12 +1,13 @@
 import 'dart:io';
 
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
+import 'package:audio_metadata_reader/src/parsers/apev2.dart';
 import 'package:audio_metadata_reader/src/parsers/riff.dart';
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 
 /// Parse the metadata of a file.
 ///
-/// It automatically detects the type of the file (`.mp3`, `.ogg`, `.flac` etc)
+/// It automatically detects the type of the file (`.mp3`, `.ogg`, `.flac` , `.ape` etc)
 /// and select the matching file parser.
 ///
 /// If there's no parser or an error, a `MetadataParserException` exception is raised.
@@ -19,15 +20,12 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
 
   try {
     if (ID3v2Parser.canUserParser(reader)) {
-      final mp3Metadata =
-          ID3v2Parser(fetchImage: getImage).parse(reader) as Mp3Metadata;
+      final mp3Metadata = ID3v2Parser(fetchImage: getImage).parse(reader) as Mp3Metadata;
 
       final a = AudioMetadata(
         file: track,
         album: mp3Metadata.album,
-        artist: mp3Metadata.bandOrOrchestra ??
-            mp3Metadata.leadPerformer ??
-            mp3Metadata.originalArtist,
+        artist: mp3Metadata.bandOrOrchestra ?? mp3Metadata.leadPerformer ?? mp3Metadata.originalArtist,
         bitrate: mp3Metadata.bitrate,
         duration: mp3Metadata.duration,
         language: mp3Metadata.languages,
@@ -37,8 +35,7 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
         totalDisc: mp3Metadata.totalDics,
         trackNumber: mp3Metadata.trackNumber,
         trackTotal: mp3Metadata.trackTotal,
-        year:
-            DateTime(mp3Metadata.originalReleaseYear ?? mp3Metadata.year ?? 0),
+        year: DateTime(mp3Metadata.originalReleaseYear ?? mp3Metadata.year ?? 0),
         discNumber: mp3Metadata.discNumber,
       );
 
@@ -53,8 +50,7 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
 
       return a;
     } else if (FlacParser.canUserParser(reader)) {
-      final vorbisMetadata =
-          FlacParser(fetchImage: getImage).parse(reader) as VorbisMetadata;
+      final vorbisMetadata = FlacParser(fetchImage: getImage).parse(reader) as VorbisMetadata;
 
       final newMetadata = AudioMetadata(
         file: track,
@@ -79,8 +75,7 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
 
       return newMetadata;
     } else if (MP4Parser.canUserParser(reader)) {
-      final mp4Metadata =
-          MP4Parser(fetchImage: getImage).parse(reader) as Mp4Metadata;
+      final mp4Metadata = MP4Parser(fetchImage: getImage).parse(reader) as Mp4Metadata;
 
       final newMetadata = AudioMetadata(
         file: track,
@@ -109,8 +104,7 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
 
       return newMetadata;
     } else if (OGGParser.canUserParser(reader)) {
-      final oggMetadata =
-          OGGParser(fetchImage: getImage).parse(reader) as VorbisMetadata;
+      final oggMetadata = OGGParser(fetchImage: getImage).parse(reader) as VorbisMetadata;
 
       final newMetadata = AudioMetadata(
         file: track,
@@ -154,8 +148,7 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
       );
 
       newMetadata.pictures = riffMetadata.pictures;
-      newMetadata.genres =
-          (riffMetadata.genre != null) ? [riffMetadata.genre!] : [];
+      newMetadata.genres = (riffMetadata.genre != null) ? [riffMetadata.genre!] : [];
 
       return newMetadata;
     } else if (ID3v1Parser.canUserParser(reader)) {
@@ -164,9 +157,7 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
       final newMetadata = AudioMetadata(
         file: track,
         album: mp3Metadata.album,
-        artist: mp3Metadata.bandOrOrchestra ??
-            mp3Metadata.originalArtist ??
-            mp3Metadata.leadPerformer,
+        artist: mp3Metadata.bandOrOrchestra ?? mp3Metadata.originalArtist ?? mp3Metadata.leadPerformer,
         bitrate: mp3Metadata.bitrate,
         duration: mp3Metadata.duration,
         language: mp3Metadata.languages,
@@ -176,8 +167,7 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
         totalDisc: mp3Metadata.totalDics,
         trackNumber: mp3Metadata.trackNumber,
         trackTotal: mp3Metadata.trackTotal,
-        year:
-            DateTime(mp3Metadata.originalReleaseYear ?? mp3Metadata.year ?? 0),
+        year: DateTime(mp3Metadata.originalReleaseYear ?? mp3Metadata.year ?? 0),
         discNumber: mp3Metadata.discNumber,
       );
 
@@ -185,13 +175,41 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
       newMetadata.genres = mp3Metadata.genres;
 
       return newMetadata;
+    } else if (Apev2Parser.canUserParser(reader)) {
+      final apeMetadata = Apev2Parser(fetchImage: getImage).parse(reader) as ApeMetadata;
+      final newMetadata = AudioMetadata(
+        file: track,
+        album: apeMetadata.album,
+        artist: apeMetadata.artist,
+        bitrate: apeMetadata.bitrate,
+        duration: apeMetadata.duration,
+        language: apeMetadata.languages,
+        lyrics: apeMetadata.lyric,
+        sampleRate: apeMetadata.samplerate,
+        title: apeMetadata.title,
+        totalDisc: apeMetadata.totalDics,
+        trackNumber: apeMetadata.trackNumber,
+        trackTotal: apeMetadata.trackTotal,
+        year: apeMetadata.year,
+        discNumber: apeMetadata.discNumber,
+
+        ///
+        // languages: apeMetadata.languages,
+        // size: apeMetadata.size,
+        // comment: apeMetadata.comment,
+        // lastModified: apeMetadata.lastModified,
+        // version: apeMetadata.version,
+        // fileMD5: apeMetadata.fileMD5,
+      );
+
+      newMetadata.pictures = apeMetadata.pictures;
+      newMetadata.genres = apeMetadata.genres;
+      return newMetadata;
     }
   } on MetadataParserException catch (e, s) {
-    Error.throwWithStackTrace(
-        MetadataParserException(track: track, message: e.message), s);
+    Error.throwWithStackTrace(MetadataParserException(track: track, message: e.message), s);
   } catch (e, s) {
-    Error.throwWithStackTrace(
-        MetadataParserException(track: track, message: e.toString()), s);
+    Error.throwWithStackTrace(MetadataParserException(track: track, message: e.toString()), s);
   }
 
   throw NoMetadataParserException(
@@ -204,7 +222,7 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
 ///
 /// Use this one if you want to rewrite the metadata later.
 ///
-/// It automatically detects the type of the file (`.mp3`, `.ogg`, `.flac` etc)
+/// It automatically detects the type of the file (`.mp3`, `.ogg`, `.flac`, `.ape` etc)
 /// and select the matching file parser.
 ///
 /// If there's no parser or an error, a `MetadataParserException` exception is raised.
@@ -224,6 +242,8 @@ ParserTag readAllMetadata(File track, {bool getImage = true}) {
       return OGGParser(fetchImage: getImage).parse(reader);
     } else if (ID3v2Parser.isID3v1(reader)) {
       return ID3v1Parser().parse(reader);
+    } else if (Apev2Parser.canUserParser(reader)) {
+      return Apev2Parser().parse(reader);
     }
   } catch (e, trace) {
     print(trace);
@@ -232,7 +252,6 @@ ParserTag readAllMetadata(File track, {bool getImage = true}) {
 
   throw MetadataParserException(
     track: track,
-    message:
-        "No available parser for this file. Please raise an issue in Github",
+    message: "No available parser for this file. Please raise an issue in Github",
   );
 }

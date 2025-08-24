@@ -59,9 +59,6 @@ class Id3v4Writer extends BaseMetadataWriter<Mp3Metadata> {
     if (metadata.composer != null) {
       _writeFrame(builder, "TCOM", metadata.composer!);
     }
-    if (metadata.contentType != null) {
-      _writeFrame(builder, "TCON", metadata.contentType!);
-    }
     if (metadata.copyrightMessage != null) {
       _writeFrame(builder, "TCOP", metadata.copyrightMessage!);
     }

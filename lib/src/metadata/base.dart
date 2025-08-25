@@ -129,7 +129,7 @@ extension CommonMetadataSetters on ParserTag {
   void setArtist(String? artist) {
     switch (this) {
       case Mp3Metadata m:
-        m.bandOrOrchestra = artist;
+        m.leadPerformer = artist;
         break;
       case Mp4Metadata m:
         m.artist = artist;

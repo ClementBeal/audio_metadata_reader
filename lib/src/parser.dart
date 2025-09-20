@@ -143,7 +143,7 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
         bitrate: riffMetadata.bitrate,
         duration: riffMetadata.duration,
         language: null,
-        lyrics: null,
+        lyrics: riffMetadata.comment,
         sampleRate: riffMetadata.samplerate,
         title: riffMetadata.title,
         totalDisc: null,
@@ -224,6 +224,8 @@ ParserTag readAllMetadata(File track, {bool getImage = true}) {
       return OGGParser(fetchImage: getImage).parse(reader);
     } else if (ID3v2Parser.isID3v1(reader)) {
       return ID3v1Parser().parse(reader);
+    } else if (RiffParser.canUserParser(reader)) {
+      return RiffParser().parse(reader);
     }
   } catch (e, trace) {
     print(trace);

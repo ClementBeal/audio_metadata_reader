@@ -138,3 +138,15 @@ class Buffer {
     }
   }
 }
+
+
+extension BufferRead on Buffer {
+  int readUint32() {
+    final bytes = read(4);
+    // MP4 box 是 big-endian
+    return (bytes[0] << 24) |
+           (bytes[1] << 16) |
+           (bytes[2] << 8)  |
+            bytes[3];
+  }
+}

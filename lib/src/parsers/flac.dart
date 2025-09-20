@@ -168,7 +168,7 @@ class FlacParser extends TagParser {
 
       final a = comment.split("=");
       final commentName = a[0];
-      final value = a[1];
+      final value = a.sublist(1).join("="); // 避免 value 中也有 "=" 被截断
 
       switch (commentName.toUpperCase()) {
         case 'TITLE':

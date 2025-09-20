@@ -157,6 +157,9 @@ class FlacWriter extends BaseMetadataWriter<VorbisMetadata> {
     _writeComment("LOCATION", metadata.location);
     _writeComment("CONTACT", metadata.contact);
     _writeComment("ISRC", metadata.isrc);
+    if (metadata.lyric != null && metadata.lyric!.isNotEmpty) {
+      _writeComment("LYRICS", [metadata.lyric!]);
+    }
 
     mainBuilder.add(intToUint32LE(i));
     mainBuilder.add(commentsBuilder.toBytes());

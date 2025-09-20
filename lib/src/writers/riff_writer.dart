@@ -14,6 +14,7 @@ class RiffWriter extends BaseMetadataWriter<RiffMetadata> {
   @override
   void write(File file, RiffMetadata metadata) {
     this.metadata = metadata;
+    print('fuck:${metadata}');
     final builder = BytesBuilder();
 
     final reader = file.openSync();
@@ -29,7 +30,7 @@ class RiffWriter extends BaseMetadataWriter<RiffMetadata> {
     builder.add(newData);
 
     reader.closeSync();
-    File("a_new.wav").writeAsBytesSync(builder.toBytes());
+    file.writeAsBytesSync(builder.toBytes());
   }
 
   Uint8List _parseChunks() {
@@ -83,6 +84,10 @@ class RiffWriter extends BaseMetadataWriter<RiffMetadata> {
           }
           if (metadata.copyright != null) {
             infoBuilder.add(_writeChunk("ICOP", metadata.copyright!));
+          }
+          print(metadata.lyric);
+          if (metadata.lyric != null) {
+            infoBuilder.add(_writeChunk("ICMT", metadata.lyric!));
           }
 
           final infoData = infoBuilder.toBytes();

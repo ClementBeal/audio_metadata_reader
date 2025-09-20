@@ -33,9 +33,9 @@ class Id3v4Writer extends BaseMetadataWriter<Mp3Metadata> {
 
     _writeHeader(finalBuilder, builder.length);
     finalBuilder.add(builder.toBytes());
-
+  
     if (size == 0) {
-      file.writeAsBytesSync(finalBuilder.toBytes());
+    file.writeAsBytesSync(finalBuilder.toBytes());
     } else {
       final oldData = file.readAsBytesSync();
       file.writeAsBytesSync([
@@ -179,6 +179,11 @@ class Id3v4Writer extends BaseMetadataWriter<Mp3Metadata> {
     } else if (metadata.contentType != null) {
       _writeFrame(builder, "TCON", metadata.contentType!);
     }
+
+    // 添加歌词支持
+    if (metadata.lyric != null && metadata.lyric!.isNotEmpty) {
+      _writeUnsyncLyrics(builder, metadata.lyric!);
+    }
   }
 
   void _writeFrame(BytesBuilder builder, String frameId, String data) {
@@ -202,6 +207,29 @@ class Id3v4Writer extends BaseMetadataWriter<Mp3Metadata> {
 
     builder.addByte(0x03);
     builder.add(data);
+  }
+
+  // 写入非同步歌词(USLT frame)
+  void _writeUnsyncLyrics(BytesBuilder builder, String lyrics) {
+    final frameBuilder = BytesBuilder();
+
+    // Text encoding (UTF-8)
+    frameBuilder.addByte(0x03);
+
+    // Language (3 bytes) - 使用"XXX"表示未指定语言
+    frameBuilder.add(ascii.encode("XXX"));
+
+    // Content descriptor (空描述 + null terminator)
+    frameBuilder.addByte(0x00);
+
+    // Lyrics text
+    frameBuilder.add(utf8.encode(lyrics));
+
+    // 写入USLT frame
+    builder.add("USLT".codeUnits);
+    builder.add(_encodeSynchsafeInteger(frameBuilder.length));
+    builder.add([0, 0]); // flags
+    builder.add(frameBuilder.toBytes());
   }
 
   void _writePictures(BytesBuilder builder, List<Picture> pictures) {

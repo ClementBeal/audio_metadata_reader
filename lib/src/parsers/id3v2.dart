@@ -207,7 +207,8 @@ class ID3v2Parser extends TagParser {
       processFrame(frame.id, frame.size);
     }
 
-    if (metadata.duration == null || metadata.duration == Duration.zero) {
+    // if (metadata.duration == null || metadata.duration == Duration.zero) {
+    if (true) {
       buffer.setPositionSync(size + 10);
 
       final mp3FrameHeader = _findFirstMp3Frame(buffer);
@@ -653,65 +654,42 @@ class ID3v2Parser extends TagParser {
   }
 
   String getUnsynchronisedLyric(Uint8List content) {
-    int offset = 1;
+  if (content.isEmpty) return "";
 
-    final reader = ByteData.sublistView(content);
-    final encoding = reader.getInt8(0);
+  int offset = 1; // encoding
+  final reader = ByteData.sublistView(content);
+  final encoding = reader.getInt8(0);
 
-    // skip language
-    offset += 3;
+  // 跳过 language (3 bytes)
+  offset += 3;
 
-    final description = [reader.getInt8(offset)];
-
-    while (description.last != 0) {
-      description.add(reader.getInt8(offset));
-      offset++;
-    }
-
-    if (encoding == 1 || encoding == 2) {
-      while (reader.getInt8(offset) == 0) {
-        offset++;
-      }
-    }
-
-    final rest = reader.buffer.asUint8List(offset);
-
-    switch (encoding) {
-      case 0:
-        final nullCharacterPosition = rest.indexOf(0, 1);
-        final informationBytes = rest.sublist(
-            1, (nullCharacterPosition >= 0) ? nullCharacterPosition : null);
-        return latin1Decoder.convert(informationBytes);
-      case 1:
-        if (encoding == 1 || encoding == 2) {
-          return utf16Decoder.decodeUtf16Le(rest, 0, rest.length - 2);
-        }
-        return utf16Decoder.decodeUtf16Le(rest);
-      case 2:
-        int nullCharacterPosition = 1;
-        bool zeroFound = false;
-        while (nullCharacterPosition < rest.length) {
-          if (rest[nullCharacterPosition] == 0) {
-            if (zeroFound) {
-              break;
-            }
-            zeroFound = true;
-          }
-          nullCharacterPosition++;
-        }
-
-        final informationBytes = rest.sublist(
-            1, (nullCharacterPosition >= 0) ? nullCharacterPosition : null);
-        return utf16Decoder.decodeUtf16Le(informationBytes);
-      case 3:
-        final nullCharacterPosition = rest.indexOf(0, 1);
-        final informationBytes = rest.sublist(
-            1, (nullCharacterPosition >= 0) ? nullCharacterPosition : null);
-        return utf8Decoder.convert(informationBytes);
-    }
-
-    return "";
+  // description 字节，以 0 结束
+  while (offset < content.length && reader.getInt8(offset) != 0) {
+    offset++;
   }
+  offset++; // 跳过 description 的 null
+
+  // 跳过可能的 padding 0
+  while ((encoding == 1 || encoding == 2) && offset < content.length && reader.getInt8(offset) == 0) {
+    offset++;
+  }
+
+  // 剩余就是歌词内容
+  final rest = content.sublist(offset);
+
+  switch (encoding) {
+    case 0: // Latin1
+      return latin1Decoder.convert(rest).trimRight();
+    case 1: // UTF-16 LE
+    case 2: // UTF-16 BE
+      String text = utf16Decoder.decodeUtf16Le(rest, 0, rest.length);
+      return text.replaceAll('\u0000', '').trimRight();
+    case 3: // UTF-8
+      return utf8Decoder.convert(rest).trimRight();
+    default:
+      return "";
+  }
+}
 
   ///
   /// To detect if this file can be parsed with this parser, the first 3 bytes

@@ -106,6 +106,7 @@ class RiffParser extends TagParser {
           metadata.year = DateTime.tryParse(subChunkData);
           break;
         case 'ICMT':
+        print(subChunkData);
           metadata.comment = subChunkData;
           break;
         case 'ITRK':

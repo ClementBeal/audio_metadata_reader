@@ -242,7 +242,8 @@ extension CommonMetadataSetters on ParserTag {
       case VorbisMetadata m:
         m.lyric = lyric;
         break;
-      case RiffMetadata():
+      case RiffMetadata m:
+        m.lyric = lyric;
         break;
     }
   }

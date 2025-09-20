@@ -126,12 +126,21 @@ class MP4Parser extends TagParser {
   ///
   /// The metadata are inside special boxes. We only read data when we need it
   /// otherwise we skip them
+  ///
+
+  int mdatSize = 0;
+  int durationSeconds = 0;
   void processBox(Buffer buffer, BoxHeader box) {
     if (box.type == "moov") {
       parseRecurvise(buffer, box);
+    } else if (box.type == "mdat") {
+      buffer.setPositionSync(buffer.fileCursor + box.size - 8);
+      mdatSize = box.size;
+      if (durationSeconds != 0) {
+        tags.bitrate = (mdatSize * 8 / durationSeconds).toInt();
+      }
     } else if (box.type == "mvhd") {
       final version = buffer.read(1)[0];
-
       // version 0 has 100 bytes
       // version 1 has 112 bytes
       final bytes = buffer.read(version == 1 ? 111 : 99);
@@ -149,6 +158,10 @@ class MP4Parser extends TagParser {
 
       double microseconds = (timeUnit / timeScale) * 1000000;
       tags.duration = Duration(microseconds: microseconds.toInt());
+      durationSeconds = tags.duration!.inSeconds;
+      if (mdatSize != 0) {
+        tags.bitrate = (mdatSize * 8 / durationSeconds).toInt();
+      }
     } else if (box.type == "udta") {
       parseRecurvise(buffer, box);
     } else if (box.type == "ilst") {
@@ -258,9 +271,16 @@ class MP4Parser extends TagParser {
       }
     } else if (box.type == "mp4a") {
       final bytes = buffer.read(box.size - 8);
-
       // tags.bitrate = timeScale;
       tags.sampleRate = getUint32(bytes.sublist(22, 26));
+    } else if (box.type == "alac") {
+      final bytes = buffer.read(box.size - 8); // 减去 header
+      final sampleRate = ((bytes[24] << 24) |
+              (bytes[25] << 16) |
+              (bytes[26] << 8) |
+              bytes[27]) >>
+          16;
+      tags.sampleRate = sampleRate;
     } else {
       buffer.setPositionSync(buffer.fileCursor + box.size - 8);
     }
@@ -275,8 +295,13 @@ class MP4Parser extends TagParser {
     if ("meta" == box.type) {
       offset += 4;
     } else if (box.type == "stsd") {
-      offset += 8;
-      buffer.read(8);
+      buffer.read(4);
+      int entryCount = buffer.readUint32();
+      for (int i = 0; i < entryCount; i++) {
+        final newBox = _readBox(buffer); // 会读到 mp4a 或 alac
+        processBox(buffer, newBox);
+      }
+      return;
     }
 
     while (offset < limit) {

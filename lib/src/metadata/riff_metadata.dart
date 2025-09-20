@@ -6,6 +6,7 @@ class RiffMetadata extends ParserTag {
   String? album;
   DateTime? year;
   String? comment;
+  String? lyric;
   String? genre;
   int? trackNumber;
   String? encoder;
@@ -22,6 +23,7 @@ class RiffMetadata extends ParserTag {
     this.album,
     this.year,
     this.comment,
+    this.lyric,
     this.genre,
     this.trackNumber,
     this.encoder,
@@ -40,6 +42,7 @@ class RiffMetadata extends ParserTag {
         '  album: $album,\n'
         '  year: $year,\n'
         '  comment: $comment,\n'
+        '  lyrics: $lyric,\n'
         '  genre: $genre,\n'
         '  trackNumber: $trackNumber,\n'
         '  encoder: $encoder,\n'

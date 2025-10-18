@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
+import 'package:audio_metadata_reader/src/metadata/base.dart';
 
 void main() {
   final track = File("Pieces.mp3");
@@ -37,6 +38,8 @@ void main() {
           m.title = ["New title"];
           break;
         case RiffMetadata m:
+          m.title = "New title";
+        case ApeMetadata m:
           m.title = "New title";
       }
     },

@@ -1,12 +1,13 @@
 import 'dart:io';
 
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
+import 'package:audio_metadata_reader/src/parsers/apev2.dart';
 import 'package:audio_metadata_reader/src/parsers/riff.dart';
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 
 /// Parse the metadata of a file.
 ///
-/// It automatically detects the type of the file (`.mp3`, `.ogg`, `.flac` etc)
+/// It automatically detects the type of the file (`.mp3`, `.ogg`, `.flac` , `.ape` etc)
 /// and select the matching file parser.
 ///
 /// If there's no parser or an error, a `MetadataParserException` exception is raised.
@@ -185,6 +186,29 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
       newMetadata.genres = mp3Metadata.genres;
 
       return newMetadata;
+    } else if (Apev2Parser.canUserParser(reader)) {
+      final apeMetadata =
+          Apev2Parser(fetchImage: getImage).parse(reader) as ApeMetadata;
+      final newMetadata = AudioMetadata(
+        file: track,
+        album: apeMetadata.album,
+        artist: apeMetadata.artist,
+        bitrate: apeMetadata.bitrate,
+        duration: apeMetadata.duration,
+        language: apeMetadata.languages,
+        lyrics: apeMetadata.lyric,
+        sampleRate: apeMetadata.samplerate,
+        title: apeMetadata.title,
+        totalDisc: apeMetadata.totalDics,
+        trackNumber: apeMetadata.trackNumber,
+        trackTotal: apeMetadata.trackTotal,
+        year: apeMetadata.year,
+        discNumber: apeMetadata.discNumber,
+      );
+
+      newMetadata.pictures = apeMetadata.pictures;
+      newMetadata.genres = apeMetadata.genres;
+      return newMetadata;
     }
   } on MetadataParserException catch (e, s) {
     Error.throwWithStackTrace(
@@ -204,7 +228,7 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
 ///
 /// Use this one if you want to rewrite the metadata later.
 ///
-/// It automatically detects the type of the file (`.mp3`, `.ogg`, `.flac` etc)
+/// It automatically detects the type of the file (`.mp3`, `.ogg`, `.flac`, `.ape` etc)
 /// and select the matching file parser.
 ///
 /// If there's no parser or an error, a `MetadataParserException` exception is raised.
@@ -224,6 +248,8 @@ ParserTag readAllMetadata(File track, {bool getImage = true}) {
       return OGGParser(fetchImage: getImage).parse(reader);
     } else if (ID3v2Parser.isID3v1(reader)) {
       return ID3v1Parser().parse(reader);
+    } else if (Apev2Parser.canUserParser(reader)) {
+      return Apev2Parser().parse(reader);
     }
   } catch (e, trace) {
     print(trace);

@@ -21,12 +21,15 @@ class Buffer {
   /// To reach good performance, we need at least 4096
   static final int _bufferSize = 16384;
 
+  final int fileSize;
+
   /// The number of bytes remaining to be read from the file.
   int get remainingBytes =>
-      (_bufferedBytes - _cursor) +
-      (randomAccessFile.lengthSync() - randomAccessFile.positionSync());
+      (_bufferedBytes - _cursor) + (fileSize - randomAccessFile.positionSync());
 
-  Buffer({required this.randomAccessFile}) : _buffer = Uint8List(_bufferSize) {
+  Buffer({required this.randomAccessFile})
+      : _buffer = Uint8List(_bufferSize),
+        fileSize = randomAccessFile.lengthSync() {
     _fill();
   }
 

@@ -126,6 +126,95 @@ void main() {
           expect(picture.bytes, equals([0, 1, 2, 3]));
         },
       );
+
+      test(
+        "Write metadata with cyrillic symbols",
+        () {
+          final writer = Id3v4Writer();
+
+          final file = createTemporaryFile("test.mp3", mp3FrameHeaderCBR());
+
+          final metadata = Mp3Metadata();
+          metadata.songName = "Какое-то название";
+          metadata.originalArtist = "Новый артист";
+          metadata.album = "Самый лучший альбом";
+          metadata.trackNumber = 6;
+          metadata.trackTotal = 12;
+          metadata.year = 2007;
+
+          writer.write(file, metadata);
+
+          final resultMetadata =
+              ID3v2Parser().parse(file.openSync()) as Mp3Metadata;
+
+          expect(resultMetadata.songName, equals(metadata.songName));
+          expect(
+              resultMetadata.originalArtist, equals(metadata.originalArtist));
+          expect(resultMetadata.album, equals(metadata.album));
+          expect(resultMetadata.trackNumber, equals(6));
+          expect(resultMetadata.trackTotal, equals(12));
+          expect(resultMetadata.year, equals(metadata.year));
+        },
+      );
+
+      test(
+        "Write metadata with arabic symbols",
+            () {
+          final writer = Id3v4Writer();
+
+          final file = createTemporaryFile("test.mp3", mp3FrameHeaderCBR());
+
+          final metadata = Mp3Metadata();
+          metadata.songName = "التيتل المعروف";
+          metadata.originalArtist = "التيتل المعروف";
+          metadata.album = "التيتل المعروف";
+          metadata.trackNumber = 6;
+          metadata.trackTotal = 12;
+          metadata.year = 2007;
+
+          writer.write(file, metadata);
+
+          final resultMetadata =
+          ID3v2Parser().parse(file.openSync()) as Mp3Metadata;
+
+          expect(resultMetadata.songName, equals(metadata.songName));
+          expect(
+              resultMetadata.originalArtist, equals(metadata.originalArtist));
+          expect(resultMetadata.album, equals(metadata.album));
+          expect(resultMetadata.trackNumber, equals(6));
+          expect(resultMetadata.trackTotal, equals(12));
+          expect(resultMetadata.year, equals(metadata.year));
+        },
+      );
+
+      test(
+        "Write metadata with chinese symbols",
+            () {
+          final writer = Id3v4Writer();
+
+          final file = createTemporaryFile("test.mp3", mp3FrameHeaderCBR());
+          final metadata = Mp3Metadata();
+          metadata.songName = "这是一个标题";
+          metadata.originalArtist = "新的艺术家";
+          metadata.album = "这是一个标题";
+          metadata.trackNumber = 6;
+          metadata.trackTotal = 12;
+          metadata.year = 2007;
+
+          writer.write(file, metadata);
+
+          final resultMetadata =
+          ID3v2Parser().parse(file.openSync()) as Mp3Metadata;
+
+          expect(resultMetadata.songName, equals(metadata.songName));
+          expect(
+              resultMetadata.originalArtist, equals(metadata.originalArtist));
+          expect(resultMetadata.album, equals(metadata.album));
+          expect(resultMetadata.trackNumber, equals(6));
+          expect(resultMetadata.trackTotal, equals(12));
+          expect(resultMetadata.year, equals(metadata.year));
+        },
+      );
     },
   );
 }

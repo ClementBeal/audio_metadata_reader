@@ -25,9 +25,11 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
       final a = AudioMetadata(
         file: track,
         album: mp3Metadata.album,
-        artist: mp3Metadata.bandOrOrchestra ??
-            mp3Metadata.leadPerformer ??
-            mp3Metadata.originalArtist,
+        artist: (mp3Metadata.bandOrOrchestra?.isNotEmpty ?? false)
+            ? mp3Metadata.bandOrOrchestra
+            : (mp3Metadata.leadPerformer?.isNotEmpty ?? false)
+                ? mp3Metadata.leadPerformer
+                : mp3Metadata.originalArtist,
         bitrate: mp3Metadata.bitrate,
         duration: mp3Metadata.duration,
         language: mp3Metadata.languages,

@@ -69,4 +69,15 @@ void main() {
     expect(result.duration, isNotNull);
     expect(result.duration!.inMilliseconds, closeTo(310, 5));
   });
+
+
+  test("Parse MP3 file with cyrillic symbols", () {
+    final track = File('./test/mp3/cyrillic_symbols.mp3');
+    final result = readMetadata(track, getImage: false);
+
+    expect(result.album, equals("Альбом"));
+    expect(result.artist, equals("Артист"));
+    expect(result.title, equals("Название"));
+    expect(result.lyrics, equals("Текст"));
+  });
 }

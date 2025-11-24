@@ -1,19 +1,12 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/utils/pad_bit.dart';
 import 'package:audio_metadata_reader/src/writers/id3v1_writer.dart';
 import 'package:test/test.dart';
 
 void main() {
-  test('Id3v1Writer writes ID3v1 tag correctly', () {
-    final dir = Directory.systemTemp.createTempSync();
-
-    final tempFile = File('${dir.path}/test_audio.mp3');
-    tempFile.createSync();
-    final writer = tempFile.openSync(mode: FileMode.write);
-
-    writer.writeFromSync([1, 2, 3, 4, 5]);
-    writer.closeSync();
+  test('Id3v1Writer writes ID3v1 tag correctly', () async {
+    final originalBytes = Uint8List.fromList([1, 2, 3, 4, 5]);
 
     final metadata = Mp3Metadata()
       ..songName = 'Test Title'
@@ -21,9 +14,7 @@ void main() {
       ..album = 'Test Album'
       ..year = 2023;
 
-    ID3v1Writer().write(tempFile, metadata);
-
-    final fileBytes = tempFile.readAsBytesSync();
+    final fileBytes = await ID3v1Writer().writeToBytes(originalBytes, metadata);
     final id3v1Bytes = fileBytes.sublist(fileBytes.length - 128);
 
     // 7. Assert that the written bytes match the expected bytes
@@ -38,7 +29,5 @@ void main() {
         equals(metadata.year!.toString().codeUnits));
     expect(id3v1Bytes.sublist(97, 127), equals(List.filled(30, 0)));
     expect(id3v1Bytes[127], equals(255));
-
-    tempFile.deleteSync();
   });
 }

@@ -1,13 +1,14 @@
 import 'dart:io';
 
+import 'package:audio_metadata_reader/src/io/io_source.dart';
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/parser.dart';
 import 'package:test/test.dart';
 
 void main() {
-  test("Parse MP3 file without the cover", () {
+  test("Parse MP3 file without the cover", () async {
     final track = File('./test/mp3/track.mp3');
-    final result = readMetadata(track, getImage: false);
+    final result = await readMetadata(await FileIOSource.fromFile(track), getImage: false);
 
     expect(result.album, equals("Album"));
     expect(result.artist, equals("Artist"));
@@ -23,9 +24,9 @@ void main() {
     expect(result.genres.first, equals("Rock"));
   });
 
-  test("Parse MP3 file and the cover", () {
+  test("Parse MP3 file and the cover", () async {
     final track = File('./test/mp3/track.mp3');
-    final result = readMetadata(track, getImage: true);
+    final result = await readMetadata(await FileIOSource.fromFile(track), getImage: true);
 
     expect(result.pictures.length, 1);
     expect(result.pictures.first.mimetype, "image/png");
@@ -34,9 +35,9 @@ void main() {
         File("test/data/cover.png").readAsBytesSync());
   });
 
-  test("Check if we skip correctly the images", () {
+  test("Check if we skip correctly the images", () async {
     final track = File("./test/mp3/caress-your-soul-cleaned.mp3");
-    final result = readMetadata(track, getImage: false);
+    final result = await readMetadata(await FileIOSource.fromFile(track), getImage: false);
 
     expect(result.pictures.length, 0);
     expect(result.album, "Caress Your Soul");
@@ -48,12 +49,12 @@ void main() {
     expect(result.sampleRate, 44100);
   });
 
-  test("Parses from truncated mp3 file", () {
+  test("Parses from truncated mp3 file", () async {
     // The caress-your-soul-truncated-cleaned.mp3 file is truncated
     // immediately before the Xing header. We should still be able
     // to read the ID3 tag data.
     final track = File("./test/mp3/caress-your-soul-cleaned-truncated.mp3");
-    final result = readMetadata(track, getImage: false);
+    final result = await readMetadata(await FileIOSource.fromFile(track), getImage: false);
     expect(result.pictures.length, 0);
     expect(result.album, "Caress Your Soul");
     expect(result.title, "How to Fly");
@@ -62,9 +63,9 @@ void main() {
     expect(result.sampleRate, 44100);
   });
 
-  test("Round duration to microseconds", () {
+  test("Round duration to microseconds", () async {
     final track = File("./test/mp3/generated_under_one_second.mp3");
-    final result = readMetadata(track, getImage: false);
+    final result = await readMetadata(await FileIOSource.fromFile(track), getImage: false);
     expect(result.pictures.length, 0);
     expect(result.duration, isNotNull);
     expect(result.duration!.inMilliseconds, closeTo(310, 5));

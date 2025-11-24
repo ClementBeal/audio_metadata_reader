@@ -1,13 +1,14 @@
 import 'dart:io';
 
+import 'package:audio_metadata_reader/src/io/io_source.dart';
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/parser.dart';
 import 'package:test/test.dart';
 
 void main() {
-  test("Parse OPUS file without the cover", () {
+  test("Parse OPUS file without the cover", () async {
     final track = File('./test/opus/track.opus');
-    final result = readMetadata(track, getImage: false);
+    final result = await readMetadata(await FileIOSource.fromFile(track), getImage: false);
 
     expect(result.album, equals("Album"));
     expect(result.artist, equals("Artist"));
@@ -22,9 +23,9 @@ void main() {
     expect(result.genres.length, equals(1));
     expect(result.genres.first, equals("Rock"));
   });
-  test("Parse OPUS file and the cover", () {
+  test("Parse OPUS file and the cover", () async {
     final track = File('./test/opus/track.opus');
-    final result = readMetadata(track, getImage: true);
+    final result = await readMetadata(await FileIOSource.fromFile(track), getImage: true);
 
     expect(result.pictures.length, 1);
     expect(result.pictures.first.mimetype, "image/png");
@@ -33,9 +34,9 @@ void main() {
         File("test/data/cover.png").readAsBytesSync());
   });
 
-  test("Correct duration", () {
+  test("Correct duration", () async {
     final track = File('./test/opus/real_track_extract.opus');
-    final result = readMetadata(track);
+    final result = await readMetadata(await FileIOSource.fromFile(track));
 
     expect(result.duration, Duration(minutes: 3, seconds: 15));
   });

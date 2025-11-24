@@ -1,7 +1,7 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:audio_metadata_reader/src/io/io_source.dart';
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/parsers/tag_parser.dart';
 import 'package:audio_metadata_reader/src/utils/bit_manipulator.dart';
@@ -29,10 +29,10 @@ class ID3v1Parser extends TagParser {
   }
 
   @override
-  ParserTag parse(RandomAccessFile reader) {
-    reader.setPositionSync(reader.lengthSync() - 128);
+  Future<ParserTag> parse(IOSource reader) async {
+    await reader.setPosition(await reader.length - 128);
 
-    final tagData = reader.readSync(128);
+    final tagData = await reader.read(128);
     metadata.songName = _extract(tagData, 3, 33);
     metadata.leadPerformer = _extract(tagData, 33, 63);
     metadata.album = _extract(tagData, 63, 93);
@@ -45,20 +45,21 @@ class ID3v1Parser extends TagParser {
 
     // metadata.genres =  [tagData[127]];
 
-    final buffer = Buffer(randomAccessFile: reader);
-    buffer.setPositionSync(0);
+    final buffer = Buffer(ioSource: reader);
+    await buffer.init();
+    await buffer.setPosition(0);
     // List<int> mp3FrameHeader = [...buffer.read(4)];
     Uint8List mp3FrameHeader = Uint8List(4);
-    mp3FrameHeader[0] = buffer.read(1)[0];
+    mp3FrameHeader[0] = (await buffer.read(1))[0];
 
     // CHECK : may have performance issues
     while (mp3FrameHeader.first != 0xff) {
-      mp3FrameHeader[0] = buffer.read(1)[0];
+      mp3FrameHeader[0] = (await buffer.read(1))[0];
     }
 
-    mp3FrameHeader[1] = buffer.read(1)[0];
-    mp3FrameHeader[2] = buffer.read(1)[0];
-    mp3FrameHeader[3] = buffer.read(1)[0];
+    mp3FrameHeader[1] = (await buffer.read(1))[0];
+    mp3FrameHeader[2] = (await buffer.read(1))[0];
+    mp3FrameHeader[3] = (await buffer.read(1))[0];
 
     final mpegVersion = (mp3FrameHeader[1] >> 3) & 0x3;
     final mpegLayer = (mp3FrameHeader[1] >> 1) & 3;
@@ -70,7 +71,7 @@ class ID3v1Parser extends TagParser {
 
     // arbitrary choice.  Usually the `Xing` header is located after ~30 bytes
     // then the header size is about ~150 bytes
-    final possibleXingHeader = buffer.read(400);
+    final possibleXingHeader = await buffer.read(400);
 
     int i = 0;
     while (possibleXingHeader[i] == 0) {
@@ -100,23 +101,23 @@ class ID3v1Parser extends TagParser {
       metadata.bitrate = _getBitrate(mpegVersion, mpegLayer, bitrateIndex);
 
       if (metadata.bitrate != null) {
-        final fileSizeWithoutMetadata = reader.lengthSync() - 128;
+        final fileSizeWithoutMetadata = await reader.length - 128;
         metadata.duration = Duration(
             seconds: (8 * fileSizeWithoutMetadata / metadata.bitrate!).round());
       }
     }
 
-    reader.closeSync();
+    await reader.close();
     return metadata;
   }
 
   /// To detect if this file can be parsed with this parser,
   /// We have to check the 128 last bytes
   /// And if the first 3 are "TAG", it's ID3v1
-  static bool canUserParser(RandomAccessFile reader) {
-    reader.setPositionSync(reader.lengthSync() - 128);
+  static Future<bool> canUserParser(IOSource reader) async {
+    await reader.setPosition(await reader.length - 128);
 
-    final headerBytes = reader.readSync(3);
+    final headerBytes = await reader.read(3);
     final tagIdentity = String.fromCharCodes(headerBytes);
 
     return tagIdentity == "TAG";

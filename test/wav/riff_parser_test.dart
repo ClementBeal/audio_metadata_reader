@@ -1,12 +1,13 @@
 import 'dart:io';
 
+import 'package:audio_metadata_reader/src/io/io_source.dart';
 import 'package:audio_metadata_reader/src/parser.dart';
 import 'package:test/test.dart';
 
 void main() {
-  test("Parse WAV file without the cover", () {
+  test("Parse WAV file without the cover", () async {
     final track = File('./test/wav/track.wav');
-    final result = readMetadata(track, getImage: false);
+    final result = await readMetadata(await FileIOSource.fromFile(track), getImage: false);
 
     expect(result.sampleRate, equals(48000));
     expect(result.bitrate, equals(96000));

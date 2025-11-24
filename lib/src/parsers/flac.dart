@@ -1,7 +1,7 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:audio_metadata_reader/src/io/io_source.dart';
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/parsers/tag_parser.dart';
 import 'package:audio_metadata_reader/src/utils/buffer.dart';
@@ -48,27 +48,28 @@ class FlacParser extends TagParser {
   FlacParser({super.fetchImage = false});
 
   @override
-  ParserTag parse(RandomAccessFile reader) {
-    reader.setPositionSync(0);
+  Future<ParserTag> parse(IOSource reader) async {
+    await reader.setPosition(0);
 
-    buffer = Buffer(randomAccessFile: reader);
+    buffer = Buffer(ioSource: reader);
+    await buffer.init();
 
-    buffer.skip(4);
+    await buffer.skip(4);
 
     bool isLastBlock = false;
     while (!isLastBlock) {
-      final block = _parseMetadataBlock(reader);
+      final block = await _parseMetadataBlock(reader);
 
       isLastBlock = block.isLastBlock;
     }
 
-    reader.closeSync();
+    await reader.close();
 
     return metadata;
   }
 
-  MetadataBlockHeader _parseMetadataBlock(RandomAccessFile reader) {
-    final bytes = buffer.read(4);
+  Future<MetadataBlockHeader> _parseMetadataBlock(IOSource reader) async {
+    final bytes = await buffer.read(4);
     final byteNumber = bytes[0];
 
     final MetadataBlockHeader block = (
@@ -79,9 +80,9 @@ class FlacParser extends TagParser {
 
     switch (block.type) {
       case 0:
-        buffer.skip(10);
+        await buffer.skip(10);
 
-        final end = ByteData.sublistView(buffer.read(8)).getUint64(0);
+        final end = ByteData.sublistView(await buffer.read(8)).getUint64(0);
 
         final sampleRate = getIntFromArbitraryBits(end, 0, 20);
         final bitPerSample = getIntFromArbitraryBits(end, 23, 5) + 1;
@@ -92,34 +93,34 @@ class FlacParser extends TagParser {
         metadata.sampleRate = sampleRate;
         metadata.bitrate = (bitPerSample * sampleRate).toInt();
 
-        buffer.skip(16); // signature (128 ~/ 8)
+        await buffer.skip(16); // signature (128 ~/ 8)
         break;
       case 3:
-        buffer.skip(block.length);
+        await buffer.skip(block.length);
         break;
       case 4:
-        final bytes = buffer.read(block.length);
+        final bytes = await buffer.read(block.length);
         _parseVorbisComment(bytes);
         break;
       case 6:
         if (!fetchImage) {
-          buffer.skip(block.length);
+          await buffer.skip(block.length);
         } else {
-          final pictureType = getUint32(buffer.read(4));
-          final mimeLength = getUint32(buffer.read(4));
+          final pictureType = getUint32(await buffer.read(4));
+          final mimeLength = getUint32(await buffer.read(4));
 
-          final mime = String.fromCharCodes(buffer.read(mimeLength));
-          final descriptionLength = getUint32(buffer.read(4));
+          final mime = String.fromCharCodes(await buffer.read(mimeLength));
+          final descriptionLength = getUint32(await buffer.read(4));
 
-          buffer.skip(descriptionLength + 16);
+          await buffer.skip(descriptionLength + 16);
           // (descriptionLength > 0)
           //     ? const Utf8Decoder().convert(buffer.read(descriptionLength))
           //     : ""; // description
 
           // buffer.skip(16);
-          final lengthData = getUint32(buffer.read(4));
+          final lengthData = getUint32(await buffer.read(4));
 
-          final data = buffer.read(lengthData);
+          final data = await buffer.read(lengthData);
           metadata.pictures.add(
             Picture(
               data,
@@ -130,7 +131,7 @@ class FlacParser extends TagParser {
         }
         break;
       default:
-        buffer.skip(block.length);
+        await buffer.skip(block.length);
         break;
     }
 
@@ -139,9 +140,9 @@ class FlacParser extends TagParser {
 
   /// To detect if this parser can be used to parse this file, the 4 first bytes
   /// must be equal to `fLaC`
-  static bool canUserParser(RandomAccessFile reader) {
-    reader.setPositionSync(0);
-    final vendorName = String.fromCharCodes(reader.readSync(4));
+  static Future<bool> canUserParser(IOSource reader) async {
+    await reader.setPosition(0);
+    final vendorName = String.fromCharCodes(await reader.read(4));
     return vendorName == "fLaC";
   }
 

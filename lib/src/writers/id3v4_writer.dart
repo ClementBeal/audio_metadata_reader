@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/src/metadata/base.dart';
@@ -21,9 +20,9 @@ class TagHeader {
 
 class Id3v4Writer extends BaseMetadataWriter<Mp3Metadata> {
   @override
-  void write(File file, Mp3Metadata metadata) {
+  Future<Uint8List> writeToBytes(Uint8List inputBytes, Mp3Metadata metadata) async {
     // check if the file has an ID3 metadata
-    final size = file.lengthSync();
+    final size = inputBytes.length;
 
     final builder = BytesBuilder();
 
@@ -35,10 +34,10 @@ class Id3v4Writer extends BaseMetadataWriter<Mp3Metadata> {
     finalBuilder.add(builder.toBytes());
 
     if (size == 0) {
-      file.writeAsBytesSync(finalBuilder.toBytes());
+      return Uint8List.fromList(finalBuilder.toBytes());
     } else {
-      final oldData = file.readAsBytesSync();
-      file.writeAsBytesSync([
+      final oldData = inputBytes;
+      return Uint8List.fromList([
         ...finalBuilder.toBytes(),
         ...oldData,
       ]);

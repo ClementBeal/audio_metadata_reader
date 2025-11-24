@@ -166,9 +166,12 @@ class FlacParser extends TagParser {
       final comment = utf8.decode(bytes.sublist(offset, offset + length));
       offset += length;
 
-      final a = comment.split("=");
+      final equalsIndex = comment.indexOf('=');
+      final a = equalsIndex != -1 
+          ? [comment.substring(0, equalsIndex), comment.substring(equalsIndex + 1)]
+          : comment.split("=");
       final commentName = a[0];
-      final value = a[1];
+      final value = a.length > 1 ? a[1] : "";
 
       switch (commentName.toUpperCase()) {
         case 'TITLE':

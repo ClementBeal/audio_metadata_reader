@@ -669,7 +669,7 @@ class ID3v2Parser extends TagParser {
     }
 
     if (encoding == 1 || encoding == 2) {
-      while (reader.getInt8(offset) == 0) {
+      while (offset < reader.lengthInBytes && reader.getInt8(offset) == 0) {
         offset++;
       }
     }
@@ -684,7 +684,11 @@ class ID3v2Parser extends TagParser {
         return latin1Decoder.convert(informationBytes);
       case 1:
         if (encoding == 1 || encoding == 2) {
-          return utf16Decoder.decodeUtf16Le(rest, 0, rest.length - 2);
+          // Check if rest length is sufficient and properly handle ending
+          if (rest.length >= 2 && rest[rest.length - 1] == 0 && rest[rest.length - 2] == 0) {
+            return utf16Decoder.decodeUtf16Le(rest, 0, rest.length - 2);
+          }
+          return utf16Decoder.decodeUtf16Le(rest);
         }
         return utf16Decoder.decodeUtf16Le(rest);
       case 2:

@@ -1,13 +1,14 @@
 import 'dart:io';
 
+import 'package:audio_metadata_reader/src/io/io_source.dart';
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/parser.dart';
 import 'package:test/test.dart';
 
 void main() {
-  test("Parse FLAC file that does not contain a cover", () {
+  test("Parse FLAC file that does not contain a cover", () async {
     final track = File('./test/flac/no_picture.flac');
-    final result = readMetadata(track, getImage: false);
+    final result = await readMetadata(await FileIOSource.fromFile(track), getImage: false);
 
     expect(result.album, equals("Album"));
     expect(result.artist, equals("Artist"));
@@ -22,9 +23,9 @@ void main() {
     expect(result.genres.length, equals(1));
     expect(result.genres.first, equals("Rock"));
   });
-  test("Parse FLAC file that contains a cover", () {
+  test("Parse FLAC file that contains a cover", () async {
     final track = File('./test/flac/no_picture.flac');
-    final result = readMetadata(track, getImage: true);
+    final result = await readMetadata(await FileIOSource.fromFile(track), getImage: true);
 
     expect(result.pictures.length, 1);
     expect(result.pictures.first.mimetype, "image/png");

@@ -2,13 +2,14 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
+import 'package:audio_metadata_reader/src/io/io_source.dart';
 
-void main() {
+Future<void> main() async {
   final track = File("Pieces.mp3");
 
   // Returns a condensate
   // Getting the image of a track can be heavy and slow the reading
-  final metadata = readMetadata(track, getImage: false);
+  final metadata = await readMetadata(await FileIOSource.fromFile(track), getImage: false);
 
   print(metadata.title);
   print(metadata.album);
@@ -18,13 +19,14 @@ void main() {
   // If you need ALL the metadata of a file (eg. MP3 has bpm)
   // Later you need to check the type of the metadata with a switch
   // ignore: unused_local_variable
-  final allMetadata = readAllMetadata(track, getImage: true);
+  final allMetadata =
+      await readAllMetadata(await FileIOSource.fromFile(track), getImage: true);
 
   print("Now we are going to rewrite the metadata");
 
   // Use the switch if you want to update metadata for a specific format
-  updateMetadata(
-    track,
+  await updateMetadata(
+    await FileIOSource.fromFile(track),
     (metadata) {
       switch (metadata) {
         case Mp3Metadata m:
@@ -43,8 +45,8 @@ void main() {
   );
 
   // Or use the extension methods to update common properties
-  updateMetadata(
-    track,
+  await updateMetadata(
+    await FileIOSource.fromFile(track),
     (metadata) {
       metadata.setTitle("New title");
       metadata.setArtist("New artist");

@@ -1,6 +1,6 @@
-import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:audio_metadata_reader/src/io/io_source.dart';
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/parsers/tag_parser.dart';
 import 'package:audio_metadata_reader/src/utils/bit_manipulator.dart';
@@ -16,16 +16,17 @@ class RiffParser extends TagParser {
   RiffParser({super.fetchImage = false});
 
   @override
-  ParserTag parse(RandomAccessFile reader) {
-    reader.setPositionSync(0);
+  Future<ParserTag> parse(IOSource reader) async {
+    await reader.setPosition(0);
 
-    buffer = Buffer(randomAccessFile: reader);
+    buffer = Buffer(ioSource: reader);
+    await buffer.init();
 
     // Skip RIFF word, total size and WAVE
-    buffer.skip(12);
+    await buffer.skip(12);
 
     // Read chunks after the RIFF header (starting with WAVE header)
-    _parseChunks();
+    await _parseChunks();
 
     if (metadata.bitrate != null && dataSize != null) {
       final durationSeconds = dataSize! / metadata.bitrate!;
@@ -33,7 +34,7 @@ class RiffParser extends TagParser {
           Duration(microseconds: (durationSeconds * 1000000).round());
     }
 
-    reader.closeSync();
+    await reader.close();
 
     return metadata;
   }
@@ -48,28 +49,28 @@ class RiffParser extends TagParser {
   /// contains the metadata.
   /// `data` chunk contains the number of audio bytes. Useful to calculate
   /// the track duration.
-  void _parseChunks() {
+  Future<void> _parseChunks() async {
     // we substract 8
-    while (buffer.fileCursor < buffer.randomAccessFile.lengthSync() - 12) {
-      final chunkId = String.fromCharCodes(buffer.read(4));
-      final chunkSize = getUint32LE(buffer.read(4));
+    while (buffer.fileCursor < await buffer.ioSource.length - 12) {
+      final chunkId = String.fromCharCodes(await buffer.read(4));
+      final chunkSize = getUint32LE(await buffer.read(4));
 
       if (chunkId == "fmt ") {
-        buffer.skip(4);
-        metadata.samplerate = getUint32LE(buffer.read(4));
-        metadata.bitrate = getUint32LE(buffer.read(4));
+        await buffer.skip(4);
+        metadata.samplerate = getUint32LE(await buffer.read(4));
+        metadata.bitrate = getUint32LE(await buffer.read(4));
 
-        buffer.skip(4);
+        await buffer.skip(4);
       } else if (chunkId == "LIST") {
-        final listType = String.fromCharCodes(buffer.read(4));
+        final listType = String.fromCharCodes(await buffer.read(4));
         if (listType == 'INFO') {
-          _parseInfoChunk(buffer.read(chunkSize - 4));
+          _parseInfoChunk(await buffer.read(chunkSize - 4));
         }
       } else if (chunkId == "data") {
         dataSize = chunkSize;
-        buffer.read(chunkSize);
+        await buffer.read(chunkSize);
       } else {
-        buffer.read(chunkSize);
+        await buffer.read(chunkSize);
       }
     }
   }
@@ -124,9 +125,9 @@ class RiffParser extends TagParser {
   }
 
   /// Must start with the magic word `RIFF` if it's a wav file
-  static bool canUserParser(RandomAccessFile reader) {
-    reader.setPositionSync(0);
-    final vendorName = String.fromCharCodes(reader.readSync(4));
+  static Future<bool> canUserParser(IOSource reader) async {
+    await reader.setPosition(0);
+    final vendorName = String.fromCharCodes(await reader.read(4));
 
     return vendorName == "RIFF";
   }

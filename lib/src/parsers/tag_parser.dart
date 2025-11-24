@@ -1,7 +1,7 @@
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/src/metadata/base.dart';
+import 'package:audio_metadata_reader/src/io/io_source.dart';
 
 /// Picture is a representation of the images we can find in an ID3 tag
 /// It's also used by Flac and OGG
@@ -84,9 +84,6 @@ class AudioMetadata {
   /// The pictures containing in the track
   late List<Picture> pictures;
 
-  /// A reference to the file that contains the metadata
-  File file;
-
   AudioMetadata({
     this.album,
     this.year,
@@ -101,7 +98,6 @@ class AudioMetadata {
     this.lyrics,
     this.bitrate,
     this.sampleRate,
-    required this.file,
   }) {
     genres = [];
     pictures = [];
@@ -124,8 +120,7 @@ class AudioMetadata {
         '  lyrics: $lyrics,\n'
         '  bitrate: $bitrate,\n'
         '  sampleRate: $sampleRate,\n'
-        '  pictures: $pictures,\n'
-        '  file: $file\n'
+        '  pictures: $pictures\n'
         ')';
   }
 }
@@ -134,5 +129,5 @@ abstract class TagParser {
   final bool fetchImage;
 
   TagParser({required this.fetchImage});
-  ParserTag parse(RandomAccessFile reader);
+  Future<ParserTag> parse(IOSource reader);
 }

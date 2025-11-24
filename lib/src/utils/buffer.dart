@@ -1,12 +1,16 @@
-import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
+
+import 'package:audio_metadata_reader/src/io/io_source.dart';
 
 import '../../audio_metadata_reader.dart';
 
 class Buffer {
-  final RandomAccessFile randomAccessFile;
+  final IOSource ioSource;
   final Uint8List _buffer;
+
+  /// Cached total length of the source
+  int? _totalLength;
 
   /// It's like positionSync() but adapted with the buffer
   int fileCursor = 0;
@@ -21,17 +25,22 @@ class Buffer {
   /// To reach good performance, we need at least 4096
   static final int _bufferSize = 16384;
 
-  /// The number of bytes remaining to be read from the file.
-  int get remainingBytes =>
-      (_bufferedBytes - _cursor) +
-      (randomAccessFile.lengthSync() - randomAccessFile.positionSync());
+  Buffer({required this.ioSource}) : _buffer = Uint8List(_bufferSize);
 
-  Buffer({required this.randomAccessFile}) : _buffer = Uint8List(_bufferSize) {
-    _fill();
+  /// Initialize the buffer by caching the total length and filling the buffer
+  Future<void> init() async {
+    _totalLength = await ioSource.length;
+    await _fill();
   }
 
-  void _fill() {
-    _bufferedBytes = randomAccessFile.readIntoSync(_buffer);
+  /// The number of bytes remaining to be read from the file.
+  int get remainingBytes {
+    if (_totalLength == null) return 0;
+    return (_bufferedBytes - _cursor) + (_totalLength! - ioSource.position);
+  }
+
+  Future<void> _fill() async {
+    _bufferedBytes = await ioSource.readInto(_buffer);
     _cursor = 0;
   }
 
@@ -39,16 +48,16 @@ class Buffer {
   /// was unable to read any data from the file.
   ///
   /// Once the end of the file is reached, subsequent reads from
-  /// [RandomAccessFile] will read 0 bytes without failing. This
+  /// [IOSource] will read 0 bytes without failing. This
   /// can cause [read] below to infinite loop.
   void _throwOnNoData() {
     if (_bufferedBytes == 0) {
       throw MetadataParserException(
-          track: File(""), message: "Expected more data in file");
+          message: "Expected more data in file");
     }
   }
 
-  Uint8List read(int size) {
+  Future<Uint8List> read(int size) async {
     fileCursor += size;
 
     // if we read something big (~100kb), we can read it directly from file
@@ -60,8 +69,8 @@ class Buffer {
       if (remaining > 0) {
         result.setRange(0, remaining, _buffer, _cursor);
       }
-      randomAccessFile.readIntoSync(result, remaining);
-      _fill();
+      await ioSource.readInto(result, remaining);
+      await _fill();
       return result;
     }
 
@@ -78,7 +87,7 @@ class Buffer {
       result.setRange(0, remaining, _buffer, _cursor);
 
       // Refill the buffer and adjust the cursor
-      _fill();
+      await _fill();
       int filled = remaining;
 
       // Continue filling `result` with new buffer data
@@ -93,7 +102,7 @@ class Buffer {
 
         // Fill buffer again if more data is needed
         if (filled < size) {
-          _fill();
+          await _fill();
           // Avoid infinite loops if we are trying to read
           // more data than there is left in the file.
           _throwOnNoData();
@@ -107,18 +116,18 @@ class Buffer {
   ///
   /// May return a smaller list if [remainingBytes] is
   /// less than [size].
-  Uint8List readAtMost(int size) {
+  Future<Uint8List> readAtMost(int size) async {
     final readSize = min(size, remainingBytes);
-    return read(readSize);
+    return await read(readSize);
   }
 
-  void setPositionSync(int position) {
+  Future<void> setPosition(int position) async {
     fileCursor = position;
-    randomAccessFile.setPositionSync(position);
-    _fill();
+    await ioSource.setPosition(position);
+    await _fill();
   }
 
-  void skip(int length) {
+  Future<void> skip(int length) async {
     // Calculate how many bytes we can skip in the current buffer
     final remainingInBuffer = _bufferedBytes - _cursor;
 
@@ -129,12 +138,12 @@ class Buffer {
       _cursor += length;
     } else {
       // Calculate the actual file position we need to skip to
-      int currentPosition = randomAccessFile.positionSync() - remainingInBuffer;
+      int currentPosition = ioSource.position - remainingInBuffer;
       fileCursor += currentPosition;
       // Skip to the new position
-      randomAccessFile.setPositionSync(currentPosition + length);
+      await ioSource.setPosition(currentPosition + length);
       // Refill the buffer at the new position
-      _fill();
+      await _fill();
     }
   }
 }

@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:audio_metadata_reader/src/io/io_source.dart';
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/parsers/id3v2.dart';
 import 'package:audio_metadata_reader/src/parsers/tag_parser.dart';
@@ -12,14 +13,12 @@ void main() {
   group(
     "Write ID3v4 header",
     () {
-      test("Empty body, the most basic header", () {
+      test("Empty body, the most basic header", () async {
         final writer = Id3v4Writer();
 
-        final file = createTemporaryFile("test.mp3");
+        final bytes = await writer.writeToBytes(Uint8List(0), Mp3Metadata());
 
-        writer.write(file, Mp3Metadata());
-
-        final readResult = ByteData.sublistView(file.openSync().readSync(10));
+        final readResult = ByteData.sublistView(bytes.sublist(0, 10));
 
         expect(readResult.getUint8(0), equals(0x49));
         expect(readResult.getUint8(1), equals(0x44));
@@ -30,15 +29,13 @@ void main() {
         expect(readResult.getUint8(5), equals(0));
         expect(readResult.getUint32(6), equals(0));
       });
-      test("Empty ID3 header but with a MP3 frame header", () {
+      test("Empty ID3 header but with a MP3 frame header", () async {
         final writer = Id3v4Writer();
         final frameData = mp3FrameHeaderCBR();
-        final file = createTemporaryFile("test.mp3", frameData);
+        final bytes =
+            await writer.writeToBytes(Uint8List.fromList(frameData), Mp3Metadata());
 
-        writer.write(file, Mp3Metadata());
-
-        final fileData = file.readAsBytesSync();
-        final readResult = ByteData.sublistView(fileData.sublist(0, 10));
+        final readResult = ByteData.sublistView(bytes.sublist(0, 10));
 
         expect(readResult.getUint8(0), equals(0x49));
         expect(readResult.getUint8(1), equals(0x44));
@@ -48,23 +45,23 @@ void main() {
         expect(readResult.getUint8(4), equals(0));
         expect(readResult.getUint8(5), equals(0));
         expect(readResult.getUint32(6), equals(0));
-        expect(fileData.length, 10 + frameData.length);
+        expect(bytes.length, 10 + frameData.length);
       });
 
       test(
         "Write basic metadata",
-        () {
+        () async {
           final writer = Id3v4Writer();
 
-          final file = createTemporaryFile("test.mp3", mp3FrameHeaderCBR());
+          final inputBytes = Uint8List.fromList(mp3FrameHeaderCBR());
 
           final metadata = Mp3Metadata();
           metadata.songName = "Only Ones Who Know";
 
-          writer.write(file, metadata);
+          final bytes = await writer.writeToBytes(inputBytes, metadata);
 
-          final resultMetadata =
-              ID3v2Parser().parse(file.openSync()) as Mp3Metadata;
+          final resultMetadata = await ID3v2Parser()
+              .parse(ByteDataIOSource.fromBytes(bytes)) as Mp3Metadata;
 
           expect(resultMetadata.songName, equals(metadata.songName));
         },
@@ -72,10 +69,10 @@ void main() {
 
       test(
         "Write a bit more of metadata",
-        () {
+        () async {
           final writer = Id3v4Writer();
 
-          final file = createTemporaryFile("test.mp3", mp3FrameHeaderCBR());
+          final inputBytes = Uint8List.fromList(mp3FrameHeaderCBR());
 
           final metadata = Mp3Metadata();
           metadata.songName = "Only Ones Who Know";
@@ -85,10 +82,10 @@ void main() {
           metadata.trackTotal = 12;
           metadata.year = 2007;
 
-          writer.write(file, metadata);
+          final bytes = await writer.writeToBytes(inputBytes, metadata);
 
-          final resultMetadata =
-              ID3v2Parser().parse(file.openSync()) as Mp3Metadata;
+          final resultMetadata = await ID3v2Parser()
+              .parse(ByteDataIOSource.fromBytes(bytes)) as Mp3Metadata;
 
           expect(resultMetadata.songName, equals(metadata.songName));
           expect(
@@ -102,10 +99,10 @@ void main() {
 
       test(
         "Write a picture",
-        () {
+        () async {
           final writer = Id3v4Writer();
 
-          final file = createTemporaryFile("test.mp3", mp3FrameHeaderCBR());
+          final inputBytes = Uint8List.fromList(mp3FrameHeaderCBR());
 
           final metadata = Mp3Metadata();
           metadata.pictures = [
@@ -113,10 +110,10 @@ void main() {
                 PictureType.coverFront),
           ];
 
-          writer.write(file, metadata);
+          final bytes = await writer.writeToBytes(inputBytes, metadata);
 
-          final resultMetadata = ID3v2Parser(fetchImage: true)
-              .parse(file.openSync()) as Mp3Metadata;
+          final resultMetadata = await ID3v2Parser(fetchImage: true)
+              .parse(ByteDataIOSource.fromBytes(bytes)) as Mp3Metadata;
 
           expect(resultMetadata.pictures, hasLength(1));
 

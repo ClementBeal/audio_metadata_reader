@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
@@ -11,16 +10,18 @@ class Mp4Writer extends BaseMetadataWriter<Mp4Metadata> {
   late Mp4Metadata mp4metadata;
 
   @override
-  void write(File file, Mp4Metadata metadata) {
+  Future<Uint8List> writeToBytes(Uint8List inputBytes, Mp4Metadata metadata) async {
     mp4metadata = metadata;
-    final reader = file.openSync();
 
-    final lengthFile = reader.lengthSync();
+    int offset = 0;
+    final lengthFile = inputBytes.length;
     final byteBuilder = BytesBuilder();
 
-    while (reader.positionSync() < lengthFile) {
-      final box = _readBox(reader.readSync(8));
-      final topBoxData = reader.readSync(box.size - 8);
+    while (offset < lengthFile) {
+      final box = _readBox(inputBytes.sublist(offset, offset + 8));
+      offset += 8;
+      final topBoxData = inputBytes.sublist(offset, offset + box.size - 8);
+      offset += box.size - 8;
 
       if (box.type != "moov") {
         byteBuilder.add(intToUint32(topBoxData.length + 8));
@@ -35,9 +36,7 @@ class Mp4Writer extends BaseMetadataWriter<Mp4Metadata> {
       }
     }
 
-    reader.closeSync();
-
-    file.writeAsBytesSync(byteBuilder.toBytes());
+    return byteBuilder.toBytes();
   }
 
   Uint8List _processBox(Uint8List data) {

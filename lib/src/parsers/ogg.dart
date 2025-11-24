@@ -1,6 +1,6 @@
-import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:audio_metadata_reader/src/io/io_source.dart';
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/parsers/tag_parser.dart';
 import 'package:audio_metadata_reader/src/parsers/vorbis_comment.dart';
@@ -33,17 +33,18 @@ class OGGParser extends TagParser {
   late final Buffer buffer;
 
   @override
-  ParserTag parse(RandomAccessFile reader) {
-    reader.setPositionSync(0);
+  Future<ParserTag> parse(IOSource reader) async {
+    await reader.setPosition(0);
 
-    buffer = Buffer(randomAccessFile: reader);
+    buffer = Buffer(ioSource: reader);
+    await buffer.init();
 
     // first page : contains samplerate and bitrate
     // second page : contains the metadata
     // it may not contains all the metadata so we would have to get them later
     final pages = [
-      _parseUniquePage(),
-      _parseUniquePage(),
+      await _parseUniquePage(),
+      await _parseUniquePage(),
     ];
 
     VorbisMetadata m = VorbisMetadata();
@@ -55,12 +56,12 @@ class OGGParser extends TagParser {
         m.sampleRate = getUint32LE(content.sublist(12, 16));
         m.bitrate = getUint32LE(content.sublist(13, 17));
       } else if (String.fromCharCodes(content.sublist(0, 8)) == "OpusTags") {
-        _parseVorbisComment(content, 8, m);
+        await _parseVorbisComment(content, 8, m);
       } else if (String.fromCharCodes(content.sublist(0, 7)) ==
           String.fromCharCodes(
               [0x03, 0x76, 0x6F, 0x72, 0x62, 0x69, 0x73])) // "\x03vorbis"
       {
-        _parseVorbisComment(content, 7, m);
+        await _parseVorbisComment(content, 7, m);
       } else if (String.fromCharCodes(content.sublist(0, 7)) ==
           String.fromCharCodes(
               [0x01, 0x76, 0x6F, 0x72, 0x62, 0x69, 0x73])) // "\x01vorbis"
@@ -80,7 +81,7 @@ class OGGParser extends TagParser {
       OggPage? page;
 
       while (page?.headerType != 0x04) {
-        page = _parseUniquePageHeader();
+        page = await _parseUniquePageHeader();
       }
 
       m.duration = Duration(
@@ -89,16 +90,16 @@ class OGGParser extends TagParser {
       );
     }
 
-    reader.closeSync();
+    await reader.close();
 
     return m;
   }
 
-  VorbisMetadata _parseVorbisComment(
+  Future<VorbisMetadata> _parseVorbisComment(
     Uint8List page,
     int headerOffset,
     VorbisMetadata m,
-  ) {
+  ) async {
     final dataBuffer = List<int>.from(page.sublist(headerOffset));
     int offset = 0;
 
@@ -115,7 +116,7 @@ class OGGParser extends TagParser {
       offset += 4;
 
       while (dataBuffer.length - offset < commentLength) {
-        dataBuffer.addAll(_parseUniquePage().data);
+        dataBuffer.addAll((await _parseUniquePage()).data);
       }
       final commentData = dataBuffer.sublist(offset, offset + commentLength);
       offset += commentLength;
@@ -126,10 +127,10 @@ class OGGParser extends TagParser {
   }
 
   /// Check if the OGG parser can be use for a specific file
-  static bool canUserParser(RandomAccessFile reader) {
-    reader.setPositionSync(0);
+  static Future<bool> canUserParser(IOSource reader) async {
+    await reader.setPosition(0);
 
-    final capturePatternBytes = reader.readSync(4);
+    final capturePatternBytes = await reader.read(4);
     final capturePattern = String.fromCharCodes(capturePatternBytes);
 
     return capturePattern == "OggS";
@@ -137,13 +138,13 @@ class OGGParser extends TagParser {
 
   /// Parse a unique OGG page
   /// It means from the OggS magic word to the last segment
-  OggPage _parseUniquePage() {
+  Future<OggPage> _parseUniquePage() async {
     // for the spec, see: https://wiki.xiph.org/Ogg
     List<int> data = []; //  contains data from previous (continuing) pages
 
     Uint8List headerData;
     try {
-      headerData = buffer.read(27);
+      headerData = await buffer.read(27);
     } catch (e) {
       // Handle end of file gracefully (return what we have or throw an error)
       if (data.isNotEmpty) {
@@ -171,11 +172,11 @@ class OGGParser extends TagParser {
 
     // define the total of segments in this page
     final totalSegments = headerData[26];
-    final segsizes = buffer.read(totalSegments);
+    final segsizes = await buffer.read(totalSegments);
     List<int> pageData = []; // Data for the current page
 
     for (final segsize in segsizes) {
-      pageData.addAll(buffer.read(segsize));
+      pageData.addAll(await buffer.read(segsize));
     }
 
     // Concatenate data from continuing pages if necessary
@@ -190,24 +191,24 @@ class OGGParser extends TagParser {
 
   /// Parse the header of an OGG page
   /// We also skip the content of the page to be synchronized
-  OggPage _parseUniquePageHeader() {
+  Future<OggPage> _parseUniquePageHeader() async {
     Uint8List headerData;
 
-    headerData = buffer.read(27);
+    headerData = await buffer.read(27);
 
     final headerType = headerData[5];
     final granulePosition = getUint64LE(headerData.sublist(6, 14));
     final bitstreamSerialNumber = getUint32LE(headerData.sublist(14, 18));
 
     final totalSegments = headerData[26];
-    final segsizes = buffer.read(totalSegments);
+    final segsizes = await buffer.read(totalSegments);
     int total = 0;
 
     for (final segsize in segsizes) {
       total += segsize;
     }
 
-    buffer.skip(total);
+    await buffer.skip(total);
 
     return OggPage(
       data: Uint8List(0),

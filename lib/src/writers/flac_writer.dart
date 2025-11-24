@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
@@ -9,14 +8,12 @@ import 'package:audio_metadata_reader/src/writers/base_writer.dart';
 
 class FlacWriter extends BaseMetadataWriter<VorbisMetadata> {
   @override
-  void write(File file, VorbisMetadata metadata) {
+  Future<Uint8List> writeToBytes(Uint8List inputBytes, VorbisMetadata metadata) async {
     final builder = BytesBuilder();
+    int position = 0;
 
-    final reader = file.openSync();
-
-    reader.setPositionSync(0);
-
-    builder.add(reader.readSync(4));
+    builder.add(inputBytes.sublist(position, position + 4));
+    position += 4;
 
     bool isLastBlock = false;
     int i = 0;
@@ -29,21 +26,20 @@ class FlacWriter extends BaseMetadataWriter<VorbisMetadata> {
         }
       }
 
-      final block = _parseMetadataBlock(reader, builder, metadata);
+      final block = _parseMetadataBlock(inputBytes, position, builder, metadata);
+      position = block.newPosition;
       isLastBlock = block.isLastBlock;
       i++;
     }
 
-    final rest = reader.lengthSync() - reader.positionSync();
-    builder.add(reader.readSync(rest));
+    builder.add(inputBytes.sublist(position));
 
-    reader.closeSync();
-    file.writeAsBytesSync(builder.toBytes());
+    return builder.toBytes();
   }
 
-  MetadataBlockHeader _parseMetadataBlock(
-      RandomAccessFile buffer, BytesBuilder builder, VorbisMetadata metadata) {
-    final bytes = buffer.readSync(4);
+  ({bool isLastBlock, int type, int length, int newPosition}) _parseMetadataBlock(
+      Uint8List inputBytes, int position, BytesBuilder builder, VorbisMetadata metadata) {
+    final bytes = inputBytes.sublist(position, position + 4);
     final byteNumber = bytes[0];
 
     final MetadataBlockHeader block = (
@@ -52,6 +48,8 @@ class FlacWriter extends BaseMetadataWriter<VorbisMetadata> {
       length: bytes[3] | bytes[2] << 8 | bytes[1] << 16,
     );
 
+    int newPosition = position + 4;
+
     // we skip the metadata blocks because we rewrite them
     // block 4 -> Vorbis comment
     // block 6 -> picture
@@ -59,21 +57,25 @@ class FlacWriter extends BaseMetadataWriter<VorbisMetadata> {
       case 3:
       case 4:
       case 6:
-        buffer.setPositionSync(buffer.positionSync() + block.length);
-
+        newPosition += block.length;
         break;
       default:
         _writeBlock(
           builder,
-          buffer.readSync(block.length),
+          inputBytes.sublist(newPosition, newPosition + block.length),
           block.type,
           block.isLastBlock,
         );
-
+        newPosition += block.length;
         break;
     }
 
-    return block;
+    return (
+      isLastBlock: block.isLastBlock,
+      type: block.type,
+      length: block.length,
+      newPosition: newPosition,
+    );
   }
 
   void _writeBlockHeader(

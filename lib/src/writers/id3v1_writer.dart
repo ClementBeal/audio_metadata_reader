@@ -1,21 +1,22 @@
-import 'dart:io';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/writers/base_writer.dart'; // For encoding strings to bytes
 
 class ID3v1Writer extends BaseMetadataWriter<Mp3Metadata> {
   @override
-  void write(File file, Mp3Metadata metadata) {
-    final reader = file.openSync(mode: FileMode.append);
+  Future<Uint8List> writeToBytes(Uint8List inputBytes, Mp3Metadata metadata) async {
+    final outputBytes = <int>[...inputBytes];
+
     // 1. Seek to the ID3v1 tag position (128 bytes from the end)
-    reader.setPositionSync(reader.lengthSync());
+    // ID3v1 tag is appended to the end of the file
 
     // 2. Write "TAG" identifier
-    reader.writeStringSync("TAG");
+    outputBytes.addAll(utf8.encode("TAG"));
 
     // 3. Helper function for writing fixed-length strings
-    void writeFixedString(String str, int length) {
+    List<int> encodeFixedString(String str, int length) {
       List<int> bytes;
       if (str.length > length) {
         bytes = utf8.encode(str.substring(0, length)); // Truncate if too long
@@ -24,27 +25,26 @@ class ID3v1Writer extends BaseMetadataWriter<Mp3Metadata> {
         bytes += List.filled(
             length - bytes.length, 0); // Pad with null bytes if too short
       }
-      reader.writeFromSync(bytes);
+      return bytes;
     }
 
     // 4. Write title, artist, album (fixed-length 30)
-    writeFixedString(metadata.songName ?? "", 30);
-    writeFixedString(metadata.bandOrOrchestra ?? "", 30);
-    writeFixedString(metadata.album ?? "", 30);
+    outputBytes.addAll(encodeFixedString(metadata.songName ?? "", 30));
+    outputBytes.addAll(encodeFixedString(metadata.bandOrOrchestra ?? "", 30));
+    outputBytes.addAll(encodeFixedString(metadata.album ?? "", 30));
 
     // 5. Write year (fixed-length 4)
     String yearString = (metadata.year ?? 0)
         .toString()
         .padLeft(4, '0'); // Pad with leading zeros
-    writeFixedString(yearString, 4);
+    outputBytes.addAll(encodeFixedString(yearString, 4));
 
     // 6. Write comment (fixed-length 30, using a placeholder)
-    writeFixedString(
-        "", 30); // You can replace this with a comment if you have one
+    outputBytes.addAll(encodeFixedString("", 30)); // You can replace this with a comment if you have one
 
     // 7. Write genre byte (default to 255 if not provided)
-    reader.writeByteSync(255);
+    outputBytes.add(255);
 
-    reader.closeSync();
+    return Uint8List.fromList(outputBytes);
   }
 }

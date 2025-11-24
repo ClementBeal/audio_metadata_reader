@@ -41,6 +41,9 @@ class FileIOSource implements IOSource {
   Future<void> close() {
     throw UnsupportedError('Not available on web');
   }
+
+  /// Placeholder for API parity with the IO implementation.
+  dynamic get file => throw UnsupportedError('Not available on web');
 }
 
 /// IOSource implementation backed by Uint8List.

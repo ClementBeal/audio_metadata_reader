@@ -4,9 +4,8 @@ export "src/parsers/tag_parser.dart" show AudioMetadata, Picture;
 export 'src/metadata/base.dart' show PictureType;
 export 'src/utils/metadata_parser_exception.dart'
     show MetadataParserException, NoMetadataParserException;
-export 'src/parser.dart' show readMetadata;
 export 'src/utils/metadata_parser_exception.dart' show MetadataParserException;
-export 'src/parser.dart' show readMetadata, readAllMetadata;
+export 'src/parser.dart' show readMetadata, readAllMetadata,readMetadataFile,readMetadataUint8List,readMetadataWebDav;
 export 'src/writer.dart' show updateMetadata, writeMetadata;
 
 export 'src/parsers/id3v1.dart' show ID3v1Parser;

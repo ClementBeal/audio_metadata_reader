@@ -215,17 +215,17 @@ Future<AudioMetadata> readMetadata(MyRandomAccessFile reader,
 Future<ParserTag> readAllMetadata(MyRandomAccessFile reader, {bool getImage = true}) async {
   try {
     if (await ID3v2Parser.canUserParser(reader)) {
-      return ID3v2Parser(fetchImage: getImage).parse(reader);
+      return await ID3v2Parser(fetchImage: getImage).parse(reader);
     } else if (await FlacParser.canUserParser(reader)) {
-      return FlacParser(fetchImage: getImage).parse(reader);
+      return await FlacParser(fetchImage: getImage).parse(reader);
     } else if (await MP4Parser.canUserParser(reader)) {
-      return MP4Parser(fetchImage: getImage).parse(reader);
+      return await MP4Parser(fetchImage: getImage).parse(reader);
     } else if (await OGGParser.canUserParser(reader)) {
-      return OGGParser(fetchImage: getImage).parse(reader);
+      return await OGGParser(fetchImage: getImage).parse(reader);
     } else if (await ID3v2Parser.isID3v1(reader)) {
-      return ID3v1Parser().parse(reader);
+      return await ID3v1Parser().parse(reader);
     } else if (await RiffParser.canUserParser(reader)) {
-      return RiffParser().parse(reader);
+      return await RiffParser().parse(reader);
     }
   } catch (e, trace) {
     print(trace);

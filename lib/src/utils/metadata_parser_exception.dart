@@ -1,27 +1,32 @@
 import 'dart:io';
+import 'package:audio_metadata_reader/src/utils/buffer.dart';
 
 class MetadataParserException implements Exception {
-  final File track;
+  final MyRandomAccessFile? track;
   final String message;
 
   const MetadataParserException({
-    required this.track,
+    this.track,
     required this.message,
   });
 
   @override
-  String toString() =>
-      'MetadataParserException : error during the parsing of "${track.path}"\n${message}';
+  String toString() {
+    final trackInfo = track != null ? '"$track"' : 'unknown track';
+    return 'MetadataParserException : error during the parsing of $trackInfo\n$message';
+  }
 }
 
 class NoMetadataParserException implements Exception {
-  final File track;
+  final MyRandomAccessFile? track;
 
   const NoMetadataParserException({
-    required this.track,
+    this.track,
   });
 
   @override
-  String toString() =>
-      'NoMetadataParserException : no parser for "${track.path}"';
+  String toString() {
+    final trackInfo = track != null ? '"$track"' : 'unknown track';
+    return 'NoMetadataParserException : no parser for $trackInfo';
+  }
 }

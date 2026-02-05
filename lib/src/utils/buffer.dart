@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
-
+import 'dart:math' as math;
 import '../../audio_metadata_reader.dart';
 import 'package:webdav_client/webdav_client.dart' as webdav;
 
@@ -54,6 +54,88 @@ class FileRandomAccessFile implements MyRandomAccessFile{
     return await randomAccessFile.read(size);
   }
 }
+
+class Uint8ListRandomAccessFile implements MyRandomAccessFile {
+  final Uint8List _data;
+  int _position = 0;
+
+  Uint8ListRandomAccessFile({required Uint8List data}) : _data = data;
+
+  @override
+  Future<int> position() async {
+    return _position;
+  }
+
+  @override
+  Future<void> setPosition(int position) async {
+    if (position < 0) {
+      throw RangeError('Position cannot be negative');
+    }
+    _position = position;
+  }
+
+  @override
+  Future<int> readInto(Uint8List buffer, [int start = 0, int? end]) async {
+    end ??= buffer.length;
+    
+    if (start < 0 || end > buffer.length || start > end) {
+      throw RangeError('Invalid buffer range');
+    }
+    
+    if (_position >= _data.length) {
+      return 0; // EOF
+    }
+    
+    final availableBytes = _data.length - _position;
+    final requestedBytes = end - start;
+    final bytesToRead = math.min(availableBytes, requestedBytes);
+    
+    buffer.setRange(
+      start, 
+      start + bytesToRead, 
+      _data, 
+      _position
+    );
+    
+    _position += bytesToRead;
+    return bytesToRead;
+  }
+
+  @override
+  Future<int> length() async {
+    return _data.length;
+  }
+
+  @override
+  Future<void> close() async {
+    // 内存数据无需关闭操作
+  }
+
+  @override
+  Future<Uint8List> read(int size) async {
+    if (size < 0) {
+      throw ArgumentError('Size cannot be negative');
+    }
+    
+    if (_position >= _data.length) {
+      return Uint8List(0); // EOF
+    }
+    
+    final availableBytes = _data.length - _position;
+    final bytesToRead = math.min(availableBytes, size);
+    
+    final result = Uint8List.sublistView(
+      _data, 
+      _position, 
+      _position + bytesToRead
+    );
+    
+    _position += bytesToRead;
+    return result;
+  }
+}
+
+
 
 class WebDavRandomAccessFile implements MyRandomAccessFile{
   final webdav.Client client;
@@ -159,7 +241,7 @@ class Buffer {
   void _throwOnNoData() {
     if (_bufferedBytes == 0) {
       throw MetadataParserException(
-          track: File(""), message: "Expected more data in file");
+          track: randomAccessFile, message: "Expected more data in file");
     }
   }
 

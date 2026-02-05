@@ -9,11 +9,11 @@ import 'package:audio_metadata_reader/src/parsers/riff.dart';
 /// The [updater] receives the specific metadata object (e.g Mp3Metadata).
 /// You can modify this object directly within the callback.
 Future<void> updateMetadata(File track, void Function(ParserTag metadata) updater) async{
-  final metadata = await readAllMetadata(track);
+  // final metadata = await readAllMetadata(track);
 
-  updater(metadata);
+  // updater(metadata);
 
-  writeMetadata(track, metadata);
+  // writeMetadata(track, metadata);
 }
 
 /// Write the [metadata] into the [track]

@@ -13,8 +13,8 @@ final client = webdav.newClient(
 
 void main() async {
   File file = File('/Users/lyp/Music/LZF-Music/After Hours - The Weeknd.flac');
-  Uint8List data = file.readAsBytesSync();
+  Uint8List data = await file.readAsBytes();
   print(data.length);
-  final metadata = await readMetadataUint8List(data, getImage: true);
+  final metadata = await readMetadataUint8List(Stream.value(data), getImage: true);
   print(metadata);
 }

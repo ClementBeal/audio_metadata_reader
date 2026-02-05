@@ -54,12 +54,35 @@ class FileRandomAccessFile implements MyRandomAccessFile{
     return await randomAccessFile.read(size);
   }
 }
-
-class Uint8ListRandomAccessFile implements MyRandomAccessFile {
-  final Uint8List _data;
+class StreamRandomAccessFile implements MyRandomAccessFile {
+  final Stream<Uint8List> _stream;
+  Uint8List? _data;
   int _position = 0;
+  bool _isLoaded = false;
 
-  Uint8ListRandomAccessFile({required Uint8List data}) : _data = data;
+  StreamRandomAccessFile({required Stream<Uint8List> stream}) : _stream = stream;
+
+  // 懒加载：第一次访问时才从 Stream 读取数据
+  Future<void> _ensureLoaded() async {
+    if (_isLoaded) return;
+    
+    final chunks = <Uint8List>[];
+    await for (final chunk in _stream) {
+      chunks.add(chunk);
+    }
+    
+    // 合并所有数据块
+    final totalLength = chunks.fold<int>(0, (sum, chunk) => sum + chunk.length);
+    _data = Uint8List(totalLength);
+    
+    int offset = 0;
+    for (final chunk in chunks) {
+      _data!.setRange(offset, offset + chunk.length, chunk);
+      offset += chunk.length;
+    }
+    
+    _isLoaded = true;
+  }
 
   @override
   Future<int> position() async {
@@ -76,26 +99,23 @@ class Uint8ListRandomAccessFile implements MyRandomAccessFile {
 
   @override
   Future<int> readInto(Uint8List buffer, [int start = 0, int? end]) async {
+    await _ensureLoaded();
+    
     end ??= buffer.length;
     
     if (start < 0 || end > buffer.length || start > end) {
       throw RangeError('Invalid buffer range');
     }
     
-    if (_position >= _data.length) {
+    if (_position >= _data!.length) {
       return 0; // EOF
     }
     
-    final availableBytes = _data.length - _position;
+    final availableBytes = _data!.length - _position;
     final requestedBytes = end - start;
     final bytesToRead = math.min(availableBytes, requestedBytes);
     
-    buffer.setRange(
-      start, 
-      start + bytesToRead, 
-      _data, 
-      _position
-    );
+    buffer.setRange(start, start + bytesToRead, _data!, _position);
     
     _position += bytesToRead;
     return bytesToRead;
@@ -103,37 +123,39 @@ class Uint8ListRandomAccessFile implements MyRandomAccessFile {
 
   @override
   Future<int> length() async {
-    return _data.length;
+    await _ensureLoaded();
+    return _data!.length;
   }
 
   @override
   Future<void> close() async {
-    // 内存数据无需关闭操作
+    // 释放内存
+    _data = null;
+    _isLoaded = false;
   }
 
   @override
   Future<Uint8List> read(int size) async {
+    await _ensureLoaded();
+    
     if (size < 0) {
       throw ArgumentError('Size cannot be negative');
     }
     
-    if (_position >= _data.length) {
+    if (_position >= _data!.length) {
       return Uint8List(0); // EOF
     }
     
-    final availableBytes = _data.length - _position;
+    final availableBytes = _data!.length - _position;
     final bytesToRead = math.min(availableBytes, size);
     
-    final result = Uint8List.sublistView(
-      _data, 
-      _position, 
-      _position + bytesToRead
-    );
+    final result = Uint8List.sublistView(_data!, _position, _position + bytesToRead);
     
     _position += bytesToRead;
     return result;
   }
 }
+
 
 
 

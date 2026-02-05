@@ -20,8 +20,8 @@ Future<AudioMetadata> readMetadataWebDav(webdav.Client client, String path,
   return readMetadata(reader, getImage: getImage);
 }
 
-Future<AudioMetadata> readMetadataUint8List(Uint8List data,{bool getImage = false}) async {
-  final reader = Uint8ListRandomAccessFile(data: data);
+Future<AudioMetadata> readMetadataUint8List(Stream<Uint8List> data,{bool getImage = false}) async {
+  final reader = StreamRandomAccessFile(stream: data);
   return readMetadata(reader, getImage: getImage);
 }
 

@@ -244,9 +244,9 @@ class ID3v2Parser extends TagParser {
 
     // arbitrary choice.  Usually the `Xing` header is located after ~30 bytes
     // then the header size is about ~150 bytes.
-    final header = buffer.readAtMost(1500);
+    final header = buffer.readAtMost(200);
 
-    for (int i = 0; i + 12 <= header.length && i < 150; i++) {
+    for (int i = 0; i < 180; i++) {
       final isXing = header[i] == 0x58 &&
           header[i + 1] == 0x69 &&
           header[i + 2] == 0x6E &&

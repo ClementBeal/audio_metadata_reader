@@ -479,7 +479,7 @@ class ID3v2Parser extends TagParser {
         },
       "TOWN" => () {
           final content = buffer.read(size);
-          metadata.fileOwner == getTextFromFrame(content);
+          metadata.fileOwner = getTextFromFrame(content);
         },
       "TDRC" => () {
           final content = buffer.read(size);

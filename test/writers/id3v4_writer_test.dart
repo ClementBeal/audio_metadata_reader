@@ -101,6 +101,24 @@ void main() {
       );
 
       test(
+        "Write and parse file owner (TOWN)",
+        () {
+          final writer = Id3v4Writer();
+          final file = createTemporaryFile("test.mp3", mp3FrameHeaderCBR());
+
+          final metadata = Mp3Metadata();
+          metadata.fileOwner = "owner@example.com";
+
+          writer.write(file, metadata);
+
+          final resultMetadata =
+              ID3v2Parser().parse(file.openSync()) as Mp3Metadata;
+
+          expect(resultMetadata.fileOwner, equals(metadata.fileOwner));
+        },
+      );
+
+      test(
         "Write a picture",
         () {
           final writer = Id3v4Writer();

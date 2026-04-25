@@ -164,7 +164,6 @@ class ID3v2Parser extends TagParser {
 
   @override
   ParserTag parse(RandomAccessFile reader) {
-    reader.setPositionSync(0);
     buffer = Buffer(randomAccessFile: reader);
 
     final headerBytes = buffer.read(10);
@@ -213,7 +212,6 @@ class ID3v2Parser extends TagParser {
       final mp3FrameHeader = _findFirstMp3Frame(buffer);
 
       if (mp3FrameHeader == null) {
-        reader.closeSync();
         return metadata;
       }
 
@@ -285,7 +283,6 @@ class ID3v2Parser extends TagParser {
       }
     }
 
-    reader.closeSync();
     return metadata;
   }
 
@@ -717,27 +714,6 @@ class ID3v2Parser extends TagParser {
     }
 
     return "";
-  }
-
-  ///
-  /// To detect if this file can be parsed with this parser, the first 3 bytes
-  /// must be equal to `ID3`
-  ///
-  static bool canUserParser(RandomAccessFile reader) {
-    reader.setPositionSync(0);
-    final headerBytes = reader.readSync(3);
-    final tagIdentity = String.fromCharCodes(headerBytes);
-
-    return tagIdentity == "ID3";
-  }
-
-  static bool isID3v1(RandomAccessFile reader) {
-    reader.setPositionSync(reader.lengthSync() - 128);
-
-    final headerBytes = reader.readSync(3);
-    final tagIdentity = String.fromCharCodes(headerBytes);
-
-    return tagIdentity == "TAG";
   }
 
   int? _parseYear(String year) {

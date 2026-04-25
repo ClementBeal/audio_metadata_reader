@@ -30,8 +30,6 @@ class ID3v1Parser extends TagParser {
 
   @override
   ParserTag parse(RandomAccessFile reader) {
-    reader.setPositionSync(reader.lengthSync() - 128);
-
     final tagData = reader.readSync(128);
     metadata.songName = _extract(tagData, 3, 33);
     metadata.leadPerformer = _extract(tagData, 33, 63);
@@ -107,20 +105,7 @@ class ID3v1Parser extends TagParser {
       }
     }
 
-    reader.closeSync();
     return metadata;
-  }
-
-  /// To detect if this file can be parsed with this parser,
-  /// We have to check the 128 last bytes
-  /// And if the first 3 are "TAG", it's ID3v1
-  static bool canUserParser(RandomAccessFile reader) {
-    reader.setPositionSync(reader.lengthSync() - 128);
-
-    final headerBytes = reader.readSync(3);
-    final tagIdentity = String.fromCharCodes(headerBytes);
-
-    return tagIdentity == "TAG";
   }
 
   int? _getSampleRate(int mpegVersion, int sampleRateIndex) {

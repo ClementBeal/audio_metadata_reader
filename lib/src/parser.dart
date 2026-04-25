@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
-import 'package:audio_metadata_reader/src/parsers/containers/riff.dart';
 import 'package:audio_metadata_reader/src/metadata/base.dart';
+import 'package:audio_metadata_reader/src/parsers/containers/riff.dart';
 
 /// Parse the metadata of a file.
 ///
@@ -18,9 +18,9 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
   final reader = track.openSync();
 
   try {
-    if (ID3v2Parser.canUserParser(reader)) {
+    if (MP3Parser.canUserParser(reader)) {
       final mp3Metadata =
-          ID3v2Parser(fetchImage: getImage).parse(reader) as Mp3Metadata;
+          MP3Parser(fetchImage: getImage).parse(reader) as Mp3Metadata;
 
       final a = AudioMetadata(
         file: track,
@@ -160,33 +160,6 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
           (riffMetadata.genre != null) ? [riffMetadata.genre!] : [];
 
       return newMetadata;
-    } else if (ID3v1Parser.canUserParser(reader)) {
-      final mp3Metadata = ID3v1Parser().parse(reader) as Mp3Metadata;
-
-      final newMetadata = AudioMetadata(
-        file: track,
-        album: mp3Metadata.album,
-        artist: mp3Metadata.bandOrOrchestra ??
-            mp3Metadata.originalArtist ??
-            mp3Metadata.leadPerformer,
-        bitrate: mp3Metadata.bitrate,
-        duration: mp3Metadata.duration,
-        language: mp3Metadata.languages,
-        lyrics: mp3Metadata.lyric,
-        sampleRate: mp3Metadata.samplerate,
-        title: mp3Metadata.songName,
-        totalDisc: mp3Metadata.totalDics,
-        trackNumber: mp3Metadata.trackNumber,
-        trackTotal: mp3Metadata.trackTotal,
-        year:
-            DateTime(mp3Metadata.originalReleaseYear ?? mp3Metadata.year ?? 0),
-        discNumber: mp3Metadata.discNumber,
-      );
-
-      newMetadata.pictures = mp3Metadata.pictures;
-      newMetadata.genres = mp3Metadata.genres;
-
-      return newMetadata;
     }
   } on MetadataParserException catch (e, s) {
     Error.throwWithStackTrace(
@@ -216,8 +189,8 @@ ParserTag readAllMetadata(File track, {bool getImage = true}) {
   final reader = track.openSync();
 
   try {
-    if (ID3v2Parser.canUserParser(reader)) {
-      return ID3v2Parser(fetchImage: getImage).parse(reader);
+    if (MP3Parser.canUserParser(reader)) {
+      return MP3Parser(fetchImage: getImage).parse(reader);
     } else if (FlacParser.canUserParser(reader)) {
       return FlacParser(fetchImage: getImage).parse(reader);
     } else if (MP4Parser.canUserParser(reader)) {
@@ -226,8 +199,6 @@ ParserTag readAllMetadata(File track, {bool getImage = true}) {
       return OGGParser(fetchImage: getImage).parse(reader);
     } else if (RiffParser.canUserParser(reader)) {
       return RiffParser(fetchImage: getImage).parse(reader);
-    } else if (ID3v2Parser.isID3v1(reader)) {
-      return ID3v1Parser().parse(reader);
     }
   } catch (e) {
     throw MetadataParserException(track: track, message: e.toString());

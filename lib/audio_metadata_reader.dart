@@ -8,6 +8,7 @@ export 'src/utils/metadata_parser_exception.dart'
 export 'src/parser.dart' show readMetadata, readAllMetadata;
 export 'src/writer.dart' show updateMetadata, writeMetadata;
 
+export 'src/parsers/containers/mp3.dart' show MP3Parser;
 export 'src/parsers/tags/id3v1.dart' show ID3v1Parser;
 export 'src/parsers/tags/id3v2.dart' show ID3v2Parser;
 export 'src/parsers/containers/flac.dart' show FlacParser;

@@ -36,8 +36,9 @@ class ID3v1Parser extends TagParser {
     metadata.songName = _extract(tagData, 3, 33);
     metadata.leadPerformer = _extract(tagData, 33, 63);
     metadata.album = _extract(tagData, 63, 93);
-    metadata.year = getUint32(tagData.sublist(93, 97));
-    metadata.year = metadata.year == 0 ? null : metadata.year;
+    final yearAsString =
+        latin1.decode(tagData.sublist(93, 97)).replaceAll('\x00', '').trim();
+    metadata.year = int.tryParse(yearAsString);
     metadata.comments = [
       Comment("", _extract(tagData, 97, 127)),
     ];

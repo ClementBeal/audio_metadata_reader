@@ -1,8 +1,12 @@
 import 'dart:io';
+
+import 'package:audio_metadata_reader/src/parser.dart';
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/utils/pad_bit.dart';
 import 'package:audio_metadata_reader/src/writers/id3v1_writer.dart';
 import 'package:test/test.dart';
+
+import '../test_helpers.dart';
 
 void main() {
   test('Id3v1Writer writes ID3v1 tag correctly', () {
@@ -12,7 +16,7 @@ void main() {
     tempFile.createSync();
     final writer = tempFile.openSync(mode: FileMode.write);
 
-    writer.writeFromSync([1, 2, 3, 4, 5]);
+    writer.writeFromSync(mp3FrameHeaderCBR());
     writer.closeSync();
 
     final metadata = Mp3Metadata()
@@ -40,5 +44,24 @@ void main() {
     expect(id3v1Bytes[127], equals(255));
 
     tempFile.deleteSync();
+  });
+
+  test('ID3v1 year is parsed from ASCII text', () {
+    final dir = Directory.systemTemp.createTempSync();
+    addTearDown(() => dir.deleteSync(recursive: true));
+
+    final tempFile = File('${dir.path}/test_audio.mp3');
+    tempFile.writeAsBytesSync(mp3FrameHeaderCBR());
+
+    final metadata = Mp3Metadata()
+      ..songName = 'Test Title'
+      ..bandOrOrchestra = 'Test Artist'
+      ..album = 'Test Album'
+      ..year = 2023;
+
+    ID3v1Writer().write(tempFile, metadata);
+
+    final parsed = readAllMetadata(tempFile) as Mp3Metadata;
+    expect(parsed.year, equals(2023));
   });
 }

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/parser.dart';
@@ -26,6 +27,12 @@ void main() {
 
     expect(target.existsSync(), isTrue);
     expect(fixedOutput.existsSync(), isFalse);
+
+    final bytes = target.readAsBytesSync();
+    final byteData = ByteData.sublistView(bytes);
+    expect(String.fromCharCodes(bytes.sublist(0, 4)), equals('RIFF'));
+    expect(String.fromCharCodes(bytes.sublist(8, 12)), equals('WAVE'));
+    expect(byteData.getUint32(4, Endian.little), equals(bytes.length - 8));
 
     final parsedMetadata = readMetadata(target, getImage: false);
     expect(parsedMetadata.title, equals('Updated WAV title'));

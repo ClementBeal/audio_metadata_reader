@@ -4,6 +4,17 @@
 - ID3v2 : read the lyrics correctly for UTF8-LE
 - MP4 : reset the reader when we start the parsing
 
+## [1.4.3](https://github.com/ClementBeal/audio_metadata_reader/compare/v1.4.2...v1.4.3) (2026-04-25)
+
+
+### Bug Fixes
+
+* id3V4 writer will work with non ASCII characters ([6bb7ae4](https://github.com/ClementBeal/audio_metadata_reader/commit/6bb7ae4f2750ed4b6a654834d3b70a4bca5c9798))
+* In some cases, the last character of lyrics may be truncated. ([#95](https://github.com/ClementBeal/audio_metadata_reader/issues/95)) ([6225d83](https://github.com/ClementBeal/audio_metadata_reader/commit/6225d833343d6695e217b445a2452ccc2695f9e5))
+* riff writer was overwriting the origin file ([2c6cad7](https://github.com/ClementBeal/audio_metadata_reader/commit/2c6cad7ce196f3457818ac6d697fd9e31d0db7bb))
+* **riff_writer:** correct size for the header ([7d523ff](https://github.com/ClementBeal/audio_metadata_reader/commit/7d523fff5f60ad1f820229b2ae21ebc16ba3fb84))
+* setArtist tag for mp3 ([#91](https://github.com/ClementBeal/audio_metadata_reader/issues/91)) ([daa5da2](https://github.com/ClementBeal/audio_metadata_reader/commit/daa5da28a6493959098907ba66791686a9676db1))
+
 ## [1.4.2](https://github.com/ClementBeal/audio_metadata_reader/compare/v1.4.1...v1.4.2) (2025-06-28)
 
 ### Chore

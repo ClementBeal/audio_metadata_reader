@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/parser.dart';
@@ -57,4 +59,94 @@ void main() {
     expect(result.artist, "FFmpeg Generator");
     expect(result.year, (DateTime(2023, 10, 27)));
   });
+
+  test("Parse chapters from chpl atom", () {
+    final track = _createMp4WithChplChapters();
+    addTearDown(() {
+      if (track.existsSync()) {
+        track.deleteSync();
+      }
+    });
+
+    final allMetadata = readAllMetadata(track, getImage: false) as Mp4Metadata;
+
+    expect(allMetadata.chapters.length, 3);
+    expect(allMetadata.chapters[0].title, "Intro");
+    expect(allMetadata.chapters[0].start, Duration.zero);
+    expect(allMetadata.chapters[1].title, "Part 1");
+    expect(allMetadata.chapters[1].start, Duration(seconds: 2));
+    expect(allMetadata.chapters[2].title, "Outro");
+    expect(allMetadata.chapters[2].start, Duration(seconds: 4));
+
+    final metadata = readMetadata(track, getImage: false);
+    expect(metadata.chapters.length, 3);
+    expect(metadata.chapters[0].title, "Intro");
+    expect(metadata.chapters[0].start, Duration.zero);
+  });
+}
+
+File _createMp4WithChplChapters() {
+  final bytes = BytesBuilder();
+
+  // Minimal MP4 layout for this parser:
+  // root -> ftyp + moov, and moov -> udta -> chpl.
+  bytes.add(_makeBox("ftyp", [
+    ...ascii.encode("M4A "),
+    ..._u32(0),
+    ...ascii.encode("isom"),
+    ...ascii.encode("M4A "),
+  ]));
+
+  final chapters = [
+    (start: Duration.zero, title: "Intro"),
+    (start: Duration(seconds: 2), title: "Part 1"),
+    (start: Duration(seconds: 4), title: "Outro"),
+  ];
+
+  final chplPayload = BytesBuilder();
+  chplPayload.add(_u32(0)); // version + flags
+  chplPayload.add(_u32(0)); // reserved bytes found in common `chpl` layout
+  chplPayload.addByte(chapters.length);
+
+  for (final chapter in chapters) {
+    // chpl timestamps are stored in 100ns units.
+    chplPayload.add(_u64(chapter.start.inMicroseconds * 10));
+    final titleBytes = utf8.encode(chapter.title);
+    chplPayload.addByte(titleBytes.length);
+    chplPayload.add(titleBytes);
+  }
+
+  final udta = _makeBox("udta", _makeBox("chpl", chplPayload.toBytes()));
+  final moov = _makeBox("moov", udta);
+  bytes.add(moov);
+
+  // Temporary file to keep tests hermetic and avoid static binary fixtures.
+  final file = File(
+      "${Directory.systemTemp.path}/audio_metadata_reader_chpl_test_${DateTime.now().microsecondsSinceEpoch}.m4a");
+  file.writeAsBytesSync(bytes.toBytes(), flush: true);
+
+  return file;
+}
+
+Uint8List _makeBox(String type, List<int> payload) {
+  final builder = BytesBuilder();
+  builder.add(_u32(payload.length + 8));
+  builder.add(ascii.encode(type));
+  builder.add(payload);
+
+  return builder.toBytes();
+}
+
+Uint8List _u32(int value) {
+  final data = ByteData(4);
+  data.setUint32(0, value);
+
+  return data.buffer.asUint8List();
+}
+
+Uint8List _u64(int value) {
+  final data = ByteData(8);
+  data.setUint64(0, value);
+
+  return data.buffer.asUint8List();
 }

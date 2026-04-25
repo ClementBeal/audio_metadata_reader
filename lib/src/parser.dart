@@ -107,6 +107,8 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
         newMetadata.genres.add(mp4Metadata.genre!);
       }
 
+      newMetadata.chapters = List.of(mp4Metadata.chapters);
+
       return newMetadata;
     } else if (OGGParser.canUserParser(reader)) {
       final oggMetadata =

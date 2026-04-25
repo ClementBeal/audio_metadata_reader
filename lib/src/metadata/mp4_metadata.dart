@@ -15,6 +15,7 @@ class Mp4Metadata extends ParserTag {
   int? sampleRate;
   int? totalTracks;
   int? totalDiscs;
+  List<Chapter> chapters;
 
   Mp4Metadata({
     this.title,
@@ -31,7 +32,8 @@ class Mp4Metadata extends ParserTag {
     this.sampleRate,
     this.totalTracks,
     this.totalDiscs,
-  });
+    List<Chapter>? chapters,
+  }) : chapters = chapters ?? [];
 
   @override
   String toString() {
@@ -49,7 +51,8 @@ class Mp4Metadata extends ParserTag {
         '  genre: $genre,\n'
         '  sampleRate: $sampleRate,\n'
         '  totalTracks: $totalTracks,\n'
-        '  totalDiscs: $totalDiscs\n'
+        '  totalDiscs: $totalDiscs,\n'
+        '  chapters: $chapters\n'
         ')';
   }
 }

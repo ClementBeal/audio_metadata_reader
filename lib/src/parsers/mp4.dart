@@ -47,6 +47,7 @@ final supportedBox = [
   "©lyr",
   "©gen",
   "----",
+  "chpl",
   "trak",
   "mdia",
   "minf",
@@ -159,6 +160,9 @@ class MP4Parser extends TagParser {
       buffer.read(4);
 
       parseRecurvise(buffer, box);
+    } else if (box.type == "chpl") {
+      // `chpl` is a chapter list atom used by many MP4/M4A encoders.
+      _parseChapterListBox(buffer.read(box.size - 8));
     } else if (box.type[0] == "©" ||
         ["gnre", "trkn", "disk", "tmpo", "cpil", "too", "covr", "pgap", "gen"]
             .contains(box.type)) {
@@ -178,12 +182,7 @@ class MP4Parser extends TagParser {
           ? metadataValue.sublist(16)
           : metadataValue.sublist(4);
 
-      String value;
-      try {
-        value = utf8.decode(data);
-      } catch (e) {
-        value = latin1.decode(data);
-      }
+      final value = _decodeString(data);
 
       switch (boxName) {
         case "nam":
@@ -264,6 +263,115 @@ class MP4Parser extends TagParser {
     } else {
       buffer.setPositionSync(buffer.fileCursor + box.size - 8);
     }
+  }
+
+  String _decodeString(Uint8List value) {
+    try {
+      // Chapter titles and iTunes text metadata are usually UTF-8.
+      return utf8.decode(value);
+    } catch (_) {
+      // Keep latin1 fallback for malformed or legacy tags.
+      return latin1.decode(value);
+    }
+  }
+
+  /// Parse chapter list atom (`chpl`) and append parsed chapters.
+  ///
+  /// The most common layout is:
+  /// - 4 bytes: version + flags (full box)
+  /// - 4 bytes: reserved
+  /// - 1 byte: chapter count
+  /// - N chapters:
+  ///   - 8 bytes: start timestamp in 100ns units
+  ///   - 1 byte: title size
+  ///   - title bytes (UTF-8)
+  void _parseChapterListBox(Uint8List value) {
+    if (value.length < 5) {
+      return;
+    }
+
+    // We handle both layouts found in the wild:
+    // - [version+flags][reserved][count]...  => count at offset 8
+    // - [version+flags][count]...            => count at offset 4
+    final chapterFromReserved = _extractChapters(value, chapterCountOffset: 8);
+    final chapterWithoutReserved =
+        _extractChapters(value, chapterCountOffset: 4);
+    final chapters = _pickBestChapterList(
+      chapterFromReserved,
+      chapterWithoutReserved,
+    );
+
+    if (chapters == null) {
+      return;
+    }
+
+    tags.chapters.addAll(chapters);
+  }
+
+  List<Chapter>? _pickBestChapterList(
+    List<Chapter>? withReserved,
+    List<Chapter>? withoutReserved,
+  ) {
+    if (withReserved == null) {
+      return withoutReserved;
+    }
+
+    if (withoutReserved == null) {
+      return withReserved;
+    }
+
+    if (withoutReserved.length > withReserved.length) {
+      // Prefer the parse that produced more complete chapters.
+      return withoutReserved;
+    }
+
+    return withReserved;
+  }
+
+  List<Chapter>? _extractChapters(
+    Uint8List value, {
+    required int chapterCountOffset,
+  }) {
+    if (chapterCountOffset >= value.length) {
+      return null;
+    }
+
+    int offset = chapterCountOffset;
+    final chapterCount = value[offset];
+    offset += 1;
+    final chapters = <Chapter>[];
+
+    for (int i = 0; i < chapterCount; i++) {
+      // Each entry needs at least 8 bytes timestamp + 1 byte title length.
+      if (offset + 9 > value.length) {
+        return null;
+      }
+
+      final startIn100Nanoseconds =
+          getUint64BE(value.sublist(offset, offset + 8));
+      offset += 8;
+
+      final titleLength = value[offset];
+      offset += 1;
+
+      // If one entry is truncated, consider this parse strategy invalid.
+      if (offset + titleLength > value.length) {
+        return null;
+      }
+
+      final titleBytes = value.sublist(offset, offset + titleLength);
+      offset += titleLength;
+
+      chapters.add(
+        Chapter(
+          // `chpl` stores timestamps in 100ns ticks, Duration uses microseconds.
+          start: Duration(microseconds: (startIn100Nanoseconds / 10).round()),
+          title: _decodeString(titleBytes),
+        ),
+      );
+    }
+
+    return chapters;
   }
 
   /// Parse a box with multiple sub boxes.

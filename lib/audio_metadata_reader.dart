@@ -22,6 +22,7 @@ export 'src/writers/riff_writer.dart' show RiffWriter;
 
 export 'src/metadata/base.dart'
     show
+        Chapter,
         Mp3Metadata,
         Mp4Metadata,
         RiffMetadata,

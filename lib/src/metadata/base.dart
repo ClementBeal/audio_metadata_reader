@@ -10,6 +10,21 @@ part 'riff_metadata.dart';
 
 sealed class ParserTag {}
 
+class Chapter {
+  final Duration start;
+  final String title;
+
+  Chapter({
+    required this.start,
+    required this.title,
+  });
+
+  @override
+  String toString() {
+    return 'Chapter(start: $start, title: $title)';
+  }
+}
+
 enum PictureType {
   other,
   fileIcon32x32,

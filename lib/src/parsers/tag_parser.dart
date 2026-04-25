@@ -84,6 +84,9 @@ class AudioMetadata {
   /// The pictures containing in the track
   late List<Picture> pictures;
 
+  /// Ordered chapters when available
+  late List<Chapter> chapters;
+
   /// A reference to the file that contains the metadata
   File file;
 
@@ -105,6 +108,7 @@ class AudioMetadata {
   }) {
     genres = [];
     pictures = [];
+    chapters = [];
   }
 
   @override
@@ -125,6 +129,7 @@ class AudioMetadata {
         '  bitrate: $bitrate,\n'
         '  sampleRate: $sampleRate,\n'
         '  pictures: $pictures,\n'
+        '  chapters: $chapters,\n'
         '  file: $file\n'
         ')';
   }

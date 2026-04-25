@@ -685,7 +685,9 @@ class ID3v2Parser extends TagParser {
       case 1:
         if (encoding == 1 || encoding == 2) {
           // Check if rest length is sufficient and properly handle ending
-          if (rest.length >= 2 && rest[rest.length - 1] == 0 && rest[rest.length - 2] == 0) {
+          if (rest.length >= 2 &&
+              rest[rest.length - 1] == 0 &&
+              rest[rest.length - 2] == 0) {
             return utf16Decoder.decodeUtf16Le(rest, 0, rest.length - 2);
           }
           return utf16Decoder.decodeUtf16Le(rest);

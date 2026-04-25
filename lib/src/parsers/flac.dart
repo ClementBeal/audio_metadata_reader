@@ -167,8 +167,11 @@ class FlacParser extends TagParser {
       offset += length;
 
       final equalsIndex = comment.indexOf('=');
-      final a = equalsIndex != -1 
-          ? [comment.substring(0, equalsIndex), comment.substring(equalsIndex + 1)]
+      final a = equalsIndex != -1
+          ? [
+              comment.substring(0, equalsIndex),
+              comment.substring(equalsIndex + 1)
+            ]
           : comment.split("=");
       final commentName = a[0];
       final value = a.length > 1 ? a[1] : "";

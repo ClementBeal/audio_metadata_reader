@@ -1,0 +1,7 @@
+analyzer:
+  errors:
+    unnecessary_statements: error
+
+linter:
+  rules:
+    - unnecessary_statements

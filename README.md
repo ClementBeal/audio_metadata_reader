@@ -32,6 +32,16 @@ void main() {
 }
 ```
 
+### Supported File Extensions
+
+Use `supportedFileExtensions` when filtering files before parsing:
+
+```dart
+final isSupported = supportedFileExtensions.any(
+  (ext) => file.path.toLowerCase().endsWith(ext),
+);
+```
+
 ### Write
 
 ```dart
@@ -87,11 +97,11 @@ void main() {
   final folder = Directory(r"music folder")
       .listSync(recursive: true)
       .whereType<File>()
-      .where((file) =>
-          file.path.endsWith(".mp4") ||
-          file.path.endsWith(".m4a") ||
-          file.path.endsWith(".mp3") ||
-          file.path.endsWith(".flac"))
+      .where(
+        (file) => supportedFileExtensions.any(
+          (ext) => file.path.toLowerCase().endsWith(ext),
+        ),
+      )
       .toList();
 
   print("Number of tracks: ${folder.length}");

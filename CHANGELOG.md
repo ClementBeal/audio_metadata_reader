@@ -1,9 +1,3 @@
-## 0.0.11
-
-- OGG : fix performance
-- ID3v2 : read the lyrics correctly for UTF8-LE
-- MP4 : reset the reader when we start the parsing
-
 ## [1.5.0](https://github.com/ClementBeal/audio_metadata_reader/compare/v1.4.2...v1.5.0) (2026-04-25)
 
 
@@ -30,7 +24,7 @@
 
 ### Chore
 
-* Bump `intl` and `test` ([#70](https://github.com/ClementBeal/audio_metadata_reader/issues/80)) ([8923c67](https://github.com/ClementBeal/audio_metadata_reader/commit/89c277127449455489e6a53c99a103a098619196))
+* Bump `intl` and `test` ([#80](https://github.com/ClementBeal/audio_metadata_reader/issues/80)) ([89c2771](https://github.com/ClementBeal/audio_metadata_reader/commit/89c277127449455489e6a53c99a103a098619196))
 
 
 ### Bug Fixes
@@ -132,6 +126,12 @@
 * skip the non used id3 tags ([a24eab6](https://github.com/ClementBeal/audio_metadata_reader/commit/a24eab6378c3b3960e5e488e385c7e49354ec03b))
 * sometimes the track value is empty ([#31](https://github.com/ClementBeal/audio_metadata_reader/issues/31)) ([256da3d](https://github.com/ClementBeal/audio_metadata_reader/commit/256da3d51de1694fd73797f79a152d5b787f94b1))
 * various bugs in ID3 ([#24](https://github.com/ClementBeal/audio_metadata_reader/issues/24)) ([e6c5c61](https://github.com/ClementBeal/audio_metadata_reader/commit/e6c5c61a913a8b5044f1653c4a094c6ea6934872))
+
+## 0.0.11
+
+- OGG : fix performance
+- ID3v2 : read the lyrics correctly for UTF8-LE
+- MP4 : reset the reader when we start the parsing
 
 ## 0.0.10
 

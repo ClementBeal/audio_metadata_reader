@@ -101,6 +101,27 @@ void main() {
       );
 
       test(
+        "Write UTF-8 metadata with Chinese characters",
+        () {
+          final writer = Id3v4Writer();
+
+          final file = createTemporaryFile("test.mp3", mp3FrameHeaderCBR());
+
+          final metadata = Mp3Metadata();
+          metadata.songName = "你好世界";
+          metadata.originalArtist = "周杰伦";
+
+          writer.write(file, metadata);
+
+          final resultMetadata =
+              ID3v2Parser().parse(file.openSync()) as Mp3Metadata;
+
+          expect(resultMetadata.songName, equals(metadata.songName));
+          expect(resultMetadata.originalArtist, equals(metadata.originalArtist));
+        },
+      );
+
+      test(
         "Write a picture",
         () {
           final writer = Id3v4Writer();

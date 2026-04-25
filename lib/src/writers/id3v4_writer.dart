@@ -182,14 +182,16 @@ class Id3v4Writer extends BaseMetadataWriter<Mp3Metadata> {
   }
 
   void _writeFrame(BytesBuilder builder, String frameId, String data) {
+    final encodedData = utf8.encode(data);
+
     builder.add(frameId.codeUnits);
 
-    builder.add(_encodeSynchsafeInteger(data.length + 1));
+    builder.add(_encodeSynchsafeInteger(encodedData.length + 1));
     // flags
     builder.add([0, 0]);
 
     builder.addByte(0x03);
-    builder.add(utf8.encode(data));
+    builder.add(encodedData);
   }
 
   void _writeFrameWithBytes(

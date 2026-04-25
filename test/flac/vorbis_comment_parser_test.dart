@@ -1,5 +1,5 @@
 import 'package:audio_metadata_reader/src/metadata/base.dart';
-import 'package:audio_metadata_reader/src/parsers/vorbis_comment.dart';
+import 'package:audio_metadata_reader/src/parsers/tags/vorbis_comment.dart';
 import 'package:test/test.dart';
 
 void main() {

@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
-import 'package:audio_metadata_reader/src/parsers/mp4.dart';
+import 'package:audio_metadata_reader/src/parsers/containers/mp4.dart';
 import 'package:audio_metadata_reader/src/utils/bit_manipulator.dart';
 import 'package:audio_metadata_reader/src/writers/base_writer.dart';
 

@@ -225,8 +225,7 @@ ParserTag readAllMetadata(File track, {bool getImage = true}) {
     } else if (ID3v2Parser.isID3v1(reader)) {
       return ID3v1Parser().parse(reader);
     }
-  } catch (e, trace) {
-    print(trace);
+  } catch (e) {
     throw MetadataParserException(track: track, message: e.toString());
   }
 

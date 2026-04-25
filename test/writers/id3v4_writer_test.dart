@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/parsers/id3v2.dart';
 import 'package:audio_metadata_reader/src/parsers/tag_parser.dart';
@@ -117,7 +118,31 @@ void main() {
               ID3v2Parser().parse(file.openSync()) as Mp3Metadata;
 
           expect(resultMetadata.songName, equals(metadata.songName));
-          expect(resultMetadata.originalArtist, equals(metadata.originalArtist));
+          expect(
+              resultMetadata.originalArtist, equals(metadata.originalArtist));
+        },
+      );
+
+      test(
+        "Update metadata should not duplicate TCON frame",
+        () {
+          final writer = Id3v4Writer();
+          final file = createTemporaryFile("test.mp3", mp3FrameHeaderCBR());
+
+          writer.write(
+            file,
+            Mp3Metadata()..genres = ["Rock"],
+          );
+
+          updateMetadata(file, (metadata) {
+            metadata.setGenres(["Jazz"]);
+          });
+
+          final resultMetadata =
+              ID3v2Parser().parse(file.openSync()) as Mp3Metadata;
+
+          expect(resultMetadata.genres, equals(["Jazz"]));
+          expect(resultMetadata.contentType, equals("Jazz"));
         },
       );
 

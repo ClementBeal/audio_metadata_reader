@@ -21,6 +21,7 @@ void main() {
     expect(result.trackTotal, equals(10));
     expect(result.genres.length, equals(1));
     expect(result.genres.first, equals("Rock"));
+    expect(result.language, isNull);
   });
   test("Parse FLAC file that contains a cover", () {
     final track = File('./test/flac/no_picture.flac');

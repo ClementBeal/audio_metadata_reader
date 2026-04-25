@@ -23,6 +23,7 @@ class VorbisMetadata extends ParserTag {
   List<String> actor = []; // ACTOR
   List<String> composer = []; // COMPOSER
   List<String> comment = []; // COMMENT
+  List<String> language = []; // LANGUAGE / LANG
   List<String> director = []; // DIRECTOR
   List<String> encodedBy = []; // ENCODED_BY
   List<String> encodedUsing = []; // ENCODED_USING
@@ -70,6 +71,7 @@ class VorbisMetadata extends ParserTag {
         '  actor: $actor,\n'
         '  composer: $composer,\n'
         '  comment: $comment,\n'
+        '  language: $language,\n'
         '  director: $director,\n'
         '  encodedBy: $encodedBy,\n'
         '  encodedUsing: $encodedUsing,\n'

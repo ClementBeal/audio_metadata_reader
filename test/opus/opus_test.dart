@@ -21,6 +21,7 @@ void main() {
     expect(result.trackTotal, equals(10));
     expect(result.genres.length, equals(1));
     expect(result.genres.first, equals("Rock"));
+    expect(result.language, isNull);
   });
   test("Parse OPUS file and the cover", () {
     final track = File('./test/opus/track.opus');

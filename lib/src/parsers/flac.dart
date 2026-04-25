@@ -240,6 +240,9 @@ class FlacParser extends TagParser {
         case 'COMMENT':
           metadata.comment.add(value);
           break;
+        case 'LANGUAGE' || 'LANG':
+          metadata.language.add(value);
+          break;
         case 'DIRECTOR':
           metadata.director.add(value);
           break;

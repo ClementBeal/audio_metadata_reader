@@ -224,6 +224,8 @@ ParserTag readAllMetadata(File track, {bool getImage = true}) {
       return MP4Parser(fetchImage: getImage).parse(reader);
     } else if (OGGParser.canUserParser(reader)) {
       return OGGParser(fetchImage: getImage).parse(reader);
+    } else if (RiffParser.canUserParser(reader)) {
+      return RiffParser(fetchImage: getImage).parse(reader);
     } else if (ID3v2Parser.isID3v1(reader)) {
       return ID3v1Parser().parse(reader);
     }

@@ -29,7 +29,7 @@ class RiffWriter extends BaseMetadataWriter<RiffMetadata> {
     builder.add(newData);
 
     reader.closeSync();
-    File("a_new.wav").writeAsBytesSync(builder.toBytes());
+    file.writeAsBytesSync(builder.toBytes());
   }
 
   Uint8List _parseChunks() {

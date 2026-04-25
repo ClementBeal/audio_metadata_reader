@@ -8,6 +8,8 @@ import 'package:audio_metadata_reader/src/utils/bit_manipulator.dart';
 import 'package:audio_metadata_reader/src/writers/base_writer.dart';
 
 class FlacWriter extends BaseMetadataWriter<VorbisMetadata> {
+  bool _isLastBlock = false;
+
   @override
   void write(File file, VorbisMetadata metadata) {
     final builder = BytesBuilder();
@@ -18,6 +20,7 @@ class FlacWriter extends BaseMetadataWriter<VorbisMetadata> {
 
     builder.add(reader.readSync(4));
 
+    _isLastBlock = false;
     bool isLastBlock = false;
     int i = 0;
     while (!isLastBlock) {
@@ -32,6 +35,12 @@ class FlacWriter extends BaseMetadataWriter<VorbisMetadata> {
       final block = _parseMetadataBlock(reader, builder, metadata);
       isLastBlock = block.isLastBlock;
       i++;
+    }
+
+    // if the original file ends with a vorbis comment or picture block, the isLastBlock flag will not be set to true
+    // add a zero-length padding block to ensure that the last block is marked as isLastBlock = true
+    if (_isLastBlock == false) {
+      _writeBlock(builder, Uint8List(0), 1, true);
     }
 
     final rest = reader.lengthSync() - reader.positionSync();
@@ -56,7 +65,6 @@ class FlacWriter extends BaseMetadataWriter<VorbisMetadata> {
     // block 4 -> Vorbis comment
     // block 6 -> picture
     switch (block.type) {
-      case 3:
       case 4:
       case 6:
         buffer.setPositionSync(buffer.positionSync() + block.length);
@@ -76,8 +84,12 @@ class FlacWriter extends BaseMetadataWriter<VorbisMetadata> {
     return block;
   }
 
+  // this function should be called for every block write operation
   void _writeBlockHeader(
       BytesBuilder builder, int blockType, int length, bool isLastBlock) {
+    // update _isLastBlock to check if the last block was truly written as the final one
+    _isLastBlock = isLastBlock;
+
     int firstByte = isLastBlock ? (1 << 7) : 0;
     firstByte = (firstByte | blockType);
 
@@ -87,11 +99,10 @@ class FlacWriter extends BaseMetadataWriter<VorbisMetadata> {
 
   void _writeBlock(
       BytesBuilder builder, Uint8List data, int blockId, bool isLastBlock) {
-    int firstByte = (isLastBlock) ? 255 | blockId : blockId & 255;
-
-    builder.addByte(firstByte);
-    builder.add(intToUint24(data.length));
-
+    // reuse the _writeBlockHeader to make sure the firstByte is correct,
+    // and reuse this function to update _isLastBlock to verify
+    // whether the last block flag is set correctly.
+    _writeBlockHeader(builder, blockId, data.length, isLastBlock);
     builder.add(data);
   }
 

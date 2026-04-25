@@ -23,7 +23,8 @@ class Id3v4Writer extends BaseMetadataWriter<Mp3Metadata> {
   @override
   void write(File file, Mp3Metadata metadata) {
     // check if the file has an ID3 metadata
-    final size = file.lengthSync();
+    final oldData = file.readAsBytesSync();
+    final id3Length = _getId3v2LengthFromBytes(oldData);
 
     final builder = BytesBuilder();
 
@@ -34,15 +35,26 @@ class Id3v4Writer extends BaseMetadataWriter<Mp3Metadata> {
     _writeHeader(finalBuilder, builder.length);
     finalBuilder.add(builder.toBytes());
 
-    if (size == 0) {
-      file.writeAsBytesSync(finalBuilder.toBytes());
-    } else {
-      final oldData = file.readAsBytesSync();
-      file.writeAsBytesSync([
-        ...finalBuilder.toBytes(),
-        ...oldData,
-      ]);
+    file.writeAsBytesSync([
+      ...finalBuilder.toBytes(),
+      ...oldData.sublist(id3Length),
+    ]);
+  }
+
+  int _getId3v2LengthFromBytes(Uint8List data) {
+    if (data.length < 10) return 0;
+
+    // 'ID3'
+    if (data[0] != 0x49 || data[1] != 0x44 || data[2] != 0x33) {
+      return 0;
     }
+
+    final size = ((data[6] & 0x7F) << 21) |
+        ((data[7] & 0x7F) << 14) |
+        ((data[8] & 0x7F) << 7) |
+        (data[9] & 0x7F);
+
+    return 10 + size;
   }
 
   void _writeFrames(BytesBuilder builder, Mp3Metadata metadata) {
@@ -184,12 +196,13 @@ class Id3v4Writer extends BaseMetadataWriter<Mp3Metadata> {
   void _writeFrame(BytesBuilder builder, String frameId, String data) {
     builder.add(frameId.codeUnits);
 
-    builder.add(_encodeSynchsafeInteger(data.length + 1));
+    final encodedData = utf8.encode(data);
+    builder.add(_encodeSynchsafeInteger(encodedData.length + 1));
     // flags
     builder.add([0, 0]);
 
     builder.addByte(0x03);
-    builder.add(utf8.encode(data));
+    builder.add(encodedData);
   }
 
   void _writeFrameWithBytes(

@@ -135,7 +135,7 @@ extension CommonMetadataSetters on ParserTag {
         m.artist = artist;
         break;
       case VorbisMetadata m:
-        m.artist = artist == null ? m.artist : [artist];
+        m.artist = artist == null ? [] : [artist];
         break;
       case RiffMetadata m:
         m.artist = artist;

@@ -59,7 +59,7 @@ class RiffParser extends TagParser {
         metadata.samplerate = getUint32LE(buffer.read(4));
         metadata.bitrate = getUint32LE(buffer.read(4));
 
-        buffer.skip(4);
+        buffer.skip(chunkSize - 12);
       } else if (chunkId == "LIST") {
         final listType = String.fromCharCodes(buffer.read(4));
         if (listType == 'INFO') {

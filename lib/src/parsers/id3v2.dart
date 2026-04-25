@@ -207,82 +207,109 @@ class ID3v2Parser extends TagParser {
       processFrame(frame.id, frame.size);
     }
 
-    if (metadata.duration == null || metadata.duration == Duration.zero) {
-      buffer.setPositionSync(size + 10);
+    if (metadata.duration != null && metadata.duration != Duration.zero) {
+      reader.closeSync();
+      return metadata;
+    }
 
-      final mp3FrameHeader = _findFirstMp3Frame(buffer);
+    buffer.setPositionSync(size + 10);
 
-      if (mp3FrameHeader == null) {
+    final mp3FrameHeader = _findFirstMp3Frame(buffer);
+
+    if (mp3FrameHeader == null) {
+      reader.closeSync();
+      return metadata;
+    }
+
+    final mpegVersion = switch ((mp3FrameHeader[1] >> 3) & 0x3) {
+      0x00 => 3,
+      0x01 => -1,
+      0x02 => 2,
+      0x03 => 1,
+      _ => -1
+    };
+    final mpegLayer = switch ((mp3FrameHeader[1] >> 1) & 0x3) {
+      0 => -1,
+      1 => 3,
+      2 => 2,
+      3 => 1,
+      _ => -1,
+    };
+
+    final bitrateIndex = mp3FrameHeader[2] >> 4;
+    final samplerateIndex = (mp3FrameHeader[2] & 12) >> 2;
+
+    metadata.samplerate = _getSampleRate(mpegVersion, samplerateIndex);
+    metadata.bitrate = _getBitrate(mpegVersion, mpegLayer, bitrateIndex);
+
+    // arbitrary choice.  Usually the `Xing` header is located after ~30 bytes
+    // then the header size is about ~150 bytes.
+    final header = buffer.readAtMost(200);
+
+    for (int i = 0; i < 180; i++) {
+      final isXing = header[i] == 0x58 &&
+          header[i + 1] == 0x69 &&
+          header[i + 2] == 0x6E &&
+          header[i + 3] == 0x67;
+
+      final isInfo = header[i] == 0x49 &&
+          header[i + 1] == 0x6E &&
+          header[i + 2] == 0x66 &&
+          header[i + 3] == 0x6F;
+
+      if (!isXing && !isInfo) continue;
+
+      final flags = header[i + 7];
+
+      if ((flags & 0x01) != 0) {
+        final numberOfFrames = getUint32(header.sublist(i + 8, i + 12));
+        final samplesPerFrame = _getSamplePerFrame(mpegVersion, mpegLayer) ?? 0;
+        final sampleRate = metadata.samplerate;
+
+        if (sampleRate != null && sampleRate > 0 && samplesPerFrame > 0) {
+          metadata.duration = Duration(
+            microseconds:
+                numberOfFrames * samplesPerFrame * 1000000 ~/ sampleRate,
+          );
+          reader.closeSync();
+          return metadata;
+        }
+      }
+
+      // Info + no frames → fallback to CBR
+      break;
+    }
+
+    final vbriOffset = 36;
+
+    if (header.length >= vbriOffset + 26 &&
+        header[vbriOffset] == 0x56 &&
+        header[vbriOffset + 1] == 0x42 &&
+        header[vbriOffset + 2] == 0x52 &&
+        header[vbriOffset + 3] == 0x49) {
+      final numberOfFrames =
+          getUint32(header.sublist(vbriOffset + 14, vbriOffset + 18));
+
+      final samplesPerFrame = _getSamplePerFrame(mpegVersion, mpegLayer) ?? 0;
+      final sampleRate = metadata.samplerate;
+
+      if (sampleRate != null && sampleRate > 0 && samplesPerFrame > 0) {
+        metadata.duration = Duration(
+          microseconds:
+              numberOfFrames * samplesPerFrame * 1000000 ~/ sampleRate,
+        );
         reader.closeSync();
         return metadata;
       }
+    }
 
-      final mpegVersion = switch ((mp3FrameHeader[1] >> 3) & 0x3) {
-        0x00 => 3,
-        0x01 => -1,
-        0x02 => 2,
-        0x03 => 1,
-        _ => -1
-      };
-      final mpegLayer = switch ((mp3FrameHeader[1] >> 1) & 0x3) {
-        0 => -1,
-        1 => 3,
-        2 => 2,
-        3 => 1,
-        _ => -1,
-      };
-
-      final bitrateIndex = mp3FrameHeader[2] >> 4;
-      final samplerateIndex = mp3FrameHeader[2] & 12 >> 0x3;
-
-      metadata.samplerate = _getSampleRate(mpegVersion, samplerateIndex);
-      metadata.bitrate = _getBitrate(mpegVersion, mpegLayer, bitrateIndex);
-
-      // arbitrary choice.  Usually the `Xing` header is located after ~30 bytes
-      // then the header size is about ~150 bytes.
-      final possibleXingHeader = buffer.readAtMost(1500);
-
-      int i = 0;
-      while (i < possibleXingHeader.length && possibleXingHeader[i] == 0) {
-        i++;
-      }
-
-      if ((i < possibleXingHeader.length - 11) &&
-          possibleXingHeader[i] == 0x58 &&
-          possibleXingHeader[i + 1] == 0X69 &&
-          possibleXingHeader[i + 2] == 0x6E &&
-          possibleXingHeader[i + 3] == 0x67) {
-        // it's a VBR file (Variable Bit Rate)
-        final xingFrameFlag = possibleXingHeader[i + 7] & 0x1;
-
-        if (xingFrameFlag == 1) {
-          final numberOfFrames =
-              getUint32(possibleXingHeader.sublist(i + 8, i + 12));
-          final samplesPerFrame =
-              _getSamplePerFrame(mpegVersion, mpegLayer) ?? 0;
-          final sampleRate = metadata.samplerate;
-
-          if (sampleRate != null && sampleRate > 0 && samplesPerFrame > 0) {
-            final totalSamples = numberOfFrames * samplesPerFrame;
-            final durationInSeconds = totalSamples / sampleRate;
-
-            final durationInMicroseconds =
-                (durationInSeconds * 1000000).toInt();
-            metadata.duration = Duration(microseconds: durationInMicroseconds);
-          }
-        }
-      } else {
-        // it's a CBR file (Constant Bit Rate)
-        if (metadata.bitrate != null && metadata.bitrate! > 0) {
-          final fileSizeWithoutMetadata = reader.lengthSync() - size;
-          final durationInSeconds =
-              (8 * fileSizeWithoutMetadata) / metadata.bitrate!;
-
-          // Convert to microseconds
-          final durationInMicroseconds = (durationInSeconds * 1000000).toInt();
-          metadata.duration = Duration(microseconds: durationInMicroseconds);
-        }
-      }
+    if (metadata.bitrate != null && metadata.bitrate! > 0) {
+      final fileSizeWithoutMetadata = reader.lengthSync() - size;
+      metadata.duration = Duration(
+        microseconds:
+            ((8 * fileSizeWithoutMetadata) / metadata.bitrate! * 1000000)
+                .toInt(),
+      );
     }
 
     reader.closeSync();
@@ -313,10 +340,7 @@ class ID3v2Parser extends TagParser {
             (frameHeader[3]);
 
         if ((word & 0xFFE00000) != 0xFFE00000) {
-          frameHeader[0] = frameHeader[1];
-          frameHeader[1] = frameHeader[2];
-          frameHeader[2] = frameHeader[3];
-          frameHeader[3] = buffer.read(1)[0];
+          _slide(frameHeader, buffer);
           continue;
         }
 
@@ -328,23 +352,83 @@ class ID3v2Parser extends TagParser {
             (word & 0x00F000) == 0x00F000 || // bad bitrate
             (word & 0x000C00) == 0x000C00 || // reserved sampling rate
             (word & 0x000003) == 0x000002) {
-          frameHeader[0] = frameHeader[1];
-          frameHeader[1] = frameHeader[2];
-          frameHeader[2] = frameHeader[3];
-          frameHeader[3] = buffer.read(1)[0];
+          _slide(frameHeader, buffer);
+          continue;
+        }
+
+        // Check next frame
+        final int? frameLength = _computeMp3FrameLength(frameHeader);
+        if (frameLength == null || frameLength <= 0) {
+          _slide(frameHeader, buffer);
+          continue;
+        }
+
+        if (buffer.remainingBytes < frameLength - 4) {
+          _slide(frameHeader, buffer);
+          continue;
+        }
+
+        final int savedPos = buffer.fileCursor;
+        buffer.setPositionSync(savedPos + frameLength - 4);
+
+        final Uint8List nextHeader = buffer.readAtMost(2);
+        buffer.setPositionSync(savedPos);
+
+        if (nextHeader.length < 2 ||
+            nextHeader[0] != 0xFF ||
+            (nextHeader[1] & 0xE0) != 0xE0) {
+          _slide(frameHeader, buffer);
           continue;
         }
 
         return frameHeader;
       }
 
-      frameHeader[0] = frameHeader[1];
-      frameHeader[1] = frameHeader[2];
-      frameHeader[2] = frameHeader[3];
-      frameHeader[3] = buffer.read(1)[0];
+      _slide(frameHeader, buffer);
     }
 
     return null;
+  }
+
+  void _slide(Uint8List header, Buffer buffer) {
+    header[0] = header[1];
+    header[1] = header[2];
+    header[2] = header[3];
+    header[3] = buffer.read(1)[0];
+  }
+
+  int? _computeMp3FrameLength(Uint8List header) {
+    final mpegVersion = switch ((header[1] >> 3) & 0x3) {
+      0x00 => 3,
+      0x01 => -1,
+      0x02 => 2,
+      0x03 => 1,
+      _ => -1
+    };
+    final mpegLayer = switch ((header[1] >> 1) & 0x3) {
+      0 => -1,
+      1 => 3,
+      2 => 2,
+      3 => 1,
+      _ => -1,
+    };
+
+    final bitrateIndex = header[2] >> 4;
+    final samplerateIndex = (header[2] & 12) >> 2;
+    final padding = (header[2] >> 1) & 0x1;
+
+    final samplerate = _getSampleRate(mpegVersion, samplerateIndex);
+    final bitrate = _getBitrate(mpegVersion, mpegLayer, bitrateIndex);
+    if (bitrate == null || samplerate == null) return null;
+    int frameLength;
+    if (mpegLayer == 1) {
+      frameLength = ((12 * bitrate ~/ samplerate) + padding) * 4;
+    } else {
+      final coeff = (mpegVersion == 1) ? 144 : 72;
+      frameLength = (coeff * bitrate ~/ samplerate) + padding;
+    }
+
+    return frameLength;
   }
 
   /// Process a frame.
@@ -685,7 +769,9 @@ class ID3v2Parser extends TagParser {
       case 1:
         if (encoding == 1 || encoding == 2) {
           // Check if rest length is sufficient and properly handle ending
-          if (rest.length >= 2 && rest[rest.length - 1] == 0 && rest[rest.length - 2] == 0) {
+          if (rest.length >= 2 &&
+              rest[rest.length - 1] == 0 &&
+              rest[rest.length - 2] == 0) {
             return utf16Decoder.decodeUtf16Le(rest, 0, rest.length - 2);
           }
           return utf16Decoder.decodeUtf16Le(rest);

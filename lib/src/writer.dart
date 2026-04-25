@@ -20,7 +20,7 @@ void updateMetadata(File track, void Function(ParserTag metadata) updater) {
 void writeMetadata(File track, ParserTag metadata) {
   final reader = track.openSync();
 
-  if (ID3v2Parser.canUserParser(reader)) {
+  if (ID3v2Parser.canUserParser(reader) || ID3v1Parser.canUserParser(reader)) {
     Id3v4Writer().write(track, metadata as Mp3Metadata);
   } else if (MP4Parser.canUserParser(reader)) {
     Mp4Writer().write(track, metadata as Mp4Metadata);
@@ -28,7 +28,5 @@ void writeMetadata(File track, ParserTag metadata) {
     FlacWriter().write(track, metadata as VorbisMetadata);
   } else if (RiffParser.canUserParser(reader)) {
     RiffWriter().write(track, metadata as RiffMetadata);
-  } else if (ID3v1Parser.canUserParser(reader)) {
-    ID3v1Writer().write(track, metadata as Mp3Metadata);
   }
 }

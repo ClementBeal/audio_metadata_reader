@@ -1,9 +1,9 @@
-import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/parsers/tags/tag_parser.dart';
+import 'package:audio_metadata_reader/src/parsers/tags/vorbis_comment.dart';
 import 'package:audio_metadata_reader/src/utils/buffer.dart';
 
 import 'package:audio_metadata_reader/src/utils/bit_manipulator.dart';
@@ -145,11 +145,8 @@ class FlacParser extends TagParser {
     return vendorName == "fLaC";
   }
 
-  /// Parse a Vorbis comment. All the number are little-endian coded.
-  /// A comment has this structure `<name>=<DATA>`
-  /// There may be multiple comments of the same kind
-  ///
-  /// https://xiph.org/vorbis/doc/v-comment.html
+  /// Parse Vorbis comments block and delegate each individual comment to the
+  /// shared Vorbis comment codec used by OGG.
   void _parseVorbisComment(Uint8List bytes) {
     int offset = 0;
 
@@ -163,142 +160,9 @@ class FlacParser extends TagParser {
     for (var i = 0; i < userCommentListLength; i++) {
       final length = getUint32LE(bytes.sublist(offset, offset + 4));
       offset += 4;
-      final comment = utf8.decode(bytes.sublist(offset, offset + length));
+      final comment = bytes.sublist(offset, offset + length);
       offset += length;
-
-      final equalsIndex = comment.indexOf('=');
-      final a = equalsIndex != -1
-          ? [
-              comment.substring(0, equalsIndex),
-              comment.substring(equalsIndex + 1)
-            ]
-          : comment.split("=");
-      final commentName = a[0];
-      final value = a.length > 1 ? a[1] : "";
-
-      switch (commentName.toUpperCase()) {
-        case 'TITLE':
-          metadata.title.add(value);
-          break;
-        case 'VERSION':
-          metadata.version.add(value);
-          break;
-        case 'ALBUM':
-          metadata.album.add(value);
-          break;
-        case 'TRACKNUMBER' || 'ITUNES_CDDB_TRACKNUMBER':
-          if (value.contains("/")) {
-            metadata.trackNumber.add(int.parse(value.split("/").first));
-          } else {
-            metadata.trackNumber.add(int.parse(value));
-          }
-          break;
-        case 'ARTIST' || "ALBUMARTIST":
-          metadata.artist.add(value);
-          break;
-        case 'PERFORMER':
-          metadata.performer.add(value);
-          break;
-        case 'COPYRIGHT':
-          metadata.copyright.add(value);
-          break;
-        case 'LICENSE':
-          metadata.license.add(value);
-          break;
-        case 'ORGANIZATION' || "PUBLISHER":
-          metadata.organization.add(value);
-          break;
-        case 'DESCRIPTION':
-          metadata.description.add(value);
-          break;
-        case 'GENRE':
-          metadata.genres.add(value);
-          break;
-        case 'DATE':
-          final parsedDatetime = DateTime.tryParse(value);
-
-          if (parsedDatetime != null) {
-            metadata.date.add(parsedDatetime);
-          } else if (value.contains("/")) {
-            metadata.date.add(DateTime(int.parse(value.split("/").first)));
-          } else if (int.tryParse(value) != null) {
-            metadata.date.add(DateTime(int.parse(value)));
-          }
-          break;
-        case 'LOCATION':
-          metadata.location.add(value);
-          break;
-        case 'CONTACT':
-          metadata.contact.add(value);
-          break;
-        case 'ISRC':
-          metadata.isrc.add(value);
-          break;
-        case 'ACTOR':
-          metadata.actor.add(value);
-          break;
-        case 'COMPOSER':
-          metadata.composer.add(value);
-          break;
-        case 'COMMENT':
-          metadata.comment.add(value);
-          break;
-        case 'LANGUAGE' || 'LANG':
-          metadata.language.add(value);
-          break;
-        case 'DIRECTOR':
-          metadata.director.add(value);
-          break;
-        case 'ENCODED_BY':
-          metadata.encodedBy.add(value);
-          break;
-        case 'ENCODED_USING':
-          metadata.encodedUsing.add(value);
-          break;
-        case 'ENCODER':
-          metadata.encoder.add(value);
-          break;
-        case 'ENCODER_OPTIONS':
-          metadata.encoderOptions.add(value);
-          break;
-        case 'PRODUCER':
-          metadata.producer.add(value);
-          break;
-        case 'REPLAYGAIN_ALBUM_GAIN':
-          metadata.replayGainAlbumGain.add(value);
-          break;
-        case 'REPLAYGAIN_ALBUM_PEAK':
-          metadata.replayGainAlbumPeak.add(value);
-          break;
-        case 'REPLAYGAIN_TRACK_GAIN':
-          metadata.replayGainTrackGain.add(value);
-          break;
-        case 'REPLAYGAIN_TRACK_PEAK':
-          metadata.replayGainTrackPeak.add(value);
-          break;
-        case 'VENDOR':
-          metadata.vendor.add(value);
-          break;
-        case 'TRACKTOTAL' || 'TOTALTRACKS':
-          metadata.trackTotal = int.parse(value);
-          break;
-        case 'DISCNUMBER':
-          if (value.contains("/")) {
-            metadata.discNumber = int.parse(value.split("/").first);
-          } else {
-            metadata.discNumber = int.parse(value);
-          }
-          break;
-        case 'DISCTOTAL' || 'TOTALDISCS':
-          metadata.discTotal = int.parse(value);
-          break;
-        case "LYRICS":
-          metadata.lyric = value;
-          break;
-        default:
-          metadata.unknowns[commentName.toUpperCase()] = value;
-          break;
-      }
+      parseVorbisComment(comment, metadata, fetchImage);
     }
   }
 }

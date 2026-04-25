@@ -226,6 +226,7 @@ extension CommonMetadataSetters on ParserTag {
     }
   }
 
+  /// Has no effect on RIFF metadata (`.wav`)
   void setTrackTotal(int? trackTotal) {
     switch (this) {
       case Mp3Metadata m:
@@ -237,8 +238,7 @@ extension CommonMetadataSetters on ParserTag {
       case VorbisMetadata m:
         m.trackTotal = trackTotal;
         break;
-      case RiffMetadata m:
-        m.trackNumber = trackTotal;
+      case RiffMetadata():
         break;
     }
   }

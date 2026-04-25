@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 import 'package:audio_metadata_reader/src/metadata/base.dart';
-import 'package:audio_metadata_reader/src/parsers/riff.dart';
+import 'package:audio_metadata_reader/src/parsers/containers/riff.dart';
 
 /// Reads the metadata, allows modification via [updater], and writes it back.
 ///

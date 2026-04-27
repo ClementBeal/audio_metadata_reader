@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 import 'package:audio_metadata_reader/src/metadata/base.dart';
+import 'package:audio_metadata_reader/src/parsers/containers/aiff.dart';
 import 'package:audio_metadata_reader/src/parsers/containers/riff.dart';
 
 /// Parse the metadata of a file.
@@ -160,6 +161,31 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
           (riffMetadata.genre != null) ? [riffMetadata.genre!] : [];
 
       return newMetadata;
+    } else if (AiffParser.canUserParser(reader)) {
+      final aiffMetadata = AiffParser().parse(reader) as RiffMetadata;
+
+      final newMetadata = AudioMetadata(
+        file: track,
+        album: aiffMetadata.album,
+        artist: aiffMetadata.artist,
+        bitrate: aiffMetadata.bitrate,
+        duration: aiffMetadata.duration,
+        language: null,
+        lyrics: null,
+        sampleRate: aiffMetadata.samplerate,
+        title: aiffMetadata.title,
+        totalDisc: null,
+        trackNumber: aiffMetadata.trackNumber,
+        trackTotal: null,
+        year: aiffMetadata.year,
+        discNumber: null,
+      );
+
+      newMetadata.pictures = aiffMetadata.pictures;
+      newMetadata.genres =
+          (aiffMetadata.genre != null) ? [aiffMetadata.genre!] : [];
+
+      return newMetadata;
     }
   } on MetadataParserException catch (e, s) {
     Error.throwWithStackTrace(
@@ -199,6 +225,8 @@ ParserTag readAllMetadata(File track, {bool getImage = true}) {
       return OGGParser(fetchImage: getImage).parse(reader);
     } else if (RiffParser.canUserParser(reader)) {
       return RiffParser(fetchImage: getImage).parse(reader);
+    } else if (AiffParser.canUserParser(reader)) {
+      return AiffParser(fetchImage: getImage).parse(reader);
     }
   } catch (e) {
     throw MetadataParserException(track: track, message: e.toString());

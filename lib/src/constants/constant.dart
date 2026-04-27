@@ -9,5 +9,8 @@ const List<String> supportedFileExtensions = <String>[
   '.ogg',
   '.opus',
   '.wav',
+  '.aif',
+  '.aiff',
+  '.aifc',
   '.mov',
 ];

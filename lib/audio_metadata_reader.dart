@@ -14,6 +14,7 @@ export 'src/parsers/tags/id3v2.dart' show ID3v2Parser;
 export 'src/parsers/containers/flac.dart' show FlacParser;
 export 'src/parsers/containers/mp4.dart' show MP4Parser;
 export 'src/parsers/containers/ogg.dart' show OGGParser;
+export 'src/parsers/containers/aiff.dart' show AiffParser;
 
 export 'src/writers/id3v4_writer.dart' show Id3v4Writer;
 export 'src/writers/flac_writer.dart' show FlacWriter;

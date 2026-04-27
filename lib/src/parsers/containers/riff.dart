@@ -67,9 +67,9 @@ class RiffParser extends TagParser {
         }
       } else if (chunkId == "data") {
         dataSize = chunkSize;
-        buffer.read(chunkSize);
+        buffer.skip(chunkSize);
       } else {
-        buffer.read(chunkSize);
+        buffer.skip(chunkSize);
       }
     }
   }

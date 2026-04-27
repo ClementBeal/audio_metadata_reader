@@ -5,7 +5,7 @@ import 'dart:typed_data';
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/parsers/tags/tag_parser.dart';
 
-class ID3v1Parser extends TagParser {
+class ID3v1Parser extends TagParser<Mp3Metadata> {
   final Mp3Metadata metadata = Mp3Metadata();
 
   ID3v1Parser({super.fetchImage = false});
@@ -27,7 +27,7 @@ class ID3v1Parser extends TagParser {
   }
 
   @override
-  ParserTag parse(RandomAccessFile reader) {
+  Mp3Metadata parse(RandomAccessFile reader) {
     final tagData = reader.readSync(128);
     metadata.songName = _extract(tagData, 3, 33);
     metadata.leadPerformer = _extract(tagData, 33, 63);

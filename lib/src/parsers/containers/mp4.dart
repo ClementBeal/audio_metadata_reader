@@ -68,14 +68,14 @@ final supportedBox = [
 ///
 /// Information about the bitrate and duration are stored in `mvhd`
 ///
-class MP4Parser extends TagParser {
+class MP4Parser extends TagParser<Mp4Metadata> {
   Mp4Metadata tags = Mp4Metadata();
   late final Buffer buffer;
 
   MP4Parser({fetchImage = false}) : super(fetchImage: fetchImage);
 
   @override
-  ParserTag parse(RandomAccessFile reader) {
+  Mp4Metadata parse(RandomAccessFile reader) {
     reader.setPositionSync(0);
     buffer = Buffer(randomAccessFile: reader);
 

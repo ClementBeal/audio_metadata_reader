@@ -27,13 +27,13 @@ class OggPage {
 //
 // OGG : https://datatracker.ietf.org/doc/pdf/rfc7845.pdf
 // vorbis : http://web.mit.edu/cfox/share/doc/libvorbis-1.0/vorbis-spec-ref.html
-class OGGParser extends TagParser {
+class OGGParser extends TagParser<VorbisMetadata> {
   OGGParser({required super.fetchImage});
 
   late final Buffer buffer;
 
   @override
-  ParserTag parse(RandomAccessFile reader) {
+  VorbisMetadata parse(RandomAccessFile reader) {
     reader.setPositionSync(0);
 
     buffer = Buffer(randomAccessFile: reader);

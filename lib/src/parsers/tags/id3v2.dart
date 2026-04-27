@@ -153,7 +153,7 @@ class TXXXFrame {
 ///
 /// https://teslabs.com/openplayer/docs/docs/specs/id3v2.3.0%20-%20ID3.org.pdf
 ///
-class ID3v2Parser extends TagParser {
+class ID3v2Parser extends TagParser<Mp3Metadata> {
   final Mp3Metadata metadata = Mp3Metadata();
   late final Buffer buffer;
 
@@ -163,7 +163,7 @@ class ID3v2Parser extends TagParser {
   ID3v2Parser({fetchImage = false}) : super(fetchImage: fetchImage);
 
   @override
-  ParserTag parse(RandomAccessFile reader) {
+  Mp3Metadata parse(RandomAccessFile reader) {
     buffer = Buffer(randomAccessFile: reader);
 
     final headerBytes = buffer.read(10);

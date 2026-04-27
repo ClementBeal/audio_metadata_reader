@@ -41,14 +41,14 @@ typedef MetadataBlockHeader = ({bool isLastBlock, int type, int length});
 /// Vorbis comment
 ///
 /// Documentation: https://xiph.org/flac/format.html
-class FlacParser extends TagParser {
+class FlacParser extends TagParser<VorbisMetadata> {
   final metadata = VorbisMetadata();
   late final Buffer buffer;
 
   FlacParser({super.fetchImage = false});
 
   @override
-  ParserTag parse(RandomAccessFile reader) {
+  VorbisMetadata parse(RandomAccessFile reader) {
     reader.setPositionSync(0);
 
     buffer = Buffer(randomAccessFile: reader);

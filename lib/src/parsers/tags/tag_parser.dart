@@ -135,9 +135,9 @@ class AudioMetadata {
   }
 }
 
-abstract class TagParser {
+abstract class TagParser<T extends ParserTag> {
   final bool fetchImage;
 
   TagParser({required this.fetchImage});
-  ParserTag parse(RandomAccessFile reader);
+  T parse(RandomAccessFile reader);
 }

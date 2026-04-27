@@ -18,25 +18,23 @@ import 'package:audio_metadata_reader/src/utils/buffer.dart';
 /// The tag parsers receive the same [RandomAccessFile] positioned at the start
 /// of the tag they must parse. This avoids loading the whole tag in memory,
 /// which matters for large ID3v2 tags containing embedded pictures.
-class MP3Parser extends TagParser {
+class MP3Parser extends TagParser<Mp3Metadata> {
   MP3Parser({super.fetchImage = false});
 
   @override
-  ParserTag parse(RandomAccessFile reader) {
+  Mp3Metadata parse(RandomAccessFile reader) {
     try {
       if (hasID3v2Tag(reader)) {
         final audioStartOffset = _getID3v2TotalSize(reader);
         reader.setPositionSync(0);
-        final metadata =
-            ID3v2Parser(fetchImage: fetchImage).parse(reader) as Mp3Metadata;
+        final metadata = ID3v2Parser(fetchImage: fetchImage).parse(reader);
         _parseAudioFrames(reader, metadata, audioStartOffset);
         return metadata;
       }
 
       if (hasID3v1Tag(reader)) {
         reader.setPositionSync(reader.lengthSync() - 128);
-        final metadata =
-            ID3v1Parser(fetchImage: fetchImage).parse(reader) as Mp3Metadata;
+        final metadata = ID3v1Parser(fetchImage: fetchImage).parse(reader);
         _parseAudioFrames(reader, metadata, 0);
         return metadata;
       }

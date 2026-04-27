@@ -22,14 +22,14 @@ import 'package:audio_metadata_reader/src/utils/metadata_parser_exception.dart';
 /// - 4 bytes: chunk data size (big-endian)
 /// - `size` bytes: payload
 /// - optional 1 pad byte if `size` is odd (IFF alignment rule)
-class AiffParser extends TagParser {
+class AiffParser extends TagParser<RiffMetadata> {
   final metadata = RiffMetadata();
   late final Buffer buffer;
 
   AiffParser({super.fetchImage = false});
 
   @override
-  ParserTag parse(RandomAccessFile reader) {
+  RiffMetadata parse(RandomAccessFile reader) {
     reader.setPositionSync(0);
     buffer = Buffer(randomAccessFile: reader);
 
@@ -180,7 +180,7 @@ class AiffParser extends TagParser {
 
     reader.setPositionSync(chunkDataOffset);
     final id3Metadata = ID3v2Parser(fetchImage: fetchImage).parse(reader);
-    _mergeId3Metadata(id3Metadata as Mp3Metadata);
+    _mergeId3Metadata(id3Metadata);
   }
 
   /// Merge the most useful ID3 fields into the AIFF metadata model.

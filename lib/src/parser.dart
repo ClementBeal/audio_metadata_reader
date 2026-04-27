@@ -20,8 +20,7 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
 
   try {
     if (MP3Parser.canUserParser(reader)) {
-      final mp3Metadata =
-          MP3Parser(fetchImage: getImage).parse(reader) as Mp3Metadata;
+      final mp3Metadata = MP3Parser(fetchImage: getImage).parse(reader);
 
       final a = AudioMetadata(
         file: track,
@@ -54,8 +53,7 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
 
       return a;
     } else if (FlacParser.canUserParser(reader)) {
-      final vorbisMetadata =
-          FlacParser(fetchImage: getImage).parse(reader) as VorbisMetadata;
+      final vorbisMetadata = FlacParser(fetchImage: getImage).parse(reader);
 
       final newMetadata = AudioMetadata(
         file: track,
@@ -80,8 +78,7 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
 
       return newMetadata;
     } else if (MP4Parser.canUserParser(reader)) {
-      final mp4Metadata =
-          MP4Parser(fetchImage: getImage).parse(reader) as Mp4Metadata;
+      final mp4Metadata = MP4Parser(fetchImage: getImage).parse(reader);
 
       final newMetadata = AudioMetadata(
         file: track,
@@ -112,8 +109,7 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
 
       return newMetadata;
     } else if (OGGParser.canUserParser(reader)) {
-      final oggMetadata =
-          OGGParser(fetchImage: getImage).parse(reader) as VorbisMetadata;
+      final oggMetadata = OGGParser(fetchImage: getImage).parse(reader);
 
       final newMetadata = AudioMetadata(
         file: track,
@@ -137,7 +133,7 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
 
       return newMetadata;
     } else if (RiffParser.canUserParser(reader)) {
-      final riffMetadata = RiffParser().parse(reader) as RiffMetadata;
+      final riffMetadata = RiffParser().parse(reader);
 
       final newMetadata = AudioMetadata(
         file: track,
@@ -162,7 +158,7 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
 
       return newMetadata;
     } else if (AiffParser.canUserParser(reader)) {
-      final aiffMetadata = AiffParser().parse(reader) as RiffMetadata;
+      final aiffMetadata = AiffParser().parse(reader);
 
       final newMetadata = AudioMetadata(
         file: track,

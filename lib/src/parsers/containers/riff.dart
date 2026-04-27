@@ -6,7 +6,7 @@ import 'package:audio_metadata_reader/src/parsers/tags/tag_parser.dart';
 import 'package:audio_metadata_reader/src/utils/bit_manipulator.dart';
 import 'package:audio_metadata_reader/src/utils/buffer.dart';
 
-class RiffParser extends TagParser {
+class RiffParser extends TagParser<RiffMetadata> {
   final metadata = RiffMetadata();
   late final Buffer buffer;
 
@@ -16,7 +16,7 @@ class RiffParser extends TagParser {
   RiffParser({super.fetchImage = false});
 
   @override
-  ParserTag parse(RandomAccessFile reader) {
+  RiffMetadata parse(RandomAccessFile reader) {
     reader.setPositionSync(0);
 
     buffer = Buffer(randomAccessFile: reader);

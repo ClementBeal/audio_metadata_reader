@@ -60,8 +60,7 @@ void main() {
 
           writer.write(file, metadata);
 
-          final resultMetadata =
-              ID3v2Parser().parse(file.openSync()) as Mp3Metadata;
+          final resultMetadata = ID3v2Parser().parse(file.openSync());
 
           expect(resultMetadata.songName, equals(metadata.songName));
         },
@@ -84,8 +83,7 @@ void main() {
 
           writer.write(file, metadata);
 
-          final resultMetadata =
-              ID3v2Parser().parse(file.openSync()) as Mp3Metadata;
+          final resultMetadata = ID3v2Parser().parse(file.openSync());
 
           expect(resultMetadata.songName, equals(metadata.songName));
           expect(
@@ -110,8 +108,7 @@ void main() {
 
           writer.write(file, metadata);
 
-          final resultMetadata =
-              ID3v2Parser().parse(file.openSync()) as Mp3Metadata;
+          final resultMetadata = ID3v2Parser().parse(file.openSync());
 
           expect(resultMetadata.songName, equals(metadata.songName));
           expect(
@@ -130,8 +127,7 @@ void main() {
 
           writer.write(file, metadata);
 
-          final resultMetadata =
-              ID3v2Parser().parse(file.openSync()) as Mp3Metadata;
+          final resultMetadata = ID3v2Parser().parse(file.openSync());
 
           expect(resultMetadata.fileOwner, equals(metadata.fileOwner));
         },
@@ -152,8 +148,7 @@ void main() {
             metadata.setGenres(["Jazz"]);
           });
 
-          final resultMetadata =
-              ID3v2Parser().parse(file.openSync()) as Mp3Metadata;
+          final resultMetadata = ID3v2Parser().parse(file.openSync());
 
           expect(resultMetadata.genres, equals(["Jazz"]));
           expect(resultMetadata.contentType, equals("Jazz"));
@@ -175,8 +170,8 @@ void main() {
 
           writer.write(file, metadata);
 
-          final resultMetadata = ID3v2Parser(fetchImage: true)
-              .parse(file.openSync()) as Mp3Metadata;
+          final resultMetadata =
+              ID3v2Parser(fetchImage: true).parse(file.openSync());
 
           expect(resultMetadata.pictures, hasLength(1));
 

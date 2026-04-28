@@ -38,6 +38,11 @@ void main() {
           break;
         case RiffMetadata m:
           m.title = "New title";
+          break;
+        case ApeMetadata m:
+          // APEv2 writing is not implemented yet. We still expose this case so
+          // user switches remain exhaustive when handling all parser types.
+          m.title = "New title";
       }
     },
   );

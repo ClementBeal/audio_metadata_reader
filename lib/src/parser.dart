@@ -2,7 +2,6 @@ import 'dart:io';
 
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 import 'package:audio_metadata_reader/src/metadata/base.dart';
-import 'package:audio_metadata_reader/src/parsers/containers/aiff.dart';
 import 'package:audio_metadata_reader/src/parsers/containers/riff.dart';
 
 /// Parse the metadata of a file.
@@ -19,7 +18,34 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
   final reader = track.openSync();
 
   try {
-    if (MP3Parser.canUserParser(reader)) {
+    // APEv2 can coexist with MP3 (often with trailing ID3v1). We check it
+    // first so dedicated APE metadata is not shadowed by older ID3v1 tags.
+    if (ApeParser.canUserParser(reader)) {
+      final apeMetadata = ApeParser(fetchImage: getImage).parse(reader);
+
+      final newMetadata = AudioMetadata(
+        file: track,
+        album: apeMetadata.album,
+        artist: apeMetadata.artist,
+        bitrate: apeMetadata.bitrate,
+        discNumber: apeMetadata.discNumber,
+        duration: apeMetadata.duration,
+        language: apeMetadata.language.firstOrNull,
+        lyrics: apeMetadata.lyric,
+        sampleRate: apeMetadata.sampleRate,
+        title: apeMetadata.title,
+        totalDisc: apeMetadata.discTotal,
+        trackNumber: apeMetadata.trackNumber,
+        trackTotal: apeMetadata.trackTotal,
+        year: apeMetadata.date,
+      );
+
+      newMetadata.genres = apeMetadata.genres;
+      newMetadata.pictures = apeMetadata.pictures;
+      newMetadata.performers.addAll(apeMetadata.performer);
+
+      return newMetadata;
+    } else if (MP3Parser.canUserParser(reader)) {
       final mp3Metadata = MP3Parser(fetchImage: getImage).parse(reader);
 
       final a = AudioMetadata(
@@ -211,7 +237,10 @@ ParserTag readAllMetadata(File track, {bool getImage = true}) {
   final reader = track.openSync();
 
   try {
-    if (MP3Parser.canUserParser(reader)) {
+    // Same priority rule as [readMetadata]: parse APEv2 before ID3-only MP3.
+    if (ApeParser.canUserParser(reader)) {
+      return ApeParser(fetchImage: getImage).parse(reader);
+    } else if (MP3Parser.canUserParser(reader)) {
       return MP3Parser(fetchImage: getImage).parse(reader);
     } else if (FlacParser.canUserParser(reader)) {
       return FlacParser(fetchImage: getImage).parse(reader);

@@ -11,6 +11,7 @@ A pure Dart package for reading and writing metadata in various audio formats.
 | Opus        | `Vorbis Comments`       | ✅   | ❌    |
 | WAV         | `RIFF`                  | ✅   | ✅    |
 | AIFF/AIFC   | `IFF chunks`            | ✅   | ❌    |
+| APE         | `APEv2`                 | ✅   | ❌    |
 
 This package is still under active development. If there's a metadata format you'd like to see supported or specific information you’d like the library to expose, feel free to open an issue.
 
@@ -62,6 +63,9 @@ void main() {
           m.title = ["New title"];
           break;
         case RiffMetadata m:
+          m.title = "New title";
+          break;
+        case ApeMetadata m:
           m.title = "New title";
       }
     },

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/writers/base_writer.dart'; // For encoding strings to bytes
 
+/// Writer for ID3v1 tags.
 class ID3v1Writer extends BaseMetadataWriter<Mp3Metadata> {
   @override
   void write(File file, Mp3Metadata metadata) {

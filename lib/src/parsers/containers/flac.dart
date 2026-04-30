@@ -8,8 +8,7 @@ import 'package:audio_metadata_reader/src/utils/buffer.dart';
 
 import 'package:audio_metadata_reader/src/utils/bit_manipulator.dart';
 
-/// The different reserved block types that are defined
-/// for this format
+/// FLAC metadata block types as defined by the FLAC specification.
 enum BlockType {
   streamInfo,
   padding,
@@ -22,11 +21,7 @@ enum BlockType {
   invalid,
 }
 
-///
-
-/// Representation of a FLAC bloc. The only important information is to know
-/// if the block is the last one or not
-///
+/// Parsed FLAC metadata block header information.
 typedef MetadataBlockHeader = ({bool isLastBlock, int type, int length});
 
 ///
@@ -42,9 +37,13 @@ typedef MetadataBlockHeader = ({bool isLastBlock, int type, int length});
 ///
 /// Documentation: https://xiph.org/flac/format.html
 class FlacParser extends TagParser<VorbisMetadata> {
+  /// Parsed Vorbis-style metadata values.
   final metadata = VorbisMetadata();
+
+  /// Reader helper bound to the current file.
   late final Buffer buffer;
 
+  /// Create a FLAC parser.
   FlacParser({super.fetchImage = false});
 
   @override
@@ -139,6 +138,7 @@ class FlacParser extends TagParser<VorbisMetadata> {
 
   /// To detect if this parser can be used to parse this file, the 4 first bytes
   /// must be equal to `fLaC`
+  /// Returns `true` when [reader] looks like a FLAC file.
   static bool canUserParser(RandomAccessFile reader) {
     reader.setPositionSync(0);
     final vendorName = String.fromCharCodes(reader.readSync(4));

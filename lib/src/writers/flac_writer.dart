@@ -7,6 +7,7 @@ import 'package:audio_metadata_reader/src/parsers/containers/flac.dart';
 import 'package:audio_metadata_reader/src/utils/bit_manipulator.dart';
 import 'package:audio_metadata_reader/src/writers/base_writer.dart';
 
+/// Writer for FLAC metadata blocks (Vorbis comments and pictures).
 class FlacWriter extends BaseMetadataWriter<VorbisMetadata> {
   @override
   void write(File file, VorbisMetadata metadata) {

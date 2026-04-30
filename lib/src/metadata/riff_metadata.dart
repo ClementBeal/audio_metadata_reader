@@ -1,21 +1,50 @@
 part of 'base.dart';
 
+/// Metadata model for RIFF/WAVE files.
 class RiffMetadata extends ParserTag {
+  /// Track title.
   String? title;
+
+  /// Main artist/author.
   String? artist;
+
+  /// Album or source collection.
   String? album;
+
+  /// Release year/date.
   DateTime? year;
+
+  /// Free-form comment.
   String? comment;
+
+  /// Genre text value.
   String? genre;
+
+  /// Track number.
   int? trackNumber;
+
+  /// Encoder or software used.
   String? encoder;
+
+  /// Publisher label.
   String? publisher;
+
+  /// Copyright notice.
   String? copyright;
+
+  /// Bitrate in bits per second.
   int? bitrate;
+
+  /// Sample rate in Hz.
   int? samplerate;
+
+  /// Playback duration.
   Duration? duration;
+
+  /// Embedded pictures collected from RIFF/ID3 data.
   List<Picture> pictures = [];
 
+  /// Build a RIFF metadata object.
   RiffMetadata({
     this.title,
     this.artist,

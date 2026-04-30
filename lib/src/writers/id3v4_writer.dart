@@ -6,19 +6,32 @@ import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/parsers/tags/tag_parser.dart';
 import 'package:audio_metadata_reader/src/writers/base_writer.dart';
 
+/// Parsed ID3 tag header details used while writing updates.
 class TagHeader {
+  /// Major ID3 version (for example `4` for ID3v2.4).
   final int majorVersion;
+
+  /// Minor ID3 version.
   final int minorVersion;
+
+  /// Tag payload size.
   final int size;
+
+  /// Whether the tag includes a footer.
   final bool hasFooter;
+
+  /// Whether the tag includes an extended header.
   final bool hasExtendedHeader;
 
+  /// Build a tag header object.
   TagHeader(this.majorVersion, this.minorVersion, this.size, this.hasFooter,
       this.hasExtendedHeader);
 
+  /// Combined numeric version (`major * 100 + minor`).
   int get version => majorVersion * 100 + minorVersion;
 }
 
+/// Writer for ID3v2.4 tags.
 class Id3v4Writer extends BaseMetadataWriter<Mp3Metadata> {
   @override
   void write(File file, Mp3Metadata metadata) {

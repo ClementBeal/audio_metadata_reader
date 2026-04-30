@@ -23,9 +23,21 @@ import 'package:audio_metadata_reader/src/utils/metadata_parser_exception.dart';
 /// - `size` bytes: payload
 /// - optional 1 pad byte if `size` is odd (IFF alignment rule)
 class AiffParser extends TagParser<RiffMetadata> {
+  /// Parsed metadata extracted from AIFF chunks (`COMM`, `NAME`, `AUTH`, etc.).
+  ///
+  /// The parser fills this object while scanning the file and returns it from
+  /// [parse].
   final metadata = RiffMetadata();
+
+  /// Binary reader helper bound to the current [RandomAccessFile].
+  ///
+  /// It is initialized at parse time and then reused by chunk-level helpers.
   late final Buffer buffer;
 
+  /// Create an AIFF parser.
+  ///
+  /// Set [fetchImage] to `true` to keep embedded pictures found in an `ID3 `
+  /// chunk. Leave it to `false` when you only need text/audio properties.
   AiffParser({super.fetchImage = false});
 
   @override

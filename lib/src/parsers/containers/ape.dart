@@ -31,8 +31,10 @@ typedef ApeTagFooter = ({
 /// - text items are mapped to [ApeMetadata]
 /// - binary cover items (`Cover Art (...)`) are mapped to [Picture]
 class ApeParser extends TagParser<ApeMetadata> {
+  /// Reader helper bound to the current file.
   late final Buffer _buffer;
 
+  /// Create an APEv2 parser.
   ApeParser({super.fetchImage = false});
 
   @override

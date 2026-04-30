@@ -7,7 +7,9 @@ import 'package:audio_metadata_reader/src/parsers/containers/mp4.dart';
 import 'package:audio_metadata_reader/src/utils/bit_manipulator.dart';
 import 'package:audio_metadata_reader/src/writers/base_writer.dart';
 
+/// Writer for MP4/M4A metadata atoms.
 class Mp4Writer extends BaseMetadataWriter<Mp4Metadata> {
+  /// Metadata currently being serialized.
   late Mp4Metadata mp4metadata;
 
   @override

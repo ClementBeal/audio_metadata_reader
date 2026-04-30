@@ -16,7 +16,9 @@ void updateMetadata(File track, void Function(ParserTag metadata) updater) {
   writeMetadata(track, metadata);
 }
 
-/// Write the [metadata] into the [track]
+/// Write [metadata] back into [track] using the matching container writer.
+///
+/// The runtime type of [metadata] must match the detected writer.
 void writeMetadata(File track, ParserTag metadata) {
   final reader = track.openSync();
 

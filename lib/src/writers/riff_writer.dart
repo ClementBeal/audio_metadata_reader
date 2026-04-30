@@ -7,8 +7,12 @@ import 'package:audio_metadata_reader/src/utils/bit_manipulator.dart';
 import 'package:audio_metadata_reader/src/utils/buffer.dart';
 import 'package:audio_metadata_reader/src/writers/base_writer.dart';
 
+/// Writer for RIFF/WAVE INFO metadata chunks.
 class RiffWriter extends BaseMetadataWriter<RiffMetadata> {
+  /// Metadata currently being serialized.
   late RiffMetadata metadata;
+
+  /// Reader helper bound to the original file.
   late final Buffer buffer;
 
   @override

@@ -16,12 +16,17 @@ import 'package:audio_metadata_reader/src/utils/bit_manipulator.dart';
 ///
 /// The size is the sum of the box header size and the box data
 class BoxHeader {
+  /// Total box size in bytes (header + payload).
   int size;
+
+  /// Four-character box type.
   String type;
 
+  /// Build a box header.
   BoxHeader(this.size, this.type);
 }
 
+/// MP4 box types this parser understands and recursively explores.
 final supportedBox = [
   "moov",
   "mvhd",
@@ -68,9 +73,13 @@ final supportedBox = [
 /// Information about the bitrate and duration are stored in `mvhd`
 ///
 class MP4Parser extends TagParser<Mp4Metadata> {
+  /// Parsed MP4 metadata.
   Mp4Metadata tags = Mp4Metadata();
+
+  /// Reader helper bound to the current file.
   late final Buffer buffer;
 
+  /// Create an MP4 parser.
   MP4Parser({fetchImage = false}) : super(fetchImage: fetchImage);
 
   @override
@@ -401,6 +410,7 @@ class MP4Parser extends TagParser<Mp4Metadata> {
 
   /// To detect if this parser can be used to parse this file, we need to detect
   /// the first box. It should be a `ftyp` box
+  /// Returns `true` when [reader] looks like an MP4-family file.
   static bool canUserParser(RandomAccessFile reader) {
     reader.setPositionSync(4);
 

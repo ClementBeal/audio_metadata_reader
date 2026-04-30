@@ -7,12 +7,21 @@ import 'package:audio_metadata_reader/src/parsers/tags/vorbis_comment.dart';
 import 'package:audio_metadata_reader/src/utils/bit_manipulator.dart';
 import 'package:audio_metadata_reader/src/utils/buffer.dart';
 
+/// Parsed content and header information for a single OGG page.
 class OggPage {
+  /// Concatenated page payload bytes.
   final Uint8List data;
+
+  /// OGG header type flag byte.
   final int headerType;
+
+  /// Absolute granule position carried by the page header.
   final int granulePosition;
+
+  /// Stream serial number this page belongs to.
   final int bitstreamSerialNumber;
 
+  /// Build an OGG page structure.
   OggPage({
     required this.data,
     required this.headerType,
@@ -28,8 +37,10 @@ class OggPage {
 // OGG : https://datatracker.ietf.org/doc/pdf/rfc7845.pdf
 // vorbis : http://web.mit.edu/cfox/share/doc/libvorbis-1.0/vorbis-spec-ref.html
 class OGGParser extends TagParser<VorbisMetadata> {
+  /// Create an OGG parser.
   OGGParser({required super.fetchImage});
 
+  /// Reader helper bound to the current file.
   late final Buffer buffer;
 
   @override

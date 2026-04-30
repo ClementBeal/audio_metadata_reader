@@ -7,13 +7,20 @@ import 'package:audio_metadata_reader/src/parsers/tags/tag_parser.dart';
 import 'package:audio_metadata_reader/src/utils/bit_manipulator.dart';
 import 'package:audio_metadata_reader/src/utils/buffer.dart';
 
+/// Parser for RIFF/WAVE containers.
 class RiffParser extends TagParser<RiffMetadata> {
+  /// Parsed metadata collected from `fmt `, `LIST/INFO`, and optional `ID3 ` chunks.
   final metadata = RiffMetadata();
+
+  /// Reader helper bound to the current file.
   late final Buffer buffer;
 
   /// Possible size of the `data` chunck
   int? dataSize;
 
+  /// Create a RIFF parser.
+  ///
+  /// Set [fetchImage] to `true` to keep embedded images from optional ID3 data.
   RiffParser({super.fetchImage = false});
 
   @override
@@ -273,6 +280,7 @@ class RiffParser extends TagParser<RiffMetadata> {
   bool _hasText(String? value) => value != null && value.trim().isNotEmpty;
 
   /// Must start with the magic word `RIFF` if it's a wav file
+  /// Returns `true` when [reader] looks like a RIFF/WAVE file.
   static bool canUserParser(RandomAccessFile reader) {
     reader.setPositionSync(0);
     final vendorName = String.fromCharCodes(reader.readSync(4));

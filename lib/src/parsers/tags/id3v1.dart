@@ -5,9 +5,12 @@ import 'dart:typed_data';
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/parsers/tags/tag_parser.dart';
 
+/// Parser for ID3v1 metadata tags.
 class ID3v1Parser extends TagParser<Mp3Metadata> {
+  /// Parsed ID3v1 metadata.
   final Mp3Metadata metadata = Mp3Metadata();
 
+  /// Create an ID3v1 parser.
   ID3v1Parser({super.fetchImage = false});
 
   ///  Extract the part text between the [start] and the [end]

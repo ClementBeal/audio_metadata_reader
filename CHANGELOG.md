@@ -20,6 +20,32 @@
 * **riff_writer:** correct size for the header ([7d523ff](https://github.com/ClementBeal/audio_metadata_reader/commit/7d523fff5f60ad1f820229b2ae21ebc16ba3fb84))
 * setArtist tag for mp3 ([#91](https://github.com/ClementBeal/audio_metadata_reader/issues/91)) ([daa5da2](https://github.com/ClementBeal/audio_metadata_reader/commit/daa5da28a6493959098907ba66791686a9676db1))
 
+## [1.6.0](https://github.com/ClementBeal/audio_metadata_reader/compare/v1.5.0...v1.6.0) (2026-04-30)
+
+
+### Features
+
+* add AIFF parser ([bbde644](https://github.com/ClementBeal/audio_metadata_reader/commit/bbde644086b55a91bf06c5067e270d22df0fa2af))
+* add APE parser ([193b182](https://github.com/ClementBeal/audio_metadata_reader/commit/193b182238cca2e4a562ae5c058d5f3e28764d66))
+* support MP4 chapters ([cb75ba6](https://github.com/ClementBeal/audio_metadata_reader/commit/cb75ba6c5cf90a41a31b36707b2d63501bea7d90))
+* WAV support ID3 metadata ([ce3d035](https://github.com/ClementBeal/audio_metadata_reader/commit/ce3d0355184c1b313e7d9dc1d535c0ba6a06ba7e))
+
+
+### Bug Fixes
+
+* add RIFF parser to the readMetadata ([2432411](https://github.com/ClementBeal/audio_metadata_reader/commit/24324110e09cfaaa509b4c9b377baf15f4286826))
+* avoid loading in memor the whole WAV file ([07844b5](https://github.com/ClementBeal/audio_metadata_reader/commit/07844b516ddf631a2027e44f4be7a353b839d047))
+* FLAC/OPUS parse the language field ([04837e4](https://github.com/ClementBeal/audio_metadata_reader/commit/04837e4dad2eaae769f54fe7ea9151ae64f27e36))
+* **id3v1:** parse correctly the year ([1a5a792](https://github.com/ClementBeal/audio_metadata_reader/commit/1a5a7924bdcc33e9b0b337bb2ff62cdfd65f8417))
+* **id3v2:** correctly assign TOWN ([9688e6b](https://github.com/ClementBeal/audio_metadata_reader/commit/9688e6b5891c9df063cce03cbaf63da5b5cb31c5))
+* id3V4 writer will work with non ASCII characters ([6bb7ae4](https://github.com/ClementBeal/audio_metadata_reader/commit/6bb7ae4f2750ed4b6a654834d3b70a4bca5c9798))
+* **ID3v4 writer:** don't write twice genre ([9dd0acd](https://github.com/ClementBeal/audio_metadata_reader/commit/9dd0acd965a5a742cab5e9469788e1c2718a5652))
+* In some cases, the last character of lyrics may be truncated. ([#95](https://github.com/ClementBeal/audio_metadata_reader/issues/95)) ([6225d83](https://github.com/ClementBeal/audio_metadata_reader/commit/6225d833343d6695e217b445a2452ccc2695f9e5))
+* riff writer was overwriting the origin file ([2c6cad7](https://github.com/ClementBeal/audio_metadata_reader/commit/2c6cad7ce196f3457818ac6d697fd9e31d0db7bb))
+* **riff writer:** don't override the track Number using setTrackTotal ([66aaa06](https://github.com/ClementBeal/audio_metadata_reader/commit/66aaa0679b2a95c2a9df9c1a16fca9d84d743654))
+* **riff_writer:** correct size for the header ([7d523ff](https://github.com/ClementBeal/audio_metadata_reader/commit/7d523fff5f60ad1f820229b2ae21ebc16ba3fb84))
+* setArtist tag for mp3 ([#91](https://github.com/ClementBeal/audio_metadata_reader/issues/91)) ([daa5da2](https://github.com/ClementBeal/audio_metadata_reader/commit/daa5da28a6493959098907ba66791686a9676db1))
+
 ## [1.4.2](https://github.com/ClementBeal/audio_metadata_reader/compare/v1.4.1...v1.4.2) (2025-06-28)
 
 ### Chore

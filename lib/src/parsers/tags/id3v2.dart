@@ -160,7 +160,7 @@ class ID3v2Parser extends TagParser<Mp3Metadata> {
   static final _discRegex = RegExp(r"(\d+)/(\d+)");
   static final _trackRegex = RegExp(r"(\d+)/(\d+)");
 
-  ID3v2Parser({fetchImage = false}) : super(fetchImage: fetchImage);
+  ID3v2Parser({bool fetchImage = false}) : super(fetchImage: fetchImage);
 
   @override
   Mp3Metadata parse(RandomAccessFile reader) {

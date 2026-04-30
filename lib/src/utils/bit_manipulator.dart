@@ -6,7 +6,7 @@ bool checkBit(int value, int bit) => (value & (1 << bit)) != 0;
 /// Get the value of the bit at a specific position
 int getBit(int number, int position) => (number >> position) & 1;
 
-int synchsafe(input) {
+int synchsafe(int input) {
   int out = 0;
 
   int mask = 0x7F;

@@ -80,7 +80,7 @@ class MP4Parser extends TagParser<Mp4Metadata> {
   late final Buffer buffer;
 
   /// Create an MP4 parser.
-  MP4Parser({fetchImage = false}) : super(fetchImage: fetchImage);
+  MP4Parser({bool fetchImage = false}) : super(fetchImage: fetchImage);
 
   @override
   Mp4Metadata parse(RandomAccessFile reader) {

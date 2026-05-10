@@ -100,8 +100,6 @@ class OGGParser extends TagParser<VorbisMetadata> {
       );
     }
 
-    reader.closeSync();
-
     return m;
   }
 

@@ -101,8 +101,6 @@ class MP4Parser extends TagParser<Mp4Metadata> {
       }
     }
 
-    reader.closeSync();
-
     return tags;
   }
 

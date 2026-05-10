@@ -61,8 +61,6 @@ class FlacParser extends TagParser<VorbisMetadata> {
       isLastBlock = block.isLastBlock;
     }
 
-    reader.closeSync();
-
     return metadata;
   }
 

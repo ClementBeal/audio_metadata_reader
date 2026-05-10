@@ -41,8 +41,6 @@ class RiffParser extends TagParser<RiffMetadata> {
           Duration(microseconds: (durationSeconds * 1000000).round());
     }
 
-    reader.closeSync();
-
     return metadata;
   }
 

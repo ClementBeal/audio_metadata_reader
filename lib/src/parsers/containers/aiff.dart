@@ -66,7 +66,6 @@ class AiffParser extends TagParser<RiffMetadata> {
 
     _parseChunks();
 
-    reader.closeSync();
     return metadata;
   }
 

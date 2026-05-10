@@ -1,9 +1,19 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 import 'package:test/test.dart';
 
 import '../test_helpers.dart';
+
+Mp3Metadata parseId3v2Metadata(File file, {bool fetchImage = false}) {
+  final reader = file.openSync();
+  try {
+    return ID3v2Parser(fetchImage: fetchImage).parse(reader);
+  } finally {
+    reader.closeSync();
+  }
+}
 
 void main() {
   group(
@@ -16,7 +26,9 @@ void main() {
 
         writer.write(file, Mp3Metadata());
 
-        final readResult = ByteData.sublistView(file.openSync().readSync(10));
+        final reader = file.openSync();
+        final readResult = ByteData.sublistView(reader.readSync(10));
+        reader.closeSync();
 
         expect(readResult.getUint8(0), equals(0x49));
         expect(readResult.getUint8(1), equals(0x44));
@@ -60,7 +72,7 @@ void main() {
 
           writer.write(file, metadata);
 
-          final resultMetadata = ID3v2Parser().parse(file.openSync());
+          final resultMetadata = parseId3v2Metadata(file);
 
           expect(resultMetadata.songName, equals(metadata.songName));
         },
@@ -83,7 +95,7 @@ void main() {
 
           writer.write(file, metadata);
 
-          final resultMetadata = ID3v2Parser().parse(file.openSync());
+          final resultMetadata = parseId3v2Metadata(file);
 
           expect(resultMetadata.songName, equals(metadata.songName));
           expect(
@@ -108,7 +120,7 @@ void main() {
 
           writer.write(file, metadata);
 
-          final resultMetadata = ID3v2Parser().parse(file.openSync());
+          final resultMetadata = parseId3v2Metadata(file);
 
           expect(resultMetadata.songName, equals(metadata.songName));
           expect(
@@ -127,7 +139,7 @@ void main() {
 
           writer.write(file, metadata);
 
-          final resultMetadata = ID3v2Parser().parse(file.openSync());
+          final resultMetadata = parseId3v2Metadata(file);
 
           expect(resultMetadata.fileOwner, equals(metadata.fileOwner));
         },
@@ -148,7 +160,7 @@ void main() {
             metadata.setGenres(["Jazz"]);
           });
 
-          final resultMetadata = ID3v2Parser().parse(file.openSync());
+          final resultMetadata = parseId3v2Metadata(file);
 
           expect(resultMetadata.genres, equals(["Jazz"]));
           expect(resultMetadata.contentType, equals("Jazz"));
@@ -170,8 +182,7 @@ void main() {
 
           writer.write(file, metadata);
 
-          final resultMetadata =
-              ID3v2Parser(fetchImage: true).parse(file.openSync());
+          final resultMetadata = parseId3v2Metadata(file, fetchImage: true);
 
           expect(resultMetadata.pictures, hasLength(1));
 

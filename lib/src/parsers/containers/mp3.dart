@@ -23,26 +23,22 @@ class MP3Parser extends TagParser<Mp3Metadata> {
 
   @override
   Mp3Metadata parse(RandomAccessFile reader) {
-    try {
-      if (hasID3v2Tag(reader)) {
-        final audioStartOffset = _getID3v2TotalSize(reader);
-        reader.setPositionSync(0);
-        final metadata = ID3v2Parser(fetchImage: fetchImage).parse(reader);
-        _parseAudioFrames(reader, metadata, audioStartOffset);
-        return metadata;
-      }
-
-      if (hasID3v1Tag(reader)) {
-        reader.setPositionSync(reader.lengthSync() - 128);
-        final metadata = ID3v1Parser(fetchImage: fetchImage).parse(reader);
-        _parseAudioFrames(reader, metadata, 0);
-        return metadata;
-      }
-
-      throw StateError("No ID3 tag found in this MP3 file");
-    } finally {
-      reader.closeSync();
+    if (hasID3v2Tag(reader)) {
+      final audioStartOffset = _getID3v2TotalSize(reader);
+      reader.setPositionSync(0);
+      final metadata = ID3v2Parser(fetchImage: fetchImage).parse(reader);
+      _parseAudioFrames(reader, metadata, audioStartOffset);
+      return metadata;
     }
+
+    if (hasID3v1Tag(reader)) {
+      reader.setPositionSync(reader.lengthSync() - 128);
+      final metadata = ID3v1Parser(fetchImage: fetchImage).parse(reader);
+      _parseAudioFrames(reader, metadata, 0);
+      return metadata;
+    }
+
+    throw StateError("No ID3 tag found in this MP3 file");
   }
 
   /// Returns true when this file has an ID3 tag that this MP3 parser can use.

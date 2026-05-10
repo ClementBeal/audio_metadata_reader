@@ -45,7 +45,6 @@ class ApeParser extends TagParser<ApeMetadata> {
     final footerOffset = _findFooterOffset(reader);
 
     if (footerOffset == null) {
-      reader.closeSync();
       throw StateError('No APEv2 footer found');
     }
 
@@ -60,7 +59,6 @@ class ApeParser extends TagParser<ApeMetadata> {
     // - size > file length: malformed footer because a tag cannot be bigger
     //   than the entire file that contains it.
     if (footer.version < 2000 || footer.size < 32 || footer.size > fileLength) {
-      reader.closeSync();
       throw StateError('Invalid APEv2 footer values');
     }
 
@@ -82,8 +80,6 @@ class ApeParser extends TagParser<ApeMetadata> {
         break;
       }
     }
-
-    reader.closeSync();
 
     if (parsedMetadata == null) {
       throw StateError('Malformed APEv2 tag: cannot parse items');

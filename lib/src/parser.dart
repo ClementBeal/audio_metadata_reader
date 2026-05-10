@@ -215,6 +215,9 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
   } catch (e, s) {
     Error.throwWithStackTrace(
         MetadataParserException(track: track, message: e.toString()), s);
+  } finally {
+    // Always close the file handle opened by this function.
+    reader.closeSync();
   }
 
   throw NoMetadataParserException(
@@ -255,6 +258,9 @@ ParserTag readAllMetadata(File track, {bool getImage = true}) {
     }
   } catch (e) {
     throw MetadataParserException(track: track, message: e.toString());
+  } finally {
+    // Always close the file handle opened by this function.
+    reader.closeSync();
   }
 
   throw MetadataParserException(

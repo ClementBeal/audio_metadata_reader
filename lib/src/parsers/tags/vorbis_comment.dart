@@ -6,9 +6,9 @@ import 'package:audio_metadata_reader/src/parsers/tags/tag_parser.dart';
 
 void parseVorbisComment(
   List<int> bytes,
-  VorbisMetadata metadata,
-  bool fetchImage,
-) {
+  VorbisMetadata metadata, {
+  required bool fetchImage,
+}) {
   int i = 0;
   final commentBytes = <int>[];
 

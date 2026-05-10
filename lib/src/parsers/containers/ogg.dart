@@ -130,7 +130,7 @@ class OGGParser extends TagParser<VorbisMetadata> {
       }
       final commentData = dataBuffer.sublist(offset, offset + commentLength);
       offset += commentLength;
-      parseVorbisComment(commentData, m, fetchImage);
+      parseVorbisComment(commentData, m, fetchImage: fetchImage);
     }
 
     return m;

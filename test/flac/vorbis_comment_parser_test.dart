@@ -6,7 +6,7 @@ void main() {
   test('Parse LANGUAGE Vorbis comment into dedicated field', () {
     final metadata = VorbisMetadata();
 
-    parseVorbisComment('LANGUAGE=ja'.codeUnits, metadata, false);
+    parseVorbisComment('LANGUAGE=ja'.codeUnits, metadata, fetchImage: false);
 
     expect(metadata.language, equals(['ja']));
     expect(metadata.unknowns.containsKey('LANGUAGE'), isFalse);
@@ -15,7 +15,7 @@ void main() {
   test('Parse LANG Vorbis comment alias into dedicated field', () {
     final metadata = VorbisMetadata();
 
-    parseVorbisComment('LANG=zh-CN'.codeUnits, metadata, false);
+    parseVorbisComment('LANG=zh-CN'.codeUnits, metadata, fetchImage: false);
 
     expect(metadata.language, equals(['zh-CN']));
     expect(metadata.unknowns.containsKey('LANG'), isFalse);

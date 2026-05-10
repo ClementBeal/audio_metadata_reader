@@ -24,8 +24,13 @@ class TagHeader {
   final bool hasExtendedHeader;
 
   /// Build a tag header object.
-  TagHeader(this.majorVersion, this.minorVersion, this.size, this.hasFooter,
-      this.hasExtendedHeader);
+  TagHeader(
+    this.majorVersion,
+    this.minorVersion,
+    this.size, {
+    required this.hasFooter,
+    required this.hasExtendedHeader,
+  });
 
   /// Combined numeric version (`major * 100 + minor`).
   int get version => majorVersion * 100 + minorVersion;

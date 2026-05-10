@@ -195,7 +195,7 @@ class ID3v2Parser extends TagParser<Mp3Metadata> {
     }
 
     while (offset < size) {
-      final frame = getFrame(reader, majorVersion == 4);
+      final frame = getFrame(reader, isV4: majorVersion == 4);
 
       if (frame == null) {
         break;
@@ -447,7 +447,10 @@ class ID3v2Parser extends TagParser<Mp3Metadata> {
     handlers.call();
   }
 
-  ID3v3Frame? getFrame(RandomAccessFile reader, bool isV4) {
+  ID3v3Frame? getFrame(
+    RandomAccessFile reader, {
+    required bool isV4,
+  }) {
     final headerBytes = buffer.read(10);
 
     if (headerBytes.every((element) => element == 0)) return null;

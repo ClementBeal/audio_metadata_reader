@@ -5,3 +5,14 @@ analyzer:
 linter:
   rules:
     - unnecessary_statements
+    - avoid_empty_else
+    - avoid_positional_boolean_parameters
+    - use_string_buffers
+    - use_named_constants
+    - annotate_overrides
+    - avoid_init_to_null
+    - await_only_futures
+    - camel_case_types
+    - empty_constructor_bodies
+    - empty_catches
+    - exhaustive_cases

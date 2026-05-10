@@ -162,7 +162,7 @@ class FlacParser extends TagParser<VorbisMetadata> {
       offset += 4;
       final comment = bytes.sublist(offset, offset + length);
       offset += length;
-      parseVorbisComment(comment, metadata, fetchImage);
+      parseVorbisComment(comment, metadata, fetchImage: fetchImage);
     }
   }
 }

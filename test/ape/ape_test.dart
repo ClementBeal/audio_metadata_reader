@@ -83,6 +83,39 @@ void main() {
     expect(apeMetadata.artist, equals('Artist A'));
     expect(apeMetadata.trackNumber, equals(3));
   });
+
+  test("recovers APEv2 items when padding and item count are stale", () {
+    final baseAudio = File('test/ape/base_no_tag.mp3').readAsBytesSync();
+    final itemChunks = <int>[
+      // These bytes model the harmless padding before the first item.
+      0x00,
+      0x00,
+      ..._buildTextItem('Title', 'Padded APE title'),
+      ..._buildTextItem('Artist', 'Padded APE artist'),
+    ];
+
+    final footer = <int>[
+      ...ascii.encode('APETAGEX'),
+      ...intToUint32LE(2000),
+      // Deliberately exclude the two leading padding bytes, as in the
+      // affected file.
+      ...intToUint32LE(itemChunks.length - 2 + 32),
+      // Deliberately stale: only two items are present.
+      ...intToUint32LE(3),
+      ...intToUint32LE(0x80000000), // header-present flag
+      ...List.filled(8, 0),
+    ];
+
+    final file = createTemporaryFile(
+      'ape_padded.mp3',
+      Uint8List.fromList([...baseAudio, ...itemChunks, ...footer]),
+    );
+
+    final metadata = readMetadata(file, getImage: false);
+
+    expect(metadata.title, equals('Padded APE title'));
+    expect(metadata.artist, equals('Padded APE artist'));
+  });
 }
 
 File _createApeTaggedTrack({

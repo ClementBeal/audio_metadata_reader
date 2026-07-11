@@ -183,6 +183,26 @@ class ApeParser extends TagParser<ApeMetadata> {
     _buffer.setPositionSync(startOffset);
 
     for (int i = 0; i < itemCount; i++) {
+      // A few taggers leave one or more NUL bytes between items. NUL is not a
+      // valid first byte for an APE key, so skipping it here is unambiguous and
+      // lets us recover without scanning beyond the declared footer boundary.
+      while (_buffer.fileCursor < footerOffset) {
+        final nextByte = _buffer.read(1)[0];
+        if (nextByte != 0x00) {
+          _buffer.setPositionSync(_buffer.fileCursor - 1);
+          break;
+        }
+      }
+
+      // The item count is metadata supplied by another application. If it is
+      // stale, but all bytes up to the footer have already been consumed, the
+      // items we decoded are still trustworthy. This is the layout found in
+      // real-world files where a tagger retained padding or an obsolete item
+      // count while rewriting the tag.
+      if (_buffer.fileCursor == footerOffset) {
+        return i == 0 ? null : metadata;
+      }
+
       if (_buffer.fileCursor + 8 > footerOffset) {
         return null;
       }

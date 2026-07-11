@@ -72,6 +72,19 @@ final supportedBox = [
 ///
 /// Information about the bitrate and duration are stored in `mvhd`
 ///
+/// Protocol section: ISO-BMFF box header
+/// Layout (big-endian):
+/// ```text
+/// SSSS SSSS TTTT TTTT
+/// ```
+/// Meaning:
+/// - `S`: 32-bit box size, including this 8-byte header and the payload.
+/// - `T`: four-byte ASCII/QuickTime box type.
+/// Constraints:
+/// - Child boxes are bounded by their parent box size.
+/// - `meta` may contain either a 4-byte version/flags field or child boxes
+///   directly; both layouts occur in valid MP4-family files in the wild.
+///
 class MP4Parser extends TagParser<Mp4Metadata> {
   /// Parsed MP4 metadata.
   Mp4Metadata tags = Mp4Metadata();
@@ -163,8 +176,6 @@ class MP4Parser extends TagParser<Mp4Metadata> {
     } else if (["trak", "mdia", "minf", "stbl", "stsd"].contains(box.type)) {
       parseRecurvise(buffer, box);
     } else if (box.type == "meta") {
-      buffer.read(4);
-
       parseRecurvise(buffer, box);
     } else if (box.type == "chpl") {
       // `chpl` is a chapter list atom used by many MP4/M4A encoders.
@@ -385,9 +396,24 @@ class MP4Parser extends TagParser<Mp4Metadata> {
     final limit = box.size - 8;
     int offset = 0;
 
-    // the `meta` box has 4 additional bytes that are not useful. We skip them
+    // ISO-BMFF normally stores 4 version/flags bytes at the start of `meta`,
+    // but some Android/MediaStore files put child boxes directly there. Probe
+    // the first 8 bytes and only consume the version/flags field when the
+    // bytes do not form a plausible child-box header.
     if ("meta" == box.type) {
-      offset += 4;
+      final firstBytes = buffer.read(8);
+      final firstSize = getUint32(firstBytes.sublist(0, 4));
+      final firstType = String.fromCharCodes(firstBytes.sublist(4, 8));
+      final hasChildBoxHeader = firstSize >= 8 &&
+          firstSize <= limit &&
+          firstType.codeUnits.every((byte) => byte >= 0x20 && byte <= 0x7e);
+
+      buffer.setPositionSync(buffer.fileCursor - 8);
+
+      if (!hasChildBoxHeader) {
+        buffer.skip(4);
+        offset = 4;
+      }
     } else if (box.type == "stsd") {
       offset += 8;
       buffer.read(8);

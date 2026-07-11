@@ -6,6 +6,8 @@ import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/parser.dart';
 import 'package:test/test.dart';
 
+import '../test_helpers.dart';
+
 void main() {
   test("Parse MP4 file without the cover", () {
     final track = File('./test/mp4/track.m4a');
@@ -82,6 +84,27 @@ void main() {
     expect(metadata.chapters.length, 3);
     expect(metadata.chapters[0].title, "Intro");
     expect(metadata.chapters[0].start, Duration.zero);
+  });
+
+  test("Parse MP4 meta box without a version/flags prefix", () {
+    final hdlr = _makeBox("hdlr", <int>[]);
+    final ilst = _makeBox("ilst", <int>[]);
+    final meta = _makeBox("meta", [...hdlr, ...ilst]);
+    final moov = _makeBox("moov", meta);
+    final file = createTemporaryFile(
+      'mp4_meta_without_full_box.m4a',
+      Uint8List.fromList([
+        ..._makeBox("ftyp", [
+          ...ascii.encode("M4A "),
+          ..._u32(0),
+          ...ascii.encode("isom"),
+          ...ascii.encode("M4A "),
+        ]),
+        ...moov,
+      ]),
+    );
+
+    expect(() => readMetadata(file, getImage: false), returnsNormally);
   });
 }
 

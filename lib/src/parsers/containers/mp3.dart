@@ -38,12 +38,45 @@ class MP3Parser extends TagParser<Mp3Metadata> {
       return metadata;
     }
 
-    throw StateError("No ID3 tag found in this MP3 file");
+    // ID3 is optional. A valid MP3 may contain only MPEG audio frames, as do
+    // files produced by some mobile recorders and media importers.
+    final metadata = Mp3Metadata();
+    _parseAudioFrames(reader, metadata, 0);
+
+    if (metadata.samplerate == null) {
+      throw StateError("No MPEG audio frame found in this MP3 file");
+    }
+
+    return metadata;
   }
 
   /// Returns true when this file has an ID3 tag that this MP3 parser can use.
   static bool canUserParser(RandomAccessFile reader) {
-    return hasID3v2Tag(reader) || hasID3v1Tag(reader);
+    return hasID3v2Tag(reader) ||
+        hasID3v1Tag(reader) ||
+        hasMpegAudioFrame(reader);
+  }
+
+  /// Returns true when the file starts with a valid MPEG audio frame. This is
+  /// intentionally independent from ID3 detection: metadata tags are optional
+  /// in an MP3 container.
+  ///
+  /// Keep this probe constant-cost. [readMetadata] calls every format detector
+  /// in sequence, so reading a large prefix here would slow down unrelated
+  /// files. The full bounded scan remains in [_findFirstMp3Frame], once this
+  /// cheap probe has selected the MP3 parser.
+  static bool hasMpegAudioFrame(RandomAccessFile reader) {
+    final fileLength = reader.lengthSync();
+    if (fileLength < 4) {
+      return false;
+    }
+
+    reader.setPositionSync(0);
+    final bytes = reader.readSync(4);
+    final word =
+        (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];
+
+    return _isValidFrameHeader(word);
   }
 
   /// ID3v2 tags are identified by the "ID3" marker in the first 3 bytes.
@@ -202,7 +235,7 @@ class MP3Parser extends TagParser<Mp3Metadata> {
     return null;
   }
 
-  bool _isValidFrameHeader(int word) {
+  static bool _isValidFrameHeader(int word) {
     if ((word & 0xFFE00000) != 0xFFE00000) {
       return false;
     }

@@ -69,4 +69,15 @@ void main() {
     expect(result.duration, isNotNull);
     expect(result.duration!.inMilliseconds, closeTo(310, 5));
   });
+
+  test("Parse an MP3 without ID3 metadata", () {
+    final track = File('./test/mp3/no_metadata.mp3');
+    final result = readMetadata(track, getImage: false);
+
+    expect(result.title, isNull);
+    expect(result.artist, isNull);
+    expect(result.sampleRate, equals(44100));
+    expect(result.bitrate, equals(64000));
+    expect(result.duration, isNotNull);
+  });
 }

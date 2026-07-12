@@ -173,8 +173,17 @@ void parseVorbisComment(
       metadata.lyric = value;
       break;
     case "LENGTH":
-      final lengthValue = int.parse(value);
-      metadata.duration = Duration(milliseconds: lengthValue);
+      // LENGTH is a non-standard Vorbis comment and its unit is not
+      // consistent across taggers (the affected FLAC stores seconds). The
+      // container's STREAMINFO block is authoritative and is parsed before
+      // comments, so never overwrite that precise duration. Keep LENGTH only
+      // as a fallback for formats that do not provide a stream duration.
+      if (metadata.duration == null) {
+        final lengthValue = int.tryParse(value);
+        if (lengthValue != null) {
+          metadata.duration = Duration(milliseconds: lengthValue);
+        }
+      }
       break;
     default:
       metadata.unknowns[commentName.toUpperCase()] = value;

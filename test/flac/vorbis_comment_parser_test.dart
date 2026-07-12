@@ -20,4 +20,12 @@ void main() {
     expect(metadata.language, equals(['zh-CN']));
     expect(metadata.unknowns.containsKey('LANG'), isFalse);
   });
+
+  test('LENGTH does not overwrite duration from STREAMINFO', () {
+    final metadata = VorbisMetadata()..duration = const Duration(seconds: 236);
+
+    parseVorbisComment('LENGTH=236'.codeUnits, metadata, fetchImage: false);
+
+    expect(metadata.duration, const Duration(seconds: 236));
+  });
 }

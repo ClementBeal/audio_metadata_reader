@@ -12,7 +12,7 @@ void main() {
     expect(result.album, equals("Album"));
     expect(result.artist, equals("Artist"));
     expect(result.discNumber, equals(1));
-    expect(result.sampleRate, equals(44100));
+    expect(result.sampleRate, equals(48000));
     expect(result.title, equals("Title"));
     expect(result.trackNumber, equals(1));
     expect(result.duration!.inMilliseconds, closeTo(1130, 10));
@@ -79,5 +79,12 @@ void main() {
     expect(result.sampleRate, equals(44100));
     expect(result.bitrate, equals(64000));
     expect(result.duration, isNotNull);
+  });
+
+  test("Parse MP3 sample rate from MPEG frame header", () {
+    final track = File('./test/mp3/no_metadata_48k.mp3');
+    final result = readMetadata(track, getImage: false);
+
+    expect(result.sampleRate, equals(48000));
   });
 }

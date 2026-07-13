@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/src/metadata/base.dart';
+import 'package:audio_metadata_reader/src/parsers/containers/ape.dart';
 import 'package:audio_metadata_reader/src/parsers/tags/id3v1.dart';
 import 'package:audio_metadata_reader/src/parsers/tags/id3v2.dart';
 import 'package:audio_metadata_reader/src/parsers/tags/tag_parser.dart';
@@ -23,31 +24,72 @@ class MP3Parser extends TagParser<Mp3Metadata> {
 
   @override
   Mp3Metadata parse(RandomAccessFile reader) {
+    late final Mp3Metadata metadata;
+
     if (hasID3v2Tag(reader)) {
       final audioStartOffset = _getID3v2TotalSize(reader);
       reader.setPositionSync(0);
-      final metadata = ID3v2Parser(fetchImage: fetchImage).parse(reader);
+      metadata = ID3v2Parser(fetchImage: fetchImage).parse(reader);
       _parseAudioFrames(reader, metadata, audioStartOffset);
-      return metadata;
-    }
-
-    if (hasID3v1Tag(reader)) {
+    } else if (hasID3v1Tag(reader)) {
       reader.setPositionSync(reader.lengthSync() - 128);
-      final metadata = ID3v1Parser(fetchImage: fetchImage).parse(reader);
+      metadata = ID3v1Parser(fetchImage: fetchImage).parse(reader);
       _parseAudioFrames(reader, metadata, 0);
-      return metadata;
+    } else {
+      // ID3 is optional. A valid MP3 may contain only MPEG audio frames, as do
+      // files produced by some mobile recorders and media importers.
+      metadata = Mp3Metadata();
+      _parseAudioFrames(reader, metadata, 0);
+
+      if (metadata.samplerate == null) {
+        throw StateError("No MPEG audio frame found in this MP3 file");
+      }
     }
 
-    // ID3 is optional. A valid MP3 may contain only MPEG audio frames, as do
-    // files produced by some mobile recorders and media importers.
-    final metadata = Mp3Metadata();
-    _parseAudioFrames(reader, metadata, 0);
-
-    if (metadata.samplerate == null) {
-      throw StateError("No MPEG audio frame found in this MP3 file");
-    }
-
+    _mergeApeMetadata(reader, metadata);
     return metadata;
+  }
+
+  /// Merge an optional trailing APEv2 tag into the MP3 metadata.
+  ///
+  /// MP3 files in the wild can carry ID3v2 at the beginning and APEv2 at the
+  /// end. ID3v2 is treated as the primary source for overlapping fields; APEv2
+  /// fills missing values and contributes fields such as ReplayGain/pictures.
+  void _mergeApeMetadata(
+    RandomAccessFile reader,
+    Mp3Metadata metadata,
+  ) {
+    if (!ApeParser.canUserParser(reader)) {
+      return;
+    }
+
+    final ape = ApeParser(fetchImage: fetchImage).parse(reader);
+
+    metadata.album ??= ape.album;
+    metadata.leadPerformer ??= ape.artist;
+    metadata.songName ??= ape.title;
+    metadata.lyric ??= ape.lyric;
+    metadata.languages ??= ape.language.firstOrNull;
+    metadata.trackNumber ??= ape.trackNumber;
+    metadata.trackTotal ??= ape.trackTotal;
+    metadata.discNumber ??= ape.discNumber;
+    metadata.totalDics ??= ape.discTotal;
+    metadata.year ??= ape.date?.year;
+    metadata.bitrate ??= ape.bitrate;
+    metadata.samplerate ??= ape.sampleRate;
+    metadata.duration ??= ape.duration;
+
+    for (final genre in ape.genres) {
+      if (!metadata.genres.contains(genre)) {
+        metadata.genres.add(genre);
+      }
+    }
+
+    metadata.pictures.addAll(ape.pictures);
+
+    for (final entry in ape.unknowns.entries) {
+      metadata.customMetadata.putIfAbsent(entry.key, () => entry.value);
+    }
   }
 
   /// Returns true when this file has an ID3 tag that this MP3 parser can use.
@@ -156,7 +198,10 @@ class MP3Parser extends TagParser<Mp3Metadata> {
     };
 
     final bitrateIndex = mp3FrameHeader[2] >> 4;
-    final samplerateIndex = mp3FrameHeader[2] & 12 >> 0x3;
+    // The sampling-rate index occupies bits 3..4 of the third header byte.
+    // Parentheses are required here: without them Dart evaluates the shift
+    // before the bitwise AND and turns index 1 (48 kHz) into index 0 (44.1 kHz).
+    final samplerateIndex = (mp3FrameHeader[2] & 0x0C) >> 2;
 
     metadata.samplerate = _getSampleRate(mpegVersion, samplerateIndex);
     metadata.bitrate = _getBitrate(mpegVersion, mpegLayer, bitrateIndex);

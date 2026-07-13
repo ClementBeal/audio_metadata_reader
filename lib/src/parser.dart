@@ -18,9 +18,9 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
   final reader = track.openSync();
 
   try {
-    // APEv2 can coexist with MP3 (often with trailing ID3v1). We check it
-    // first so dedicated APE metadata is not shadowed by older ID3v1 tags.
-    if (ApeParser.canUserParser(reader)) {
+    // APEv2 can coexist with MP3. Let MP3Parser own files with MPEG audio or
+    // ID3 tags; it merges any trailing APEv2 data as supplementary metadata.
+    if (ApeParser.canUserParser(reader) && !MP3Parser.hasID3v2Tag(reader)) {
       final apeMetadata = ApeParser(fetchImage: getImage).parse(reader);
 
       final newMetadata = AudioMetadata(
@@ -240,8 +240,8 @@ ParserTag readAllMetadata(File track, {bool getImage = true}) {
   final reader = track.openSync();
 
   try {
-    // Same priority rule as [readMetadata]: parse APEv2 before ID3-only MP3.
-    if (ApeParser.canUserParser(reader)) {
+    // MP3Parser merges optional trailing APEv2 data for MP3 files.
+    if (ApeParser.canUserParser(reader) && !MP3Parser.hasID3v2Tag(reader)) {
       return ApeParser(fetchImage: getImage).parse(reader);
     } else if (MP3Parser.canUserParser(reader)) {
       return MP3Parser(fetchImage: getImage).parse(reader);

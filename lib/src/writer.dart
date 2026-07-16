@@ -23,7 +23,11 @@ void writeMetadata(File track, ParserTag metadata) {
   final reader = track.openSync();
 
   try {
-    if (MP3Parser.hasID3v2Tag(reader)) {
+    // Test APEv2 before MP3: a tag-only APEv2 file may contain MPEG audio but
+    // has no ID3 tag, and its metadata model must be written by ApeWriter.
+    if (ApeParser.canUserParser(reader) && metadata is ApeMetadata) {
+      ApeWriter().write(track, metadata);
+    } else if (MP3Parser.hasID3v2Tag(reader)) {
       Id3v4Writer().write(track, metadata as Mp3Metadata);
     } else if (MP4Parser.canUserParser(reader)) {
       Mp4Writer().write(track, metadata as Mp4Metadata);

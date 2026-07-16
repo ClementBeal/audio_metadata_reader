@@ -30,6 +30,7 @@ export 'src/writers/flac_writer.dart' show FlacWriter;
 export 'src/writers/id3v1_writer.dart' show ID3v1Writer;
 export 'src/writers/mp4_writer.dart' show Mp4Writer;
 export 'src/writers/riff_writer.dart' show RiffWriter;
+export 'src/writers/ape_writer.dart' show ApeWriter;
 
 export 'src/metadata/base.dart'
     show

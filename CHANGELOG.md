@@ -1,3 +1,25 @@
+## [1.7.0](https://github.com/ClementBeal/audio_metadata_reader/compare/v1.6.0...v1.7.0) (2026-07-27)
+
+
+### Features
+
+* add APEv2 metadata writer ([556bb81](https://github.com/ClementBeal/audio_metadata_reader/commit/556bb813fbb0acef08aa7f4f476d8e50f91a5284))
+
+
+### Bug Fixes
+
+* merge MP3 tags and decode sample rates ([5c6ed17](https://github.com/ClementBeal/audio_metadata_reader/commit/5c6ed1745728d2c19066bf50ba71687cc11cd536))
+* preserve FLAC stream duration ([af309f8](https://github.com/ClementBeal/audio_metadata_reader/commit/af309f891631f5b79cae0a96caebf7002912f9a2))
+* parse MP3 files without ID3 tags ([6c65312](https://github.com/ClementBeal/audio_metadata_reader/commit/6c65312becce356b1f4818c0205096db311330b6))
+* parse MP4 meta boxes without fullbox header ([4950f1c](https://github.com/ClementBeal/audio_metadata_reader/commit/4950f1c3d95318670a94362d34d979219ce8d5f3))
+* tolerate malformed APEv2 item padding ([b9e3519](https://github.com/ClementBeal/audio_metadata_reader/commit/b9e3519e24193aa489c2d3112922f3cad0fb5185))
+
+
+### Maintenance
+
+* always close the reader even if there's an error ([9367009](https://github.com/ClementBeal/audio_metadata_reader/commit/9367009578a10be2d2f26a2c9eabdd8b2ec68668))
+* add linter rules ([9f39e1d](https://github.com/ClementBeal/audio_metadata_reader/commit/9f39e1d77e5683424bf40f6e5521c871ee2e603d))
+
 ## [1.5.0](https://github.com/ClementBeal/audio_metadata_reader/compare/v1.4.2...v1.5.0) (2026-04-25)
 
 

@@ -20,6 +20,22 @@
 * **riff_writer:** correct size for the header ([7d523ff](https://github.com/ClementBeal/audio_metadata_reader/commit/7d523fff5f60ad1f820229b2ae21ebc16ba3fb84))
 * setArtist tag for mp3 ([#91](https://github.com/ClementBeal/audio_metadata_reader/issues/91)) ([daa5da2](https://github.com/ClementBeal/audio_metadata_reader/commit/daa5da28a6493959098907ba66791686a9676db1))
 
+## [1.7.0](https://github.com/ClementBeal/audio_metadata_reader/compare/v1.6.0...v1.7.0) (2026-07-28)
+
+
+### Features
+
+* add APEv2 metadata writer ([556bb81](https://github.com/ClementBeal/audio_metadata_reader/commit/556bb813fbb0acef08aa7f4f476d8e50f91a5284))
+
+
+### Bug Fixes
+
+* merge MP3 tags and decode sample rates ([5c6ed17](https://github.com/ClementBeal/audio_metadata_reader/commit/5c6ed1745728d2c19066bf50ba71687cc11cd536))
+* parse MP3 files without ID3 tags ([6c65312](https://github.com/ClementBeal/audio_metadata_reader/commit/6c65312becce356b1f4818c0205096db311330b6))
+* parse MP4 meta boxes without fullbox header ([4950f1c](https://github.com/ClementBeal/audio_metadata_reader/commit/4950f1c3d95318670a94362d34d979219ce8d5f3))
+* preserve FLAC stream duration ([af309f8](https://github.com/ClementBeal/audio_metadata_reader/commit/af309f891631f5b79cae0a96caebf7002912f9a2))
+* tolerate malformed APEv2 item padding ([b9e3519](https://github.com/ClementBeal/audio_metadata_reader/commit/b9e3519e24193aa489c2d3112922f3cad0fb5185))
+
 ## [1.6.0](https://github.com/ClementBeal/audio_metadata_reader/compare/v1.5.0...v1.6.0) (2026-04-30)
 
 

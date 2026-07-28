@@ -34,7 +34,27 @@ void main() {
 }
 ```
 
+`readMetadata` returns the common `AudioMetadata` view shared by all supported
+formats. Use `readAllMetadata` when you need the format-specific metadata
+object, such as `Mp3Metadata`, `Mp4Metadata`, `VorbisMetadata`, `RiffMetadata`
+or `ApeMetadata`.
+
+```dart
+import 'dart:io';
+
+import 'package:audio_metadata_reader/audio_metadata_reader.dart';
+
+final track = File("Pieces.mp3");
+final metadata = readAllMetadata(track, getImage: false);
+print(metadata);
+```
+
 ### Supported File Extensions
+
+The package currently recognizes these extensions:
+
+`.mp3`, `.flac`, `.mp4`, `.m4a`, `.ape`, `.ogg`, `.opus`, `.wav`, `.aif`,
+`.aiff`, `.aifc` and `.mov`.
 
 Use `supportedFileExtensions` when filtering files before parsing:
 
@@ -47,7 +67,14 @@ final isSupported = supportedFileExtensions.any(
 ### Write
 
 ```dart
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:audio_metadata_reader/audio_metadata_reader.dart';
+
 void main() {
+  final track = File("Pieces.mp3");
+
   // Use a switch if you want to update metadata based on the file type
   updateMetadata(
     track,
@@ -89,6 +116,27 @@ void main() {
   );
 }
 ```
+
+`updateMetadata` reads the existing format-specific metadata, applies the
+callback, then writes it back to the same file. For an already constructed
+metadata object, use `writeMetadata` directly:
+
+```dart
+import 'dart:io';
+
+import 'package:audio_metadata_reader/audio_metadata_reader.dart';
+
+final metadata = Mp3Metadata()..songName = "New title";
+writeMetadata(File("Pieces.mp3"), metadata);
+```
+
+The common setter extension also provides `setTrackTotal` and `setCD`. Some
+formats do not support every field; unsupported setters are intentionally
+ignored for those formats.
+
+MP4 metadata can also contain `Chapter` markers. OGG, Opus and AIFF/AIFC are
+currently read-only; metadata writing is supported for MP3, MP4, FLAC, WAV and
+APE files.
 
 ## Performance
 

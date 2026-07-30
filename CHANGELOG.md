@@ -20,6 +20,13 @@
 * always close the reader even if there's an error ([9367009](https://github.com/ClementBeal/audio_metadata_reader/commit/9367009578a10be2d2f26a2c9eabdd8b2ec68668))
 * add linter rules ([9f39e1d](https://github.com/ClementBeal/audio_metadata_reader/commit/9f39e1d77e5683424bf40f6e5521c871ee2e603d))
 
+## [1.7.1](https://github.com/ClementBeal/audio_metadata_reader/compare/v1.7.0...v1.7.1) (2026-07-30)
+
+
+### Bug Fixes
+
+* skip consecutive ID3v2 tags before MP3 audio ([5b12b01](https://github.com/ClementBeal/audio_metadata_reader/commit/5b12b016c92942b58d534a42bba90e05f43e0e0c))
+
 ## [1.5.0](https://github.com/ClementBeal/audio_metadata_reader/compare/v1.4.2...v1.5.0) (2026-04-25)
 
 

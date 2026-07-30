@@ -112,6 +112,24 @@ class Buffer {
     return read(readSize);
   }
 
+  /// Reads one byte without allocating a one-byte [Uint8List].
+  ///
+  /// MPEG frame resynchronisation may inspect a long non-audio prefix. Keeping
+  /// this primitive allocation-free avoids creating one temporary list for
+  /// every candidate byte while retaining the buffered file I/O boundary.
+  /// Returns `null` at EOF instead of attempting a zero-length refill.
+  int? readByteOrNull() {
+    if (_cursor >= _bufferedBytes) {
+      _fill();
+      if (_bufferedBytes == 0) {
+        return null;
+      }
+    }
+
+    fileCursor++;
+    return _buffer[_cursor++];
+  }
+
   void setPositionSync(int position) {
     fileCursor = position;
     randomAccessFile.setPositionSync(position);

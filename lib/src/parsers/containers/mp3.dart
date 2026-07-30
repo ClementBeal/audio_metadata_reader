@@ -11,6 +11,36 @@ import 'package:audio_metadata_reader/src/utils/buffer.dart';
 
 /// Container-level parser for MP3 files.
 ///
+/// Protocol section: leading ID3v2 tags and the first MPEG audio frame.
+///
+/// Bytes: ID3v2 header 0..9
+/// Layout:
+/// ```text
+/// 4944 33VV RRFF SSSS SSSS
+/// ```
+/// Meaning:
+/// - `49 44 33`: the ASCII `ID3` tag marker.
+/// - `VV`, `RR`: ID3v2 major and revision versions.
+/// - `FF`: flags. In ID3v2.4, bit 4 declares a 10-byte footer.
+/// - `SS SS SS SS`: 28-bit sync-safe tag size, big-endian; the high bit of
+///   every byte is zero. This size excludes the 10-byte header and footer.
+///
+/// Bytes: MPEG audio frame header 0..3
+/// Layout:
+/// ```text
+/// 11111111 111VVVLL BBBBSSPP CCCCCCCC
+/// ```
+/// Meaning:
+/// - leading `1` bits: the 11-bit MPEG frame sync word;
+/// - `VVV`, `LL`, `BBBB`, `SS`: MPEG version, layer, bitrate and sample-rate
+///   indices used to derive audio properties.
+///
+/// Constraints:
+/// - a leading ID3v2 tag is parsed for metadata; additional consecutive tags
+///   are skipped because this parser has no metadata-merging policy for them;
+/// - malformed additional tag sizes stop the skip and fall back to MPEG frame
+///   resynchronisation, rather than seeking past the end of the file.
+///
 /// MP3 metadata is usually stored in ID3 tags, but finding those tags is a
 /// responsibility of the MP3 container, not of the individual tag parsers:
 /// - ID3v2, when present, starts at the beginning of the file.
@@ -27,7 +57,7 @@ class MP3Parser extends TagParser<Mp3Metadata> {
     late final Mp3Metadata metadata;
 
     if (hasID3v2Tag(reader)) {
-      final audioStartOffset = _getID3v2TotalSize(reader);
+      final audioStartOffset = _getLeadingID3v2TotalSize(reader);
       reader.setPositionSync(0);
       metadata = ID3v2Parser(fetchImage: fetchImage).parse(reader);
       _parseAudioFrames(reader, metadata, audioStartOffset);
@@ -147,19 +177,70 @@ class MP3Parser extends TagParser<Mp3Metadata> {
     return tagIdentity == "TAG";
   }
 
-  /// Returns the total byte size of the ID3v2 tag, including its 10-byte
-  /// header. The size stored in ID3v2 is sync-safe and excludes that header.
-  int _getID3v2TotalSize(RandomAccessFile reader) {
+  /// Returns the offset where MPEG audio begins after consecutive ID3v2 tags.
+  ///
+  /// Some tag editors prepend a replacement ID3v2 tag instead of replacing
+  /// the old one. We parse the first tag as the metadata source, then jump
+  /// across each following well-formed tag. This avoids treating an embedded
+  /// image or text frame as a byte-by-byte MPEG resynchronisation region.
+  int _getLeadingID3v2TotalSize(RandomAccessFile reader) {
+    const id3v2HeaderSize = 10;
+    const id3v2FooterSize = 10;
+    final fileLength = reader.lengthSync();
+
+    // [parse] reached this method only after checking the first three bytes
+    // for `ID3`. Preserve the existing first-tag behavior even if the tag is
+    // malformed; validation is only needed for optional following tags.
     reader.setPositionSync(0);
-    final headerBytes = reader.readSync(10);
-    final sizeBytes = headerBytes.sublist(6);
+    final firstHeader = reader.readSync(id3v2HeaderSize);
+    var offset = id3v2HeaderSize +
+        _getID3v2TagSize(firstHeader) +
+        (_hasID3v2Footer(firstHeader) ? id3v2FooterSize : 0);
 
-    final tagSize = (sizeBytes[3] & 0x7F) |
-        ((sizeBytes[2] & 0x7F) << 7) |
-        ((sizeBytes[1] & 0x7F) << 14) |
-        ((sizeBytes[0] & 0x7F) << 21);
+    while (offset <= fileLength - id3v2HeaderSize) {
+      reader.setPositionSync(offset);
+      final header = reader.readSync(id3v2HeaderSize);
 
-    return 10 + tagSize;
+      if (!_isValidID3v2Header(header)) {
+        break;
+      }
+
+      final tagSize = _getID3v2TagSize(header);
+      final footerSize = _hasID3v2Footer(header) ? id3v2FooterSize : 0;
+      final totalTagSize = id3v2HeaderSize + tagSize + footerSize;
+
+      if (totalTagSize > fileLength - offset) {
+        // Do not seek beyond EOF while looking for optional subsequent tags.
+        break;
+      }
+
+      offset += totalTagSize;
+    }
+
+    return offset;
+  }
+
+  static bool _isValidID3v2Header(Uint8List header) {
+    return header[0] == 0x49 &&
+        header[1] == 0x44 &&
+        header[2] == 0x33 &&
+        header[6] & 0x80 == 0 &&
+        header[7] & 0x80 == 0 &&
+        header[8] & 0x80 == 0 &&
+        header[9] & 0x80 == 0;
+  }
+
+  static int _getID3v2TagSize(Uint8List header) {
+    return (header[9] & 0x7F) |
+        ((header[8] & 0x7F) << 7) |
+        ((header[7] & 0x7F) << 14) |
+        ((header[6] & 0x7F) << 21);
+  }
+
+  static bool _hasID3v2Footer(Uint8List header) {
+    // The footer-present flag only exists in ID3v2.4. It contributes a second
+    // ten-byte structure after the tag payload and is excluded from tag size.
+    return header[3] == 4 && (header[5] & 0x10) != 0;
   }
 
   /// Extract MPEG audio properties from the first valid frame.
@@ -267,14 +348,15 @@ class MP3Parser extends TagParser<Mp3Metadata> {
         }
       }
 
-      if (buffer.remainingBytes == 0) {
+      final nextByte = buffer.readByteOrNull();
+      if (nextByte == null) {
         break;
       }
 
       frameHeader[0] = frameHeader[1];
       frameHeader[1] = frameHeader[2];
       frameHeader[2] = frameHeader[3];
-      frameHeader[3] = buffer.read(1)[0];
+      frameHeader[3] = nextByte;
     }
 
     return null;

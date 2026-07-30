@@ -1,8 +1,11 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/parser.dart';
 import 'package:test/test.dart';
+
+import '../test_helpers.dart';
 
 void main() {
   test("Parse MP3 file without the cover", () {
@@ -87,4 +90,34 @@ void main() {
 
     expect(result.sampleRate, equals(48000));
   });
+
+  test("Reads audio after consecutive ID3v2 tags", () {
+    // The second tag starts with bytes that resemble a valid MPEG header. The
+    // observable result must still describe the real MPEG stream after both
+    // tags, rather than the tag payload.
+    final bytes = BytesBuilder(copy: false)
+      ..add(_id3v2Header(size: 0))
+      ..add(_id3v2Header(size: 4))
+      ..add([0xFF, 0xFB, 0xE4, 0x00])
+      ..add(File('./test/mp3/generated_stacked_id3v2_audio.mp3')
+          .readAsBytesSync());
+    final track = createTemporaryFile('consecutive-id3v2.mp3', bytes.toBytes());
+
+    final result = readMetadata(track, getImage: false);
+
+    expect(result.sampleRate, equals(44100));
+    expect(result.bitrate, equals(64000));
+    expect(result.duration, isNotNull);
+  });
+}
+
+Uint8List _id3v2Header({required int size}) {
+  return Uint8List.fromList([
+    0x49, 0x44, 0x33, // "ID3"
+    0x04, 0x00, 0x00, // ID3v2.4, revision 0, no flags
+    (size >> 21) & 0x7F,
+    (size >> 14) & 0x7F,
+    (size >> 7) & 0x7F,
+    size & 0x7F,
+  ]);
 }

@@ -407,7 +407,10 @@ class ID3v2Parser extends TagParser<Mp3Metadata> {
             metadata.trackNumber = int.parse(match.group(1)!);
             metadata.trackTotal = int.parse(match.group(2)!);
           } else {
-            metadata.trackNumber = int.parse(trackInfo);
+            // ID3 text frames come from external taggers. A malformed value
+            // such as "Enero" must not abort parsing the whole audio file;
+            // it simply does not provide a usable track number.
+            metadata.trackNumber = int.tryParse(trackInfo);
           }
         },
       "TRSN" => () {

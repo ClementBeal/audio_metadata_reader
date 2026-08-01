@@ -91,6 +91,19 @@ void main() {
     expect(result.sampleRate, equals(48000));
   });
 
+  test("Ignores a non-numeric ID3 track value", () {
+    // This fixture is generated once with ffmpeg and intentionally contains
+    // `TRCK=Enero`, which models malformed metadata found in the wild. The
+    // audio stream remains valid and must still be readable.
+    final track = File('./test/mp3/malformed_numeric_track.mp3');
+    final result = readMetadata(track, getImage: false);
+
+    expect(result.title, equals('Malformed numeric track'));
+    expect(result.trackNumber, isNull);
+    expect(result.sampleRate, isNotNull);
+    expect(result.duration, isNotNull);
+  });
+
   test("Reads audio after consecutive ID3v2 tags", () {
     // The second tag starts with bytes that resemble a valid MPEG header. The
     // observable result must still describe the real MPEG stream after both

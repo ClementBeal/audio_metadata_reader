@@ -501,10 +501,29 @@ class ID3v2Parser extends TagParser<Mp3Metadata> {
 
     offset++;
 
-    final description = [reader.getInt8(offset++)];
+    if (encoding == 1) {
+      // APIC encoding 1 uses UTF-16 with a BOM. Its description is terminated
+      // by a UTF-16 NUL code unit (`00 00`), not by the first zero byte. A
+      // single-byte scan would stop in the middle of every UTF-16 character
+      // and make the returned image include the rest of the description.
+      //
+      // Layout at this point:
+      //   FF FE       UTF-16LE BOM
+      //   XX 00 ...   description code units
+      //   00 00       description terminator
+      while (offset + 1 < reader.lengthInBytes) {
+        final first = reader.getUint8(offset++);
+        final second = reader.getUint8(offset++);
+        if (first == 0 && second == 0) {
+          break;
+        }
+      }
+    } else {
+      final description = [reader.getInt8(offset++)];
 
-    while (description.last != 0) {
-      description.add(reader.getInt8(offset++));
+      while (description.last != 0) {
+        description.add(reader.getInt8(offset++));
+      }
     }
 
     if (encoding == 1 || encoding == 2) {

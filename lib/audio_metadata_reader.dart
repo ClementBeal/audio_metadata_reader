@@ -22,6 +22,7 @@ export 'src/parsers/tags/id3v2.dart' show ID3v2Parser;
 export 'src/parsers/containers/flac.dart' show FlacParser;
 export 'src/parsers/containers/mp4.dart' show MP4Parser;
 export 'src/parsers/containers/ogg.dart' show OGGParser;
+export 'src/parsers/containers/webm.dart' show WebmParser;
 export 'src/parsers/containers/aiff.dart' show AiffParser;
 export 'src/parsers/containers/ape.dart' show ApeParser;
 

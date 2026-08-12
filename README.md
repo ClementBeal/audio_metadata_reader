@@ -9,6 +9,7 @@ A pure Dart package for reading and writing metadata in various audio formats.
 | FLAC        | `Vorbis Comments`       | ✅   | ✅    |
 | OGG         | `Vorbis Comments`       | ✅   | ❌    |
 | Opus        | `Vorbis Comments`       | ✅   | ❌    |
+| WebM/Matroska | `Tags` / Opus          | ✅   | ❌    |
 | WAV         | `RIFF`                  | ✅   | ✅    |
 | AIFF/AIFC   | `IFF chunks`            | ✅   | ❌    |
 | APE         | `APEv2`                 | ✅   | ✅    |
@@ -53,8 +54,8 @@ print(metadata);
 
 The package currently recognizes these extensions:
 
-`.mp3`, `.flac`, `.mp4`, `.m4a`, `.ape`, `.ogg`, `.opus`, `.wav`, `.aif`,
-`.aiff`, `.aifc` and `.mov`.
+`.mp3`, `.flac`, `.mp4`, `.m4a`, `.ape`, `.ogg`, `.opus`, `.wav`, `.webm`,
+`.mkv`, `.aif`, `.aiff`, `.aifc` and `.mov`.
 
 Use `supportedFileExtensions` when filtering files before parsing:
 
@@ -169,6 +170,29 @@ void main() {
   print("Duration: ${end.difference(start)}");
 }
 ```
+
+### Compare with FFmpeg/libavformat
+
+The repository includes a standalone benchmark that recursively scans a music
+directory and reads metadata without loading cover images:
+
+```bash
+dart run tool/benchmark_metadata.dart --backend both --runs 3
+```
+
+It defaults to `~/Music`. Use `--music PATH` for another directory and
+`--backend library` to measure only this package. The `ffprobe` comparison uses
+FFmpeg/libavformat through the `ffprobe` executable and requests only
+`format_tags`; its timing includes one process launch per file.
+
+To list the files that fail to parse, run the diagnostic script:
+
+```bash
+dart run tool/find_metadata_errors.dart --music ~/Music
+```
+
+It prints each failing path, the exception message, and an error summary. Add
+`--stack-traces` when investigating a parser failure in detail.
 
 
 ## Anonymize a Music Track

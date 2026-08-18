@@ -103,6 +103,30 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
       newMetadata.performers.addAll(vorbisMetadata.performer);
 
       return newMetadata;
+    } else if (WebmParser.canUserParser(reader)) {
+      final vorbisMetadata = WebmParser(fetchImage: getImage).parse(reader);
+
+      final newMetadata = AudioMetadata(
+        file: track,
+        album: vorbisMetadata.album.firstOrNull,
+        artist: vorbisMetadata.artist.firstOrNull,
+        bitrate: vorbisMetadata.bitrate,
+        discNumber: vorbisMetadata.discNumber,
+        duration: vorbisMetadata.duration,
+        language: vorbisMetadata.language.firstOrNull,
+        lyrics: vorbisMetadata.lyric,
+        sampleRate: vorbisMetadata.sampleRate,
+        title: vorbisMetadata.title.firstOrNull,
+        totalDisc: vorbisMetadata.discTotal,
+        trackNumber: vorbisMetadata.trackNumber.firstOrNull,
+        trackTotal: vorbisMetadata.trackTotal,
+        year: vorbisMetadata.date.firstOrNull,
+      );
+      newMetadata.genres = vorbisMetadata.genres;
+      newMetadata.pictures.addAll(vorbisMetadata.pictures);
+      newMetadata.performers.addAll(vorbisMetadata.performer);
+
+      return newMetadata;
     } else if (MP4Parser.canUserParser(reader)) {
       final mp4Metadata = MP4Parser(fetchImage: getImage).parse(reader);
 
@@ -247,6 +271,8 @@ ParserTag readAllMetadata(File track, {bool getImage = true}) {
       return MP3Parser(fetchImage: getImage).parse(reader);
     } else if (FlacParser.canUserParser(reader)) {
       return FlacParser(fetchImage: getImage).parse(reader);
+    } else if (WebmParser.canUserParser(reader)) {
+      return WebmParser(fetchImage: getImage).parse(reader);
     } else if (MP4Parser.canUserParser(reader)) {
       return MP4Parser(fetchImage: getImage).parse(reader);
     } else if (OGGParser.canUserParser(reader)) {

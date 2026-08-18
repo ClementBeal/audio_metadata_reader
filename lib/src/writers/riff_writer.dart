@@ -16,25 +16,31 @@ class RiffWriter extends BaseMetadataWriter<RiffMetadata> {
   late final Buffer buffer;
 
   @override
-  void write(File file, RiffMetadata metadata) {
+  void writeContents(File source, File destination, RiffMetadata metadata) {
     this.metadata = metadata;
     final builder = BytesBuilder();
 
-    final reader = file.openSync();
+    final reader = source.openSync();
     buffer = Buffer(randomAccessFile: reader);
-    reader.setPositionSync(0);
+    late final Uint8List output;
 
-    buffer.skip(12);
-    final newData = _parseChunks();
+    try {
+      reader.setPositionSync(0);
 
-    builder.add("RIFF".codeUnits);
-    // RIFF chunk size is file size - 8, i.e. 4 ("WAVE") + payload bytes.
-    builder.add(intToUint32LE(newData.length + 4));
-    builder.add("WAVE".codeUnits);
-    builder.add(newData);
+      buffer.skip(12);
+      final newData = _parseChunks();
 
-    reader.closeSync();
-    file.writeAsBytesSync(builder.toBytes());
+      builder.add("RIFF".codeUnits);
+      // RIFF chunk size is file size - 8, i.e. 4 ("WAVE") + payload bytes.
+      builder.add(intToUint32LE(newData.length + 4));
+      builder.add("WAVE".codeUnits);
+      builder.add(newData);
+      output = builder.takeBytes();
+    } finally {
+      reader.closeSync();
+    }
+
+    destination.writeAsBytesSync(output);
   }
 
   Uint8List _parseChunks() {

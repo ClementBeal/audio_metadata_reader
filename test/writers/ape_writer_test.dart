@@ -45,7 +45,7 @@ void main() {
     expect(parsed.pictures.single.bytes, equals(cover));
   });
 
-  test('writeMetadata replaces APEv2 in place and preserves trailing ID3v1',
+  test('replaceMetadata replaces APEv2 in place and preserves trailing ID3v1',
       () {
     final directory = Directory.systemTemp.createTempSync();
     addTearDown(() => directory.deleteSync(recursive: true));
@@ -57,7 +57,7 @@ void main() {
         <int>[...'TAG'.codeUnits, ...List<int>.filled(125, 0)]);
     file.writeAsBytesSync(<int>[...file.readAsBytesSync(), ...id3v1]);
 
-    writeMetadata(file, ApeMetadata()..title = 'New title');
+    replaceMetadata(file, ApeMetadata()..title = 'New title');
 
     final parsed = readAllMetadata(file, getImage: false) as ApeMetadata;
     expect(parsed.title, equals('New title'));
@@ -85,5 +85,38 @@ void main() {
         file.readAsBytesSync().sublist(0, baseAudio.length), equals(baseAudio));
     expect(
         (readAllMetadata(file) as ApeMetadata).title, equals('After rewrite'));
+  });
+
+  test('writeMetadata keeps the legacy replacement behavior', () {
+    final directory = Directory.systemTemp.createTempSync();
+    addTearDown(() => directory.deleteSync(recursive: true));
+    final file = File('${directory.path}/track.mp3')
+      ..writeAsBytesSync(File('test/ape/base_no_tag.mp3').readAsBytesSync());
+
+    ApeWriter().write(file, ApeMetadata()..title = 'Before legacy call');
+    writeMetadata(file, ApeMetadata()..title = 'Legacy title');
+
+    expect(
+        (readAllMetadata(file) as ApeMetadata).title, equals('Legacy title'));
+  });
+
+  test('replaceMetadata leaves the original file when writing fails', () {
+    final directory = Directory.systemTemp.createTempSync();
+    addTearDown(() => directory.deleteSync(recursive: true));
+    final file = File('${directory.path}/track.mp3')
+      ..writeAsBytesSync(File('test/ape/base_no_tag.mp3').readAsBytesSync());
+
+    ApeWriter().write(file, ApeMetadata()..title = 'Before failed rewrite');
+    final originalBytes = file.readAsBytesSync();
+    final directoryEntries =
+        directory.listSync().map((entry) => entry.path).toSet();
+    final invalidMetadata = ApeMetadata()
+      ..unknowns['X'] = 'This key cannot be encoded';
+
+    expect(() => replaceMetadata(file, invalidMetadata), throwsArgumentError);
+
+    expect(file.readAsBytesSync(), equals(originalBytes));
+    expect(directory.listSync().map((entry) => entry.path).toSet(),
+        equals(directoryEntries));
   });
 }

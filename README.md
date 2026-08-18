@@ -9,6 +9,7 @@ A pure Dart package for reading and writing metadata in various audio formats.
 | FLAC        | `Vorbis Comments`       | ✅   | ✅    |
 | OGG         | `Vorbis Comments`       | ✅   | ❌    |
 | Opus        | `Vorbis Comments`       | ✅   | ❌    |
+| WebM/Matroska | `Tags` / Opus          | ✅   | ❌    |
 | WAV         | `RIFF`                  | ✅   | ✅    |
 | AIFF/AIFC   | `IFF chunks`            | ✅   | ❌    |
 | APE         | `APEv2`                 | ✅   | ✅    |
@@ -53,8 +54,8 @@ print(metadata);
 
 The package currently recognizes these extensions:
 
-`.mp3`, `.flac`, `.mp4`, `.m4a`, `.ape`, `.ogg`, `.opus`, `.wav`, `.aif`,
-`.aiff`, `.aifc` and `.mov`.
+`.mp3`, `.flac`, `.mp4`, `.m4a`, `.ape`, `.ogg`, `.opus`, `.wav`, `.webm`,
+`.mkv`, `.aif`, `.aiff`, `.aifc` and `.mov`.
 
 Use `supportedFileExtensions` when filtering files before parsing:
 
@@ -118,8 +119,9 @@ void main() {
 ```
 
 `updateMetadata` reads the existing format-specific metadata, applies the
-callback, then writes it back to the same file. For an already constructed
-metadata object, use `writeMetadata` directly:
+callback, then writes it back to the same file while retaining metadata that
+the callback does not change. For an already constructed metadata object, use
+`replaceMetadata` directly:
 
 ```dart
 import 'dart:io';
@@ -127,8 +129,19 @@ import 'dart:io';
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 
 final metadata = Mp3Metadata()..songName = "New title";
-writeMetadata(File("Pieces.mp3"), metadata);
+replaceMetadata(File("Pieces.mp3"), metadata);
 ```
+
+`replaceMetadata` reconstructs the supported metadata from the object you
+provide. It is destructive: tags that are not represented by that object may
+be removed. `writeMetadata` is deprecated and behaves the same way; use
+`updateMetadata` when you need to preserve existing metadata that you are not
+editing.
+
+The replacement is written to a temporary file in the same directory and
+renamed into place only after the writer completes, so a failed write leaves
+the original file untouched. The format-specific writer classes use the same
+atomic write path.
 
 The common setter extension also provides `setTrackTotal` and `setCD`. Some
 formats do not support every field; unsupported setters are intentionally
@@ -169,6 +182,29 @@ void main() {
   print("Duration: ${end.difference(start)}");
 }
 ```
+
+### Compare with FFmpeg/libavformat
+
+The repository includes a standalone benchmark that recursively scans a music
+directory and reads metadata without loading cover images:
+
+```bash
+dart run tool/benchmark_metadata.dart --backend both --runs 3
+```
+
+It defaults to `~/Music`. Use `--music PATH` for another directory and
+`--backend library` to measure only this package. The `ffprobe` comparison uses
+FFmpeg/libavformat through the `ffprobe` executable and requests only
+`format_tags`; its timing includes one process launch per file.
+
+To list the files that fail to parse, run the diagnostic script:
+
+```bash
+dart run tool/find_metadata_errors.dart --music ~/Music
+```
+
+It prints each failing path, the exception message, and an error summary. Add
+`--stack-traces` when investigating a parser failure in detail.
 
 
 ## Anonymize a Music Track

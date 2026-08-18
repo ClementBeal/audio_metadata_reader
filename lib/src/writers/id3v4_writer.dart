@@ -39,9 +39,9 @@ class TagHeader {
 /// Writer for ID3v2.4 tags.
 class Id3v4Writer extends BaseMetadataWriter<Mp3Metadata> {
   @override
-  void write(File file, Mp3Metadata metadata) {
+  void writeContents(File source, File destination, Mp3Metadata metadata) {
     // check if the file has an ID3 metadata
-    final size = file.lengthSync();
+    final size = source.lengthSync();
 
     final builder = BytesBuilder();
 
@@ -53,10 +53,10 @@ class Id3v4Writer extends BaseMetadataWriter<Mp3Metadata> {
     finalBuilder.add(builder.toBytes());
 
     if (size == 0) {
-      file.writeAsBytesSync(finalBuilder.toBytes());
+      destination.writeAsBytesSync(finalBuilder.toBytes());
     } else {
-      final oldData = file.readAsBytesSync();
-      file.writeAsBytesSync([
+      final oldData = source.readAsBytesSync();
+      destination.writeAsBytesSync([
         ...finalBuilder.toBytes(),
         ...oldData,
       ]);

@@ -50,8 +50,8 @@ class ApeWriter extends BaseMetadataWriter<ApeMetadata> {
   static const _apeSignature = 'APETAGEX';
 
   @override
-  void write(File file, ApeMetadata metadata) {
-    final original = file.readAsBytesSync();
+  void writeContents(File source, File destination, ApeMetadata metadata) {
+    final original = source.readAsBytesSync();
     final layout = _splitExistingTag(original);
     final tag = _buildTag(metadata);
 
@@ -63,7 +63,7 @@ class ApeWriter extends BaseMetadataWriter<ApeMetadata> {
       ..add(tag)
       ..add(original.sublist(layout.id3v1Start));
 
-    file.writeAsBytesSync(output.takeBytes());
+    destination.writeAsBytesSync(output.takeBytes());
   }
 
   _ExistingTagLayout _splitExistingTag(Uint8List bytes) {

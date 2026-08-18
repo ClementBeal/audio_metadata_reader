@@ -13,33 +13,38 @@ class Mp4Writer extends BaseMetadataWriter<Mp4Metadata> {
   late Mp4Metadata mp4metadata;
 
   @override
-  void write(File file, Mp4Metadata metadata) {
+  void writeContents(File source, File destination, Mp4Metadata metadata) {
     mp4metadata = metadata;
-    final reader = file.openSync();
+    final reader = source.openSync();
+    late final Uint8List output;
 
-    final lengthFile = reader.lengthSync();
-    final byteBuilder = BytesBuilder();
+    try {
+      final lengthFile = reader.lengthSync();
+      final byteBuilder = BytesBuilder();
 
-    while (reader.positionSync() < lengthFile) {
-      final box = _readBox(reader.readSync(8));
-      final topBoxData = reader.readSync(box.size - 8);
+      while (reader.positionSync() < lengthFile) {
+        final box = _readBox(reader.readSync(8));
+        final topBoxData = reader.readSync(box.size - 8);
 
-      if (box.type != "moov") {
-        byteBuilder.add(intToUint32(topBoxData.length + 8));
-        byteBuilder.add(box.type.codeUnits);
-        byteBuilder.add(topBoxData);
-      } else {
-        final data = _processBox(topBoxData);
+        if (box.type != "moov") {
+          byteBuilder.add(intToUint32(topBoxData.length + 8));
+          byteBuilder.add(box.type.codeUnits);
+          byteBuilder.add(topBoxData);
+        } else {
+          final data = _processBox(topBoxData);
 
-        byteBuilder.add(intToUint32(data.length + 8));
-        byteBuilder.add(box.type.codeUnits);
-        byteBuilder.add(data);
+          byteBuilder.add(intToUint32(data.length + 8));
+          byteBuilder.add(box.type.codeUnits);
+          byteBuilder.add(data);
+        }
       }
+
+      output = byteBuilder.takeBytes();
+    } finally {
+      reader.closeSync();
     }
 
-    reader.closeSync();
-
-    file.writeAsBytesSync(byteBuilder.toBytes());
+    destination.writeAsBytesSync(output);
   }
 
   Uint8List _processBox(Uint8List data) {

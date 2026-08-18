@@ -1,3 +1,8 @@
+/// ID3v1/ID3v2 numeric genre table.
+///
+/// ID3v1 stores one unsigned byte: values 0..191 refer to this table and 255
+/// means that no genre is defined. ID3v2 may represent the same values as
+/// text in a TCON frame.
 Map<String, String> id3Genres = {
   "0": "Blues",
   "1": "Classic Rock",
@@ -192,3 +197,35 @@ Map<String, String> id3Genres = {
   "190": "Garage Rock",
   "191": "Psybient",
 };
+
+/// Convert an ID3 genre name or numeric code to its standard table code.
+///
+/// Matching names is case-insensitive. Numeric strings are accepted for
+/// callers that already have an ID3-oriented value. Returns `null` when the
+/// value is empty, unknown, or outside the standard 0..191 table.
+int? id3GenreCode(String? genre) {
+  if (genre == null) {
+    return null;
+  }
+
+  final requestedGenre = genre.trim();
+  if (requestedGenre.isEmpty) {
+    return null;
+  }
+
+  for (final entry in id3Genres.entries) {
+    if (entry.value.toLowerCase() == requestedGenre.toLowerCase()) {
+      return int.parse(entry.key);
+    }
+  }
+
+  final numericGenre = int.tryParse(requestedGenre);
+  if (numericGenre != null && numericGenre >= 0 && numericGenre <= 191) {
+    return numericGenre;
+  }
+
+  return null;
+}
+
+/// Convert an ID3 genre table code to its canonical name.
+String? id3GenreName(int code) => id3Genres[code.toString()];

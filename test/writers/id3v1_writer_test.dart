@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:audio_metadata_reader/src/constants/id3_genres.dart';
 import 'package:audio_metadata_reader/src/parser.dart';
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/utils/pad_bit.dart';
@@ -24,6 +25,7 @@ void main() {
       ..songName = 'Test Title'
       ..bandOrOrchestra = 'Test Artist'
       ..album = 'Test Album'
+      ..genres = ['Rock']
       ..year = 2023;
 
     ID3v1Writer().write(tempFile, metadata);
@@ -42,7 +44,7 @@ void main() {
     expect(id3v1Bytes.sublist(93, 97),
         equals(metadata.year!.toString().codeUnits));
     expect(id3v1Bytes.sublist(97, 127), equals(List.filled(30, 0)));
-    expect(id3v1Bytes[127], equals(255));
+    expect(id3v1Bytes[127], equals(17)); // ID3v1 code for Rock.
 
     tempFile.deleteSync();
   });
@@ -64,6 +66,23 @@ void main() {
 
     final parsed = readAllMetadata(tempFile) as Mp3Metadata;
     expect(parsed.year, equals(2023));
+    expect(parsed.genres, isEmpty);
+  });
+
+  test('Id3v1Writer writes 255 for an unknown genre', () {
+    final dir = Directory.systemTemp.createTempSync();
+    addTearDown(() => dir.deleteSync(recursive: true));
+
+    final tempFile = File('${dir.path}/test_audio.mp3');
+    tempFile.writeAsBytesSync(mp3FrameHeaderCBR());
+
+    ID3v1Writer().write(
+      tempFile,
+      Mp3Metadata()..genres = ['Not an ID3v1 genre'],
+    );
+
+    final fileBytes = tempFile.readAsBytesSync();
+    expect(fileBytes.last, equals(255));
   });
 
   test('Id3v1Writer replaces an existing trailing tag', () {
@@ -128,5 +147,13 @@ void main() {
 
     final updatedMetadata = readAllMetadata(tempFile) as Mp3Metadata;
     expect(updatedMetadata.leadPerformer, equals('Updated artist'));
+  });
+
+  test('ID3 genre helpers convert names and codes', () {
+    expect(id3GenreCode(' rock '), equals(17));
+    expect(id3GenreCode('17'), equals(17));
+    expect(id3GenreCode('Unknown genre'), isNull);
+    expect(id3GenreName(17), equals('Rock'));
+    expect(id3GenreName(255), isNull);
   });
 }

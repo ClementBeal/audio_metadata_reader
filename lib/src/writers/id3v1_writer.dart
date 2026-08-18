@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
 
+import 'package:audio_metadata_reader/src/constants/id3_genres.dart';
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/writers/base_writer.dart'; // For encoding strings to bytes
 
@@ -15,7 +16,8 @@ import 'package:audio_metadata_reader/src/writers/base_writer.dart'; // For enco
 /// - `title`, `artist`, `album`: fixed-width 30-byte text fields.
 /// - `year`: fixed-width four-byte text field.
 /// - `comment`: fixed-width 30-byte text field.
-/// - `genre`: one byte; this writer uses 255 when no genre is provided.
+/// - `genre`: one byte; values 0..191 index the ID3 genre table and 255 means
+///   that no genre is defined.
 /// Constraints:
 /// - A valid ID3v1 tag is exactly 128 bytes and starts with `TAG`.
 /// - The tag is stored at the end of the file, after the audio bytes.
@@ -28,7 +30,7 @@ class ID3v1Writer extends BaseMetadataWriter<Mp3Metadata> {
     try {
       final sourceLength = sourceReader.lengthSync();
       const existingTagLength = 128;
-      var audioLength = sourceLength;
+      int audioLength = sourceLength;
 
       // ID3v1 is a trailer, so replace an existing final trailer instead of
       // copying it and appending another one. Checking the identifier at the
@@ -51,7 +53,7 @@ class ID3v1Writer extends BaseMetadataWriter<Mp3Metadata> {
       // streaming-friendly for large tracks and leaves the destination ready
       // for the one new 128-byte ID3v1 trailer below.
       sourceReader.setPositionSync(0);
-      var remaining = audioLength;
+      int remaining = audioLength;
       const chunkSize = 64 * 1024;
       while (remaining > 0) {
         final bytesToRead = remaining < chunkSize ? remaining : chunkSize;
@@ -94,8 +96,10 @@ class ID3v1Writer extends BaseMetadataWriter<Mp3Metadata> {
       writeFixedString(
           "", 30); // You can replace this with a comment if you have one
 
-      // Write genre byte (default to 255 if not provided).
-      destinationWriter.writeByteSync(255);
+      // Write the one representable genre byte. 255 is the ID3v1 undefined
+      // value and is used when the metadata has no recognized genre.
+      final genre = metadata.genres.isEmpty ? null : metadata.genres.first;
+      destinationWriter.writeByteSync(id3GenreCode(genre) ?? 255);
     } finally {
       sourceReader.closeSync();
       destinationWriter.closeSync();

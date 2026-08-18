@@ -99,4 +99,24 @@ void main() {
     expect(
         (readAllMetadata(file) as ApeMetadata).title, equals('Legacy title'));
   });
+
+  test('replaceMetadata leaves the original file when writing fails', () {
+    final directory = Directory.systemTemp.createTempSync();
+    addTearDown(() => directory.deleteSync(recursive: true));
+    final file = File('${directory.path}/track.mp3')
+      ..writeAsBytesSync(File('test/ape/base_no_tag.mp3').readAsBytesSync());
+
+    ApeWriter().write(file, ApeMetadata()..title = 'Before failed rewrite');
+    final originalBytes = file.readAsBytesSync();
+    final directoryEntries =
+        directory.listSync().map((entry) => entry.path).toSet();
+    final invalidMetadata = ApeMetadata()
+      ..unknowns['X'] = 'This key cannot be encoded';
+
+    expect(() => replaceMetadata(file, invalidMetadata), throwsArgumentError);
+
+    expect(file.readAsBytesSync(), equals(originalBytes));
+    expect(directory.listSync().map((entry) => entry.path).toSet(),
+        equals(directoryEntries));
+  });
 }

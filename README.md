@@ -138,6 +138,10 @@ be removed. `writeMetadata` is deprecated and behaves the same way; use
 `updateMetadata` when you need to preserve existing metadata that you are not
 editing.
 
+The replacement is written to a temporary file in the same directory and
+renamed into place only after the writer completes, so a failed write leaves
+the original file untouched.
+
 The common setter extension also provides `setTrackTotal` and `setCD`. Some
 formats do not support every field; unsupported setters are intentionally
 ignored for those formats.

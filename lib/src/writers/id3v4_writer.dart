@@ -6,6 +6,40 @@ import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/parsers/tags/tag_parser.dart';
 import 'package:audio_metadata_reader/src/writers/base_writer.dart';
 
+/// Protocol section: ID3v2.4 tag written by [Id3v4Writer].
+///
+/// Bytes: tag header 0..9
+/// Layout:
+/// ```text
+/// 4944 33VV RRFF SSSS SSSS
+/// ```
+/// Meaning:
+/// - `49 44 33`: the ASCII `ID3` marker.
+/// - `VV`, `RR`: major version and revision (`04 00` here).
+/// - `FF`: flags; this writer emits zero flags, so no footer is written.
+/// - `SS SS SS SS`: 28-bit sync-safe payload size, big-endian. Each byte uses
+///   only its low seven bits; the value excludes this ten-byte header.
+///
+/// Frame anatomy:
+/// ```text
+/// IIII SSSS SSSS FFPP DDDD ...
+/// ```
+/// Meaning:
+/// - `IIII`: four-byte frame identifier such as `TIT2` or `TCON`.
+/// - `SSSS`: four-byte sync-safe frame payload size.
+/// - `FF`: two zero flag bytes.
+/// - `PP`: one-byte UTF-8 encoding marker (`03`) followed by the frame value
+///   or picture payload `DDDD ...`.
+///
+/// Replacement policy: when updating a file, every complete, valid ID3v2 tag
+/// at offset zero is discarded before the new tag is written. This keeps the
+/// MPEG audio bytes intact and repairs files created by older versions that
+/// already contain a stack of leading ID3v2 tags.
+///
+/// Constraints:
+/// - sync-safe size bytes must have their high bit cleared;
+/// - an incomplete or malformed leading tag is preserved rather than guessed;
+/// - this writer always emits ID3v2.4 without an extended header or footer.
 /// Parsed ID3 tag header details used while writing updates.
 class TagHeader {
   /// Major ID3 version (for example `4` for ID3v2.4).
@@ -40,9 +74,6 @@ class TagHeader {
 class Id3v4Writer extends BaseMetadataWriter<Mp3Metadata> {
   @override
   void writeContents(File source, File destination, Mp3Metadata metadata) {
-    // check if the file has an ID3 metadata
-    final size = source.lengthSync();
-
     final builder = BytesBuilder();
 
     _writeFrames(builder, metadata);
@@ -51,16 +82,77 @@ class Id3v4Writer extends BaseMetadataWriter<Mp3Metadata> {
 
     _writeHeader(finalBuilder, builder.length);
     finalBuilder.add(builder.toBytes());
+    final Uint8List newTag = finalBuilder.toBytes();
 
-    if (size == 0) {
-      destination.writeAsBytesSync(finalBuilder.toBytes());
-    } else {
-      final oldData = source.readAsBytesSync();
-      destination.writeAsBytesSync([
-        ...finalBuilder.toBytes(),
-        ...oldData,
-      ]);
+    final oldData = source.readAsBytesSync();
+    final audioData = _removeLeadingId3v2Tags(oldData);
+
+    // The source is read completely before the destination is written. The
+    // base writer later replaces the original file atomically, so this keeps
+    // the audio stream safe even when the metadata tag changes size.
+    destination.writeAsBytesSync([
+      ...newTag,
+      ...audioData,
+    ]);
+  }
+
+  /// Removes complete ID3v2 tags that occupy the beginning of [data].
+  ///
+  /// A previous update could have produced `ID3(new) + ID3(old) + audio`.
+  /// Walking the sync-safe sizes, instead of searching for the next `ID3`
+  /// marker, prevents bytes inside a text or picture frame from being treated
+  /// as another tag. If a tag is incomplete or malformed, the original data
+  /// is returned from the first untrusted offset so no audio bytes are lost.
+  Uint8List _removeLeadingId3v2Tags(Uint8List data) {
+    const int id3v2HeaderSize = 10;
+    const int id3v2FooterSize = 10;
+    int offset = 0;
+
+    while (data.length - offset >= id3v2HeaderSize &&
+        _hasId3v2Marker(data, offset)) {
+      final bool hasValidSyncSafeSize = _hasValidSyncSafeSize(data, offset);
+      if (!hasValidSyncSafeSize) {
+        break;
+      }
+
+      final int payloadSize = _readSyncSafeInteger(data, offset);
+      final bool hasFooter =
+          data[offset + 3] == 4 && (data[offset + 5] & 0x10) != 0;
+      final int totalTagSize =
+          id3v2HeaderSize + payloadSize + (hasFooter ? id3v2FooterSize : 0);
+
+      if (totalTagSize > data.length - offset) {
+        break;
+      }
+
+      offset += totalTagSize;
     }
+
+    if (offset == 0) {
+      return data;
+    }
+
+    return Uint8List.sublistView(data, offset);
+  }
+
+  bool _hasId3v2Marker(Uint8List data, int offset) {
+    return data[offset] == 0x49 &&
+        data[offset + 1] == 0x44 &&
+        data[offset + 2] == 0x33;
+  }
+
+  bool _hasValidSyncSafeSize(Uint8List data, int offset) {
+    return data[offset + 6] & 0x80 == 0 &&
+        data[offset + 7] & 0x80 == 0 &&
+        data[offset + 8] & 0x80 == 0 &&
+        data[offset + 9] & 0x80 == 0;
+  }
+
+  int _readSyncSafeInteger(Uint8List data, int headerOffset) {
+    return (data[headerOffset + 9] & 0x7F) |
+        ((data[headerOffset + 8] & 0x7F) << 7) |
+        ((data[headerOffset + 7] & 0x7F) << 14) |
+        ((data[headerOffset + 6] & 0x7F) << 21);
   }
 
   void _writeFrames(BytesBuilder builder, Mp3Metadata metadata) {

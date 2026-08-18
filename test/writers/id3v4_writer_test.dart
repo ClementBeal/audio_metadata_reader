@@ -168,6 +168,44 @@ void main() {
       );
 
       test(
+        "Repeated metadata updates replace the leading ID3v2 tag",
+        () {
+          final writer = Id3v4Writer();
+          final audioData =
+              File("./test/mp3/no_metadata.mp3").readAsBytesSync();
+          final file = createTemporaryFile(
+            "repeated-id3v2-updates.mp3",
+            Uint8List.fromList(audioData),
+          );
+
+          writer.write(
+            file,
+            Mp3Metadata()..genres = ["Rock"],
+          );
+          final int expectedSize = file.lengthSync();
+
+          for (final String genre in ["Jazz", "Pop!", "Blue"]) {
+            writer.write(file, Mp3Metadata()..genres = [genre]);
+
+            // All replacement values have the same byte length. A stacked
+            // implementation would grow the file after every iteration.
+            expect(file.lengthSync(), equals(expectedSize));
+          }
+
+          final Uint8List finalData = file.readAsBytesSync();
+          final int leadingTagSize = _leadingId3v2Size(finalData);
+
+          expect(_countLeadingId3v2Tags(finalData), equals(1));
+          expect(finalData.length, equals(leadingTagSize + audioData.length));
+          expect(
+            finalData.sublist(leadingTagSize),
+            equals(audioData),
+          );
+          expect(parseId3v2Metadata(file).genres, equals(["Blue"]));
+        },
+      );
+
+      test(
         "Write a picture",
         () {
           final writer = Id3v4Writer();
@@ -194,4 +232,43 @@ void main() {
       );
     },
   );
+}
+
+int _countLeadingId3v2Tags(Uint8List data) {
+  const int headerSize = 10;
+  int offset = 0;
+  int count = 0;
+
+  while (data.length - offset >= headerSize &&
+      data[offset] == 0x49 &&
+      data[offset + 1] == 0x44 &&
+      data[offset + 2] == 0x33) {
+    final int payloadSize = _readSyncSafeInteger(data, offset);
+    final bool hasFooter =
+        data[offset + 3] == 4 && (data[offset + 5] & 0x10) != 0;
+    final int totalTagSize = headerSize + payloadSize + (hasFooter ? 10 : 0);
+
+    if (totalTagSize > data.length - offset) {
+      break;
+    }
+
+    offset += totalTagSize;
+    count++;
+  }
+
+  return count;
+}
+
+int _leadingId3v2Size(Uint8List data) {
+  const int headerSize = 10;
+  final int payloadSize = _readSyncSafeInteger(data, 0);
+  final bool hasFooter = data[3] == 4 && (data[5] & 0x10) != 0;
+  return headerSize + payloadSize + (hasFooter ? 10 : 0);
+}
+
+int _readSyncSafeInteger(Uint8List data, int headerOffset) {
+  return (data[headerOffset + 9] & 0x7F) |
+      ((data[headerOffset + 8] & 0x7F) << 7) |
+      ((data[headerOffset + 7] & 0x7F) << 14) |
+      ((data[headerOffset + 6] & 0x7F) << 21);
 }

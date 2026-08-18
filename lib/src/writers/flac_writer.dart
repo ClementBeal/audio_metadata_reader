@@ -10,9 +10,14 @@ typedef _Block = ({int type, Uint8List data});
 
 /// Writer for FLAC metadata blocks (Vorbis comments and pictures).
 class FlacWriter extends BaseMetadataWriter<VorbisMetadata> {
+  /// Rebuilds FLAC metadata from [source] into [destination].
+  ///
+  /// The base writer owns the temporary file and calls this method with a
+  /// read-only source, so this method only serializes the FLAC replacement.
   @override
-  void write(File file, VorbisMetadata metadata) {
-    final reader = file.openSync();
+  void writeContents(File source, File destination, VorbisMetadata metadata) {
+    final reader = source.openSync();
+    late final Uint8List output;
 
     try {
       reader.setPositionSync(0);
@@ -66,10 +71,12 @@ class FlacWriter extends BaseMetadataWriter<VorbisMetadata> {
       reader.setPositionSync(audioStart);
       builder.add(reader.readSync(reader.lengthSync() - audioStart));
 
-      file.writeAsBytesSync(builder.toBytes());
+      output = builder.takeBytes();
     } finally {
       reader.closeSync();
     }
+
+    destination.writeAsBytesSync(output);
   }
 
   void _writeBlockHeader(

@@ -140,7 +140,8 @@ editing.
 
 The replacement is written to a temporary file in the same directory and
 renamed into place only after the writer completes, so a failed write leaves
-the original file untouched.
+the original file untouched. The format-specific writer classes use the same
+atomic write path.
 
 The common setter extension also provides `setTrackTotal` and `setCD`. Some
 formats do not support every field; unsupported setters are intentionally

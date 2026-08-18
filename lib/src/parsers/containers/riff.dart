@@ -81,7 +81,15 @@ class RiffParser extends TagParser<RiffMetadata> {
         _parseId3Chunk(chunkDataOffset, chunkSize);
         buffer.setPositionSync(chunkDataOffset + chunkSize);
       } else {
-        buffer.skip(chunkSize);
+        // RIFF permits application-specific chunks such as `bext`, `cue `,
+        // `JUNK`, and vendor-defined identifiers. Keep their payload instead
+        // of discarding it so callers can inspect or preserve it later.
+        metadata.unknownChunks.add(
+          RiffUnknownChunk(
+            id: chunkId,
+            data: buffer.read(chunkSize),
+          ),
+        );
       }
 
       // RIFF chunks are word-aligned: odd sizes are followed by 1 pad byte.
@@ -120,8 +128,15 @@ class RiffParser extends TagParser<RiffMetadata> {
     if (listType == 'INFO') {
       _parseInfoChunk(buffer.read(payloadSize));
     } else {
-      // LIST can host non-INFO data. We intentionally ignore it.
-      buffer.skip(payloadSize);
+      // LIST can host application-specific payloads as well. Keep the list
+      // type together with its payload because it is part of the chunk data.
+      final payload = buffer.read(payloadSize);
+      metadata.unknownChunks.add(
+        RiffUnknownChunk(
+          id: 'LIST',
+          data: Uint8List.fromList(<int>[...listType.codeUnits, ...payload]),
+        ),
+      );
     }
   }
 
@@ -181,6 +196,9 @@ class RiffParser extends TagParser<RiffMetadata> {
           metadata.copyright = subChunkData;
           break;
         default:
+          // INFO is an extensible namespace. Preserve vendor-specific text
+          // fields instead of treating them as malformed or losing them.
+          metadata.unknowns[subChunkId] = subChunkData;
           break;
       }
     }

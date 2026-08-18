@@ -1,3 +1,36 @@
+// Protocol section: ID3v2 tag and frame headers
+//
+// Tag header (10 bytes):
+//   49 44 33 VV RR FF SS SS SS SS
+// Meaning:
+// - `49 44 33`: ASCII `ID3` marker.
+// - `VV`: major version. Version 2.3 uses big-endian frame sizes; version 2.4
+//   uses 28-bit sync-safe frame sizes.
+// - `RR`: revision number.
+// - `FF`: tag flags. The parser currently consumes the extended header when
+//   the extended-header flag is set and otherwise treats unsupported flags as
+//   non-fatal.
+// - `SS`: tag payload size, four 7-bit bytes in big-endian sync-safe order;
+//   the header itself is not included.
+//
+// Frame header (10 bytes):
+//   II II II II LL LL LL LL FF FF
+// Meaning:
+// - `II`: four-character frame identifier.
+// - `LL`: frame payload size. It is big-endian for ID3v2.3 and sync-safe for
+//   ID3v2.4; the 10-byte frame header is not included.
+// - `FF`: two frame flags, preserved while identifying the frame but not
+//   interpreted by this parser.
+//
+// Constraints and recovery:
+// - A frame with an all-zero header terminates the frame list (padding).
+// - Known frames are decoded according to their ID3 payload format.
+// - Unknown frames are consumed completely and retained in `customMetadata`:
+//   unknown text frames are decoded using their encoding byte, while other
+//   payloads use a one-byte Latin-1 mapping so their bytes are not discarded.
+// - Malformed or truncated data is handled by the existing buffer/parser
+//   error path; the parser never leaves the cursor inside a frame payload.
+
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -173,7 +206,7 @@ class ID3v2Parser extends TagParser<Mp3Metadata> {
       return metadata;
     }
 
-    var sizeBytes = headerBytes.sublist(6);
+    final Uint8List sizeBytes = headerBytes.sublist(6);
 
     // size of the ID3 tag minus id3 header size
     int size = (sizeBytes[3] & 0x7F) |
@@ -211,7 +244,31 @@ class ID3v2Parser extends TagParser<Mp3Metadata> {
 
   /// Process a frame.
   ///
-  /// If the frame ID is not defined in the id3vX specs, then its content is dropped.
+  /// Unknown frames are retained because ID3 allows application-specific and
+  /// newer frame identifiers that this parser does not know yet.
+  ///
+  /// Text information frames carry an encoding byte as their first payload
+  /// byte. Other frame families (for example `PRIV` and `WXXX`) do not, so
+  /// treating every unknown frame as an encoded text frame would corrupt their
+  /// value or throw while parsing. Latin-1 maps each byte to one Dart code unit
+  /// and therefore gives callers a lossless string representation for those
+  /// non-text payloads within the existing `Map<String, String>` API.
+  String _getUnknownFrameValue(String frameId, Uint8List content) {
+    if (content.isEmpty) {
+      return "";
+    }
+
+    if (frameId.startsWith("T") && content.first <= 3) {
+      return getTextFromFrame(content);
+    }
+
+    return latin1Decoder.convert(content);
+  }
+
+  /// Decode an unknown ID3 frame payload.
+  ///
+  /// If the frame ID is not defined in the ID3 specification, its complete
+  /// payload is preserved in `customMetadata` under the frame ID.
   void processFrame(String frameId, int size) {
     // why do we duplicate the content in every block?
     // it's because the biggest thing to get in the cover
@@ -443,7 +500,9 @@ class ID3v2Parser extends TagParser<Mp3Metadata> {
           metadata.encoderSoftware = getTextFromFrame(content);
         },
       _ => () {
-          buffer.skip(size);
+          final Uint8List content = buffer.read(size);
+          metadata.customMetadata[frameId] =
+              _getUnknownFrameValue(frameId, content);
         }
     };
 

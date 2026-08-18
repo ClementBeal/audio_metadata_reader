@@ -42,4 +42,5 @@ export 'src/metadata/base.dart'
         RiffMetadata,
         ApeMetadata,
         VorbisMetadata,
+        RiffUnknownChunk,
         CommonMetadataSetters;

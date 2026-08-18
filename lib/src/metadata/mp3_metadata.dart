@@ -45,7 +45,8 @@ class Mp3Metadata extends ParserTag {
   String? uniqueFileIdentifer; // UFID
   String? termsOfUSe; // USER
   String? lyric; // USLT
-  Map<String, String> customMetadata = {}; // TXXX
+  // TXXX descriptions and unsupported ID3 frame identifiers.
+  Map<String, String> customMetadata = {};
   List<Picture> pictures = []; // APIC
   AudioEncryption? audioEncryption; // AENC
   List<Comment> comments = []; // COMM

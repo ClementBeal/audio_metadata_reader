@@ -104,6 +104,18 @@ void main() {
     expect(result.duration, isNotNull);
   });
 
+  test("Preserves an unsupported ID3 text frame", () {
+    // FFmpeg generates this fixture with an ID3v2.4 `TSST` frame. `TSST` is a
+    // valid text frame, but this parser does not expose a dedicated field for
+    // it, so its value must remain available through customMetadata.
+    final File track = File('./test/mp3/unknown_id3_frame.mp3');
+    final Mp3Metadata result =
+        readAllMetadata(track, getImage: false) as Mp3Metadata;
+
+    expect(result.customMetadata['TSST'], equals('Custom subtitle'));
+    expect(result.songName, equals('Unknown ID3 frame'));
+  });
+
   test("Reads audio after consecutive ID3v2 tags", () {
     // The second tag starts with bytes that resemble a valid MPEG header. The
     // observable result must still describe the real MPEG stream after both

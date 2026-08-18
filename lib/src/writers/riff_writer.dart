@@ -96,6 +96,27 @@ class RiffWriter extends BaseMetadataWriter<RiffMetadata> {
             infoBuilder.add(_writeChunk("ICOP", metadata.copyright!));
           }
 
+          // INFO is extensible. Re-emit fields that the parser did not map to
+          // the common model, while avoiding collisions with fields written
+          // above. The parser only accepts four-character INFO identifiers,
+          // so these keys are valid RIFF subchunk identifiers here.
+          const knownInfoIds = <String>{
+            'INAM',
+            'IART',
+            'IPRD',
+            'ICRD',
+            'ICMT',
+            'ITRK',
+            'ISFT',
+            'IGNR',
+            'ICOP',
+          };
+          for (final entry in metadata.unknowns.entries) {
+            if (!knownInfoIds.contains(entry.key)) {
+              infoBuilder.add(_writeChunk(entry.key, entry.value));
+            }
+          }
+
           final infoData = infoBuilder.toBytes();
           // 4 bytes for "INFO" + INFO subchunks
           final newChunkSize = 4 + infoData.length;

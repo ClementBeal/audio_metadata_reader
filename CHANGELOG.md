@@ -20,6 +20,21 @@
 * always close the reader even if there's an error ([9367009](https://github.com/ClementBeal/audio_metadata_reader/commit/9367009578a10be2d2f26a2c9eabdd8b2ec68668))
 * add linter rules ([9f39e1d](https://github.com/ClementBeal/audio_metadata_reader/commit/9f39e1d77e5683424bf40f6e5521c871ee2e603d))
 
+## [1.8.0](https://github.com/ClementBeal/audio_metadata_reader/compare/v1.7.1...v1.8.0) (2026-08-18)
+
+
+### Features
+
+* make writer safer ([#114](https://github.com/ClementBeal/audio_metadata_reader/issues/114)) ([014fad3](https://github.com/ClementBeal/audio_metadata_reader/commit/014fad3c788759b0e9e12d823e208392f22f9248))
+
+
+### Bug Fixes
+
+* **flac:** write a valid last metadata block header ([#113](https://github.com/ClementBeal/audio_metadata_reader/issues/113)) ([3d46d68](https://github.com/ClementBeal/audio_metadata_reader/commit/3d46d6840283211d069417fca3c214b54fd498bc))
+* parse UTF-16 APIC descriptions ([f176a31](https://github.com/ClementBeal/audio_metadata_reader/commit/f176a31d1f4f9a19dc34a4ce01b51cdc30bff57c))
+* replace leading ID3v2 tags when writing ([adbdc77](https://github.com/ClementBeal/audio_metadata_reader/commit/adbdc778f09ec6e5e3aa4639d2f3c2a6b0ed2004))
+* tolerate malformed ID3 track numbers ([28b0055](https://github.com/ClementBeal/audio_metadata_reader/commit/28b00551b91c0adc8a482e7aec0f0a01bb6e921d))
+
 ## [1.7.1](https://github.com/ClementBeal/audio_metadata_reader/compare/v1.7.0...v1.7.1) (2026-07-30)
 
 

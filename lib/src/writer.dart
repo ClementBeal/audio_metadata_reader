@@ -13,13 +13,19 @@ void updateMetadata(File track, void Function(ParserTag metadata) updater) {
 
   updater(metadata);
 
-  writeMetadata(track, metadata);
+  replaceMetadata(track, metadata);
 }
 
-/// Write [metadata] back into [track] using the matching container writer.
+/// Replaces the metadata in [track] with [metadata] using the matching
+/// container writer.
+///
+/// This reconstructs the supported metadata blocks from [metadata]. Tags that
+/// are not represented by the metadata object can therefore be discarded.
+/// Use [updateMetadata] when existing metadata that is not being edited must
+/// be preserved.
 ///
 /// The runtime type of [metadata] must match the detected writer.
-void writeMetadata(File track, ParserTag metadata) {
+void replaceMetadata(File track, ParserTag metadata) {
   final reader = track.openSync();
 
   try {
@@ -42,4 +48,19 @@ void writeMetadata(File track, ParserTag metadata) {
     // Always close the file handle opened by this function.
     reader.closeSync();
   }
+}
+
+/// Writes metadata using the matching container writer.
+///
+/// Deprecated because the name does not make the destructive replacement
+/// behavior explicit. This function has the same behavior as
+/// [replaceMetadata], including the possibility of discarding tags that are
+/// not represented by [metadata]. Use [updateMetadata] when those existing
+/// tags must be preserved.
+@Deprecated(
+  'Use replaceMetadata for a full metadata replacement. '
+  'Use updateMetadata to preserve existing metadata fields.',
+)
+void writeMetadata(File track, ParserTag metadata) {
+  replaceMetadata(track, metadata);
 }

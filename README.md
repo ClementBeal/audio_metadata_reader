@@ -119,8 +119,9 @@ void main() {
 ```
 
 `updateMetadata` reads the existing format-specific metadata, applies the
-callback, then writes it back to the same file. For an already constructed
-metadata object, use `writeMetadata` directly:
+callback, then writes it back to the same file while retaining metadata that
+the callback does not change. For an already constructed metadata object, use
+`replaceMetadata` directly:
 
 ```dart
 import 'dart:io';
@@ -128,8 +129,14 @@ import 'dart:io';
 import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 
 final metadata = Mp3Metadata()..songName = "New title";
-writeMetadata(File("Pieces.mp3"), metadata);
+replaceMetadata(File("Pieces.mp3"), metadata);
 ```
+
+`replaceMetadata` reconstructs the supported metadata from the object you
+provide. It is destructive: tags that are not represented by that object may
+be removed. `writeMetadata` is deprecated and behaves the same way; use
+`updateMetadata` when you need to preserve existing metadata that you are not
+editing.
 
 The common setter extension also provides `setTrackTotal` and `setCD`. Some
 formats do not support every field; unsupported setters are intentionally

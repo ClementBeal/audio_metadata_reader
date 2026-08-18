@@ -64,4 +64,42 @@ void main() {
     final parsed = readAllMetadata(tempFile) as Mp3Metadata;
     expect(parsed.year, equals(2023));
   });
+
+  test('Id3v1Writer replaces an existing trailing tag', () {
+    final dir = Directory.systemTemp.createTempSync();
+    addTearDown(() => dir.deleteSync(recursive: true));
+
+    final tempFile = File('${dir.path}/test_audio.mp3');
+    final originalAudio =
+        File('test/mp3/generated_under_one_second.mp3').readAsBytesSync();
+    tempFile.writeAsBytesSync(originalAudio);
+
+    ID3v1Writer().write(
+      tempFile,
+      Mp3Metadata()
+        ..songName = 'First title'
+        ..bandOrOrchestra = 'First artist'
+        ..album = 'First album'
+        ..year = 2023,
+    );
+    final lengthAfterFirstWrite = tempFile.lengthSync();
+
+    ID3v1Writer().write(
+      tempFile,
+      Mp3Metadata()
+        ..songName = 'Second title'
+        ..bandOrOrchestra = 'Second artist'
+        ..album = 'Second album'
+        ..year = 2024,
+    );
+
+    final finalBytes = tempFile.readAsBytesSync();
+    expect(finalBytes.length, equals(lengthAfterFirstWrite));
+    expect(finalBytes.length, equals(originalAudio.length + 128));
+    expect(finalBytes.sublist(0, originalAudio.length), equals(originalAudio));
+    expect(
+      finalBytes.sublist(finalBytes.length - 125, finalBytes.length - 95),
+      equals('Second title'.codeUnits.padBitRight(30, 0)),
+    );
+  });
 }

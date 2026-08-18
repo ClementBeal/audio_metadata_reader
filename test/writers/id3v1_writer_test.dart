@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:audio_metadata_reader/src/parser.dart';
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/utils/pad_bit.dart';
+import 'package:audio_metadata_reader/src/writer.dart';
 import 'package:audio_metadata_reader/src/writers/id3v1_writer.dart';
 import 'package:test/test.dart';
 
@@ -101,5 +102,31 @@ void main() {
       finalBytes.sublist(finalBytes.length - 125, finalBytes.length - 95),
       equals('Second title'.codeUnits.padBitRight(30, 0)),
     );
+  });
+
+  test('setArtist writes the ID3v1 artist field', () {
+    final dir = Directory.systemTemp.createTempSync();
+    addTearDown(() => dir.deleteSync(recursive: true));
+
+    final tempFile = File('${dir.path}/test_audio.mp3');
+    tempFile.writeAsBytesSync(
+      File('test/mp3/generated_under_one_second.mp3').readAsBytesSync(),
+    );
+
+    ID3v1Writer().write(
+      tempFile,
+      Mp3Metadata()
+        ..songName = 'Original title'
+        ..leadPerformer = 'Original artist'
+        ..album = 'Original album'
+        ..year = 2023,
+    );
+
+    updateMetadata(tempFile, (metadata) {
+      metadata.setArtist('Updated artist');
+    });
+
+    final updatedMetadata = readAllMetadata(tempFile) as Mp3Metadata;
+    expect(updatedMetadata.leadPerformer, equals('Updated artist'));
   });
 }

@@ -76,7 +76,12 @@ class ID3v1Writer extends BaseMetadataWriter<Mp3Metadata> {
 
       // Write title, artist, album (fixed-length 30).
       writeFixedString(metadata.songName ?? "", 30);
-      writeFixedString(metadata.bandOrOrchestra ?? "", 30);
+      // ID3v1 has one artist slot. It corresponds to the lead performer
+      // (`TPE1`), which is also the field written by the common `setArtist`
+      // setter. Keep the band/orchestra fallback for callers that construct
+      // Mp3Metadata directly using the older field.
+      writeFixedString(
+          metadata.leadPerformer ?? metadata.bandOrOrchestra ?? "", 30);
       writeFixedString(metadata.album ?? "", 30);
 
       // Write year (fixed-length 4).

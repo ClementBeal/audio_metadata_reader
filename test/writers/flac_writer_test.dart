@@ -82,4 +82,23 @@ void main() {
       });
     });
   }
+
+  test('writes and reads back the album artist Vorbis comment', () {
+    final directory = Directory.systemTemp.createTempSync();
+    addTearDown(() => directory.deleteSync(recursive: true));
+    final target = File('${directory.path}/track.flac')
+      ..writeAsBytesSync(File('test/flac/album_artist.flac').readAsBytesSync());
+
+    updateMetadata(target, (metadata) {
+      final vorbisMetadata = metadata as VorbisMetadata;
+      vorbisMetadata.albumArtist
+        ..clear()
+        ..add('Updated album artist');
+    });
+
+    final result = readMetadata(target, getImage: false);
+
+    expect(result.artist, equals('Track artist'));
+    expect(result.albumArtist, equals('Updated album artist'));
+  });
 }

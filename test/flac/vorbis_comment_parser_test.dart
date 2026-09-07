@@ -21,6 +21,28 @@ void main() {
     expect(metadata.unknowns.containsKey('LANG'), isFalse);
   });
 
+  test('keeps ARTIST and ALBUMARTIST in separate fields', () {
+    final metadata = VorbisMetadata();
+
+    parseVorbisComment('ARTIST=Track artist'.codeUnits, metadata,
+        fetchImage: false);
+    parseVorbisComment('ALBUMARTIST=Album artist'.codeUnits, metadata,
+        fetchImage: false);
+
+    expect(metadata.artist, equals(['Track artist']));
+    expect(metadata.albumArtist, equals(['Album artist']));
+  });
+
+  test('accepts the ALBUM_ARTIST spelling used by some taggers', () {
+    final metadata = VorbisMetadata();
+
+    parseVorbisComment('ALBUM_ARTIST=Album artist'.codeUnits, metadata,
+        fetchImage: false);
+
+    expect(metadata.albumArtist, equals(['Album artist']));
+    expect(metadata.unknowns.containsKey('ALBUM_ARTIST'), isFalse);
+  });
+
   test('LENGTH does not overwrite duration from STREAMINFO', () {
     final metadata = VorbisMetadata()..duration = const Duration(seconds: 236);
 

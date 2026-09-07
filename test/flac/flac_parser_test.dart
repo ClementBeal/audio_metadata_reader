@@ -23,6 +23,19 @@ void main() {
     expect(result.genres.first, equals("Rock"));
     expect(result.language, isNull);
   });
+
+  test('keeps track artist and album artist separate', () {
+    final track = File('./test/flac/album_artist.flac');
+
+    final result = readMetadata(track, getImage: false);
+    final detailed = readAllMetadata(track, getImage: false) as VorbisMetadata;
+
+    expect(result.artist, equals('Track artist'));
+    expect(result.albumArtist, equals('Album artist'));
+    expect(detailed.artist, equals(['Track artist']));
+    expect(detailed.albumArtist, equals(['Album artist']));
+  });
+
   test("Parse FLAC file that contains a cover", () {
     final track = File('./test/flac/no_picture.flac');
     final result = readMetadata(track, getImage: true);

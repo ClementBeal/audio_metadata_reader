@@ -26,6 +26,7 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
       final newMetadata = AudioMetadata(
         file: track,
         album: apeMetadata.album,
+        albumArtist: apeMetadata.albumArtist,
         artist: apeMetadata.artist,
         bitrate: apeMetadata.bitrate,
         discNumber: apeMetadata.discNumber,
@@ -84,6 +85,7 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
       final newMetadata = AudioMetadata(
         file: track,
         album: vorbisMetadata.album.firstOrNull,
+        albumArtist: vorbisMetadata.albumArtist.firstOrNull,
         artist: vorbisMetadata.artist.firstOrNull,
         bitrate: vorbisMetadata.bitrate,
         discNumber: vorbisMetadata.discNumber,
@@ -109,6 +111,7 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
       final newMetadata = AudioMetadata(
         file: track,
         album: vorbisMetadata.album.firstOrNull,
+        albumArtist: vorbisMetadata.albumArtist.firstOrNull,
         artist: vorbisMetadata.artist.firstOrNull,
         bitrate: vorbisMetadata.bitrate,
         discNumber: vorbisMetadata.discNumber,
@@ -164,6 +167,7 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
       final newMetadata = AudioMetadata(
         file: track,
         album: oggMetadata.album.firstOrNull,
+        albumArtist: oggMetadata.albumArtist.firstOrNull,
         artist: oggMetadata.artist.firstOrNull,
         bitrate: oggMetadata.bitrate,
         discNumber: oggMetadata.discNumber,

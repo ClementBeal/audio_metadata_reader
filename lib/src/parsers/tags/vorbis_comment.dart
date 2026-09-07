@@ -70,8 +70,13 @@ void parseVorbisComment(
         metadata.trackNumber.add(int.parse(value));
       }
       break;
-    case 'ARTIST' || "ALBUMARTIST":
+    case 'ARTIST':
       metadata.artist.add(value);
+      break;
+    case 'ALBUMARTIST' || 'ALBUM_ARTIST':
+      // ALBUMARTIST is a common Vorbis comment convention. Some taggers,
+      // including FFmpeg, use the equivalent ALBUM_ARTIST spelling.
+      metadata.albumArtist.add(value);
       break;
     case 'PERFORMER':
       metadata.performer.add(value);

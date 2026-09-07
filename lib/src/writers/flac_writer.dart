@@ -130,6 +130,7 @@ class FlacWriter extends BaseMetadataWriter<VorbisMetadata> {
     writeComment(
         "TRACKNUMBER", metadata.trackNumber.map((e) => e.toString()).toList());
     writeComment("ARTIST", metadata.artist);
+    writeComment("ALBUMARTIST", metadata.albumArtist);
     writeComment("PERFORMER", metadata.performer);
     writeComment("COPYRIGHT", metadata.copyright);
     writeComment("LICENSE", metadata.license);

@@ -36,6 +36,12 @@ class AudioMetadata {
   /// The name of the album
   String? album;
 
+  /// The main artist credited for the whole album.
+  ///
+  /// This is distinct from [artist], which identifies the artist credited on
+  /// the individual track. It is useful for compilations and guest features.
+  String? albumArtist;
+
   /// The year of when the album/track has been released
   DateTime? year;
 
@@ -92,6 +98,7 @@ class AudioMetadata {
 
   AudioMetadata({
     this.album,
+    this.albumArtist,
     this.year,
     this.language,
     this.artist,
@@ -115,6 +122,7 @@ class AudioMetadata {
   String toString() {
     return 'AudioMetadata(\n'
         '  album: $album,\n'
+        '  albumArtist: $albumArtist,\n'
         '  year: $year,\n'
         '  language: $language,\n'
         '  artist: $artist,\n'

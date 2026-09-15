@@ -490,7 +490,12 @@ class Mp4Writer extends BaseMetadataWriter<Mp4Metadata> {
       throw const FormatException("Malformed MP4 box header");
     }
 
-    return BoxHeader(boxSize, String.fromCharCodes(boxNameBytes));
+    return BoxHeader(
+      start: 0,
+      size: boxSize,
+      headerSize: 8,
+      type: String.fromCharCodes(boxNameBytes),
+    );
   }
 }
 

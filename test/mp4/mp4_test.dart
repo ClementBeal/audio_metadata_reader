@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/parser.dart';
+import 'package:audio_metadata_reader/src/utils/metadata_parser_exception.dart';
 import 'package:test/test.dart';
 
 import '../test_helpers.dart';
@@ -106,6 +107,94 @@ void main() {
 
     expect(() => readMetadata(file, getImage: false), returnsNormally);
   });
+
+  test(
+    "Parse an FFmpeg-generated MP4 with a final zero-sized free box",
+    () {
+      // `track.m4a` is the checked-in audio fixture generated with ffmpeg.
+      // ISO-BMFF defines a zero box size as extending to the end of its scope.
+      // Appending this valid final box used to make the parser re-read its
+      // header forever because the old traversal skipped -8 payload bytes.
+      final File track = _copyTrackWithFinalZeroSizedFreeBox();
+      addTearDown(() {
+        if (track.existsSync()) {
+          track.deleteSync();
+        }
+      });
+
+      final result = readMetadata(track, getImage: false);
+
+      expect(result.title, equals("Title"));
+      expect(result.sampleRate, equals(48000));
+    },
+    timeout: const Timeout(Duration(seconds: 1)),
+  );
+
+  test("Parse a large-size MP4 box", () {
+    final File file = createTemporaryFile(
+      'mp4_large_size_box.m4a',
+      Uint8List.fromList([
+        ..._fileTypeBox(),
+        ..._makeLargeBox('free', <int>[]),
+      ]),
+    );
+    addTearDown(() => file.deleteSync());
+
+    expect(() => readMetadata(file, getImage: false), returnsNormally);
+  });
+
+  test("Reject a child box that exceeds its parent boundary", () {
+    // The `free` header declares 16 bytes, but only its 8-byte header fits in
+    // `moov`. A parser must not treat bytes after `moov` as this child's data.
+    final File file = createTemporaryFile(
+      'mp4_child_exceeds_parent.m4a',
+      Uint8List.fromList([
+        ..._fileTypeBox(),
+        ..._makeBox('moov', [
+          ..._u32(16),
+          ...ascii.encode('free'),
+        ]),
+      ]),
+    );
+    addTearDown(() => file.deleteSync());
+
+    expect(
+      () => readMetadata(file, getImage: false),
+      throwsA(isA<MetadataParserException>()),
+    );
+  });
+}
+
+File _copyTrackWithFinalZeroSizedFreeBox() {
+  final File fixture = File('./test/mp4/track.m4a');
+  final BytesBuilder bytes = BytesBuilder(copy: false)
+    ..add(fixture.readAsBytesSync())
+    ..add(_u32(0))
+    ..add(ascii.encode('free'));
+
+  return createTemporaryFile(
+    'mp4_final_zero_sized_free.m4a',
+    bytes.toBytes(),
+  );
+}
+
+Uint8List _fileTypeBox() {
+  return _makeBox('ftyp', [
+    ...ascii.encode('M4A '),
+    ..._u32(0),
+    ...ascii.encode('isom'),
+    ...ascii.encode('M4A '),
+  ]);
+}
+
+Uint8List _makeLargeBox(String type, List<int> payload) {
+  final BytesBuilder builder = BytesBuilder(copy: false)
+    ..add(_u32(1))
+    ..add(ascii.encode(type))
+    ..add(_u64(payload.length + 16))
+    ..add(payload);
+
+  return builder.toBytes();
 }
 
 File _createMp4WithChplChapters() {

@@ -12,18 +12,33 @@ import 'package:audio_metadata_reader/src/utils/bit_manipulator.dart';
 // https://xhelmboyx.tripod.com/formats/mp4-layout.txt
 
 ///
-/// Contains the data of a box header
-///
-/// The size is the sum of the box header size and the box data
+/// Contains the validated location and size of an ISO-BMFF box.
 class BoxHeader {
+  /// Absolute byte position where this box header starts.
+  final int start;
+
   /// Total box size in bytes (header + payload).
-  int size;
+  final int size;
+
+  /// Number of bytes occupied by this header: 8 normally, 16 for large-size.
+  final int headerSize;
 
   /// Four-character box type.
-  String type;
+  final String type;
 
-  /// Build a box header.
-  BoxHeader(this.size, this.type);
+  /// Absolute byte position immediately after this box.
+  int get end => start + size;
+
+  /// Number of bytes available to this box after its header.
+  int get payloadSize => size - headerSize;
+
+  /// Build a box header that has already passed its parent-boundary checks.
+  BoxHeader({
+    required this.start,
+    required this.size,
+    required this.headerSize,
+    required this.type,
+  });
 }
 
 /// MP4 box types this parser understands and recursively explores.
@@ -78,10 +93,13 @@ final supportedBox = [
 /// SSSS SSSS TTTT TTTT
 /// ```
 /// Meaning:
-/// - `S`: 32-bit box size, including this 8-byte header and the payload.
+/// - `S`: 32-bit box size. `0` extends to the containing scope's end; `1`
+///   means an eight-byte 64-bit size follows the type.
 /// - `T`: four-byte ASCII/QuickTime box type.
 /// Constraints:
-/// - Child boxes are bounded by their parent box size.
+/// - Normal boxes are at least 8 bytes; large-size boxes are at least 16.
+/// - Child boxes, including size-zero boxes, must end inside their parent.
+///   This gives every traversal a finite, forward-only boundary.
 /// - `meta` may contain either a 4-byte version/flags field or child boxes
 ///   directly; both layouts occur in valid MP4-family files in the wild.
 ///
@@ -100,17 +118,17 @@ class MP4Parser extends TagParser<Mp4Metadata> {
     reader.setPositionSync(0);
     buffer = Buffer(randomAccessFile: reader);
 
-    final lengthFile = reader.lengthSync();
+    final int fileEnd = reader.lengthSync();
 
-    while (buffer.fileCursor < lengthFile) {
-      final box = _readBox(buffer);
+    while (buffer.fileCursor < fileEnd) {
+      final BoxHeader box = _readBox(buffer, limit: fileEnd);
 
       if (supportedBox.contains(box.type)) {
         processBox(buffer, box);
       } else {
-        // We substract 8 to the box size because we already read the data for
-        // the box header
-        buffer.skip(box.size - 8);
+        // The validated box end is always after the header and within the
+        // file, including for size-zero and large-size boxes.
+        buffer.setPositionSync(box.end);
       }
     }
 
@@ -118,17 +136,23 @@ class MP4Parser extends TagParser<Mp4Metadata> {
   }
 
   ///
-  /// A box (or atom) header uses 8 bytes
+  /// A box (or atom) header normally uses 8 bytes.
   ///
   /// [0...3] -> box size (header + body)
   /// [4...7] -> box name (ASCII)
+  /// [8...15] -> 64-bit total size when the 32-bit size is `1`
   ///
-  BoxHeader _readBox(Buffer buffer) {
-    final headerBytes = buffer.read(8);
-    final parser = ByteData.sublistView(headerBytes);
+  /// [limit] is the absolute end of the current parent scope. Validating
+  /// against it before reading a payload prevents malformed child sizes from
+  /// seeking into a sibling box or beyond the file.
+  BoxHeader _readBox(Buffer buffer, {required int limit}) {
+    final int start = buffer.fileCursor;
+    _requireBytes(start, 8, limit);
 
-    final boxSize = parser.getUint32(0);
-    final boxNameBytes = headerBytes.sublist(4);
+    final Uint8List headerBytes = buffer.read(8);
+    final ByteData parser = ByteData.sublistView(headerBytes);
+    final int declaredSize = parser.getUint32(0);
+    final Uint8List boxNameBytes = headerBytes.sublist(4);
 
     // throw error if we don't have a correct box name
     if (boxNameBytes[0] == 0 &&
@@ -139,7 +163,44 @@ class MP4Parser extends TagParser<Mp4Metadata> {
           track: File(""), message: "Malformed MP4 file");
     }
 
-    return BoxHeader(boxSize, String.fromCharCodes(boxNameBytes));
+    int headerSize = 8;
+    int size = declaredSize;
+
+    if (declaredSize == 0) {
+      // ISO-BMFF defines zero as extending to EOF. Within a nested traversal,
+      // the containing box is the only legal EOF, so use its boundary.
+      size = limit - start;
+    } else if (declaredSize == 1) {
+      _requireBytes(buffer.fileCursor, 8, limit);
+      size = getUint64BE(buffer.read(8));
+      headerSize = 16;
+    }
+
+    if (size < headerSize) {
+      _malformed('MP4 box size is smaller than its header');
+    }
+    if (size > limit - start) {
+      _malformed('MP4 box exceeds its parent boundary');
+    }
+
+    return BoxHeader(
+      start: start,
+      size: size,
+      headerSize: headerSize,
+      type: String.fromCharCodes(boxNameBytes),
+    );
+  }
+
+  /// Fail before a read or seek would cross the active box boundary.
+  void _requireBytes(int position, int length, int limit) {
+    if (position < 0 || length < 0 || position + length > limit) {
+      _malformed('MP4 box is truncated or exceeds its parent boundary');
+    }
+  }
+
+  /// Produce one consistent malformed-container error for boundary failures.
+  Never _malformed(String message) {
+    throw MetadataParserException(track: File(''), message: message);
   }
 
   /// Parse a box
@@ -148,13 +209,16 @@ class MP4Parser extends TagParser<Mp4Metadata> {
   /// otherwise we skip them
   void processBox(Buffer buffer, BoxHeader box) {
     if (box.type == "moov") {
-      parseRecurvise(buffer, box);
+      parseRecursive(buffer, box);
     } else if (box.type == "mvhd") {
-      final version = buffer.read(1)[0];
+      _requirePayloadBytes(buffer, box, 1);
+      final int version = buffer.read(1)[0];
 
       // version 0 has 100 bytes
       // version 1 has 112 bytes
-      final bytes = buffer.read(version == 1 ? 111 : 99);
+      final int remainingMvhdBytes = version == 1 ? 111 : 99;
+      _requirePayloadBytes(buffer, box, remainingMvhdBytes);
+      final Uint8List bytes = buffer.read(remainingMvhdBytes);
 
       int timeScale = 0;
       int timeUnit = 0;
@@ -170,97 +234,97 @@ class MP4Parser extends TagParser<Mp4Metadata> {
       double microseconds = (timeUnit / timeScale) * 1000000;
       tags.duration = Duration(microseconds: microseconds.toInt());
     } else if (box.type == "udta") {
-      parseRecurvise(buffer, box);
+      parseRecursive(buffer, box);
     } else if (box.type == "ilst") {
-      parseRecurvise(buffer, box);
+      parseRecursive(buffer, box);
     } else if (["trak", "mdia", "minf", "stbl", "stsd"].contains(box.type)) {
-      parseRecurvise(buffer, box);
+      parseRecursive(buffer, box);
     } else if (box.type == "meta") {
-      parseRecurvise(buffer, box);
+      parseRecursive(buffer, box);
     } else if (box.type == "chpl") {
       // `chpl` is a chapter list atom used by many MP4/M4A encoders.
-      _parseChapterListBox(buffer.read(box.size - 8));
+      _parseChapterListBox(buffer.read(box.payloadSize));
     } else if (box.type[0] == "©" ||
         ["gnre", "trkn", "disk", "tmpo", "cpil", "too", "covr", "pgap", "gen"]
             .contains(box.type)) {
       final boxName = (box.type[0] == "©") ? box.type.substring(1) : box.type;
 
       if (boxName == "covr" && !fetchImage) {
-        buffer.skip(box.size - 8);
-        return;
-      }
+        buffer.skip(box.payloadSize);
+      } else {
+        final Uint8List metadataValue = buffer.read(box.payloadSize);
 
-      final metadataValue = buffer.read(box.size - 8);
+        // sometimes the data is stored inside another box called `data`
+        // we try to find out if the data contains the box type "data" (0:4 is the box size)
+        // otherwise we just skip the Apple's tag of 4 chars
+        final Uint8List data =
+            (String.fromCharCodes(metadataValue.sublist(4, 8)) == "data")
+                ? metadataValue.sublist(16)
+                : metadataValue.sublist(4);
 
-      // sometimes the data is stored inside another box called `data`
-      // we try to find out if the data contains the box type "data" (0:4 is the box size)
-      // otherwise we just skip the Apple's tag of 4 chars
-      final data = (String.fromCharCodes(metadataValue.sublist(4, 8)) == "data")
-          ? metadataValue.sublist(16)
-          : metadataValue.sublist(4);
+        final String value = _decodeString(data);
 
-      final value = _decodeString(data);
+        switch (boxName) {
+          case "nam":
+            tags.title = value;
+            break;
+          case "ART":
+            tags.artist = value;
+            break;
+          case "alb":
+            tags.album = value;
+            break;
+          case "cmt":
+            break;
+          case "lyr":
+            tags.lyrics = value;
+            break;
+          case "gen":
+            tags.genre = value;
+            break;
+          case "day":
+            final int? intDay = int.tryParse(value);
 
-      switch (boxName) {
-        case "nam":
-          tags.title = value;
-          break;
-        case "ART":
-          tags.artist = value;
-          break;
-        case "alb":
-          tags.album = value;
-          break;
-        case "cmt":
-          break;
-        case "lyr":
-          tags.lyrics = value;
-          break;
-        case "gen":
-          tags.genre = value;
-          break;
-        case "day":
-          final intDay = int.tryParse(value);
+            if (intDay != null) {
+              tags.year = DateTime(intDay);
+            } else {
+              tags.year = DateTime.tryParse(value);
+            }
+            break;
+          case "too":
+            break;
+          case "disk":
+            tags.discNumber = getUint16(data.sublist(2, 4));
+            tags.totalDiscs = getUint16(data.sublist(4, 6));
+            break;
 
-          if (intDay != null) {
-            tags.year = DateTime(intDay);
-          } else {
-            tags.year = DateTime.tryParse(value);
-          }
-          break;
-        case "too":
-          break;
-        case "disk":
-          tags.discNumber = getUint16(data.sublist(2, 4));
-          tags.totalDiscs = getUint16(data.sublist(4, 6));
-          break;
-
-        case "covr":
-          final imageData = data;
-          tags.picture = Picture(
-              imageData,
-              lookupMimeType("no path", headerBytes: imageData) ?? "",
-              PictureType.coverFront);
-          break;
-        case "trkn":
-          final a = getUint16(data.sublist(2, 4));
-          final totalTracks = getUint16(data.sublist(4, 6));
-          tags.totalTracks = totalTracks;
-          if (a > 0) {
-            tags.trackNumber = a;
-          }
-          break;
+          case "covr":
+            final Uint8List imageData = data;
+            tags.picture = Picture(
+                imageData,
+                lookupMimeType("no path", headerBytes: imageData) ?? "",
+                PictureType.coverFront);
+            break;
+          case "trkn":
+            final int a = getUint16(data.sublist(2, 4));
+            final int totalTracks = getUint16(data.sublist(4, 6));
+            tags.totalTracks = totalTracks;
+            if (a > 0) {
+              tags.trackNumber = a;
+            }
+            break;
+        }
       }
     } else if (box.type == "----") {
-      final mean = _readBox(buffer);
-      String.fromCharCodes(buffer.read(mean.size - 8)); // mean value
+      final BoxHeader mean = _readBox(buffer, limit: box.end);
+      String.fromCharCodes(buffer.read(mean.payloadSize)); // mean value
 
-      final name = _readBox(buffer);
+      final BoxHeader name = _readBox(buffer, limit: box.end);
 
       final nameValue =
-          String.fromCharCodes(buffer.read(name.size - 8).sublist(4));
-      final dataBox = _readBox(buffer);
-      final data = buffer.read(dataBox.size - 8);
+          String.fromCharCodes(buffer.read(name.payloadSize).sublist(4));
+      final BoxHeader dataBox = _readBox(buffer, limit: box.end);
+      final Uint8List data = buffer.read(dataBox.payloadSize);
       final finalValue = String.fromCharCodes(data.sublist(8));
 
       switch (nameValue) {
@@ -273,13 +337,28 @@ class MP4Parser extends TagParser<Mp4Metadata> {
         default:
       }
     } else if (box.type == "mp4a") {
-      final bytes = buffer.read(box.size - 8);
+      final Uint8List bytes = buffer.read(box.payloadSize);
 
       // tags.bitrate = timeScale;
       tags.sampleRate = getUint32(bytes.sublist(22, 26));
     } else {
-      buffer.setPositionSync(buffer.fileCursor + box.size - 8);
+      buffer.setPositionSync(box.end);
     }
+
+    // A specialised parser may consume only the fields it needs. Restore the
+    // cursor to the declared end so its parent always starts the next child at
+    // a new position; fail instead if a parser crossed this box's boundary.
+    if (buffer.fileCursor > box.end) {
+      _malformed('MP4 box payload exceeds its declared size');
+    }
+    if (buffer.fileCursor < box.end) {
+      buffer.setPositionSync(box.end);
+    }
+  }
+
+  /// Ensure a fixed-size field is completely inside [box]'s payload.
+  void _requirePayloadBytes(Buffer buffer, BoxHeader box, int length) {
+    _requireBytes(buffer.fileCursor, length, box.end);
   }
 
   String _decodeString(Uint8List value) {
@@ -391,44 +470,62 @@ class MP4Parser extends TagParser<Mp4Metadata> {
     return chapters;
   }
 
-  /// Parse a box with multiple sub boxes.
-  void parseRecurvise(Buffer buffer, BoxHeader box) {
-    final limit = box.size - 8;
-    int offset = 0;
+  /// Parse child boxes until the declared end of [box].
+  ///
+  /// The loop has no manually maintained offset: each iteration reads a
+  /// validated header and moves the cursor to that child's absolute end. That
+  /// makes forward progress independent of special size values.
+  void parseRecursive(Buffer buffer, BoxHeader box) {
+    final int childStart = buffer.fileCursor;
 
     // ISO-BMFF normally stores 4 version/flags bytes at the start of `meta`,
     // but some Android/MediaStore files put child boxes directly there. Probe
-    // the first 8 bytes and only consume the version/flags field when the
-    // bytes do not form a plausible child-box header.
-    if ("meta" == box.type) {
-      final firstBytes = buffer.read(8);
-      final firstSize = getUint32(firstBytes.sublist(0, 4));
-      final firstType = String.fromCharCodes(firstBytes.sublist(4, 8));
-      final hasChildBoxHeader = firstSize >= 8 &&
-          firstSize <= limit &&
-          firstType.codeUnits.every((byte) => byte >= 0x20 && byte <= 0x7e);
+    // the first 8 bytes only when they fit inside this parent, and consume the
+    // prefix only when those bytes cannot describe a normal child header.
+    if (box.type == "meta") {
+      final int availableBytes = box.end - buffer.fileCursor;
+      bool hasChildBoxHeader = false;
 
-      buffer.setPositionSync(buffer.fileCursor - 8);
+      if (availableBytes >= 8) {
+        final Uint8List firstBytes = buffer.read(8);
+        final int firstSize = getUint32(firstBytes.sublist(0, 4));
+        final String firstType = String.fromCharCodes(firstBytes.sublist(4, 8));
+        final bool hasPrintableType = firstType.codeUnits
+            .every((int byte) => byte >= 0x20 && byte <= 0x7e);
+
+        if (firstSize == 1 && availableBytes >= 16) {
+          final int largeSize = getUint64BE(buffer.read(8));
+          hasChildBoxHeader = largeSize >= 16 &&
+              largeSize <= availableBytes &&
+              hasPrintableType;
+        } else if (firstSize == 0) {
+          hasChildBoxHeader = hasPrintableType;
+        } else {
+          hasChildBoxHeader =
+              firstSize >= 8 && firstSize <= availableBytes && hasPrintableType;
+        }
+        buffer.setPositionSync(childStart);
+      }
 
       if (!hasChildBoxHeader) {
+        _requireBytes(buffer.fileCursor, 4, box.end);
         buffer.skip(4);
-        offset = 4;
       }
     } else if (box.type == "stsd") {
-      offset += 8;
-      buffer.read(8);
+      // Sample descriptions start with a full-box version/flags field and a
+      // 32-bit entry count before their child sample-entry boxes.
+      _requireBytes(buffer.fileCursor, 8, box.end);
+      buffer.skip(8);
     }
 
-    while (offset < limit) {
-      final newBox = _readBox(buffer);
+    while (buffer.fileCursor < box.end) {
+      final BoxHeader child = _readBox(buffer, limit: box.end);
 
-      if (supportedBox.contains(newBox.type)) {
-        processBox(buffer, newBox);
+      if (supportedBox.contains(child.type)) {
+        processBox(buffer, child);
       } else {
-        buffer.skip(newBox.size - 8);
+        buffer.setPositionSync(child.end);
       }
-
-      offset += newBox.size;
     }
   }
 

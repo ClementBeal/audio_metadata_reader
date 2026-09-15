@@ -20,6 +20,13 @@
 * always close the reader even if there's an error ([9367009](https://github.com/ClementBeal/audio_metadata_reader/commit/9367009578a10be2d2f26a2c9eabdd8b2ec68668))
 * add linter rules ([9f39e1d](https://github.com/ClementBeal/audio_metadata_reader/commit/9f39e1d77e5683424bf40f6e5521c871ee2e603d))
 
+## [1.8.1](https://github.com/ClementBeal/audio_metadata_reader/compare/v1.8.0...v1.8.1) (2026-09-15)
+
+
+### Bug Fixes
+
+* bound MP4 box traversal ([220b2c6](https://github.com/ClementBeal/audio_metadata_reader/commit/220b2c695267f0989b89e3627e39303e996e5c48))
+
 ## [1.8.0](https://github.com/ClementBeal/audio_metadata_reader/compare/v1.7.1...v1.8.0) (2026-09-08)
 
 

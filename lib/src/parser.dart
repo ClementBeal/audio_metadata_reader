@@ -187,7 +187,8 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
 
       return newMetadata;
     } else if (RiffParser.canUserParser(reader)) {
-      final riffMetadata = RiffParser().parse(reader);
+      final RiffMetadata riffMetadata =
+          RiffParser(fetchImage: getImage).parse(reader);
 
       final newMetadata = AudioMetadata(
         file: track,

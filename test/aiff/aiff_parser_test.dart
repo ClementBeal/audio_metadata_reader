@@ -12,7 +12,7 @@ void main() {
 
     expect(result.title, equals('Simple title'));
     expect(result.sampleRate, equals(44100));
-    expect(result.bitrate, equals(176400));
+    expect(result.bitrate, equals(1411200));
     expect(result.duration?.inSeconds, equals(1));
     expect(result.lyrics, isNull);
   });
@@ -54,7 +54,7 @@ void main() {
     expect(result.year, equals(DateTime(2014)));
     expect(result.genres, contains('Rock'));
     expect(result.sampleRate, equals(44100));
-    expect(result.bitrate, equals(176400));
+    expect(result.bitrate, equals(1411200));
   });
 
   for (final String path in <String>[

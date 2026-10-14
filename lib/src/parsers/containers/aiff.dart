@@ -145,10 +145,10 @@ class AiffParser extends TagParser<RiffMetadata> {
 
     metadata.samplerate = sampleRate.round();
 
-    // For PCM-style AIFF files, bitrate (bytes/sec) is:
-    // sampleRate * channels * bytesPerSample
+    // For PCM-style AIFF files, bitrate (bits/sec) is:
+    // sampleRate * channels * bytesPerSample * 8
     final bytesPerSample = (bitsPerSample / 8).ceil();
-    metadata.bitrate = (sampleRate * channels * bytesPerSample).round();
+    metadata.bitrate = (sampleRate * channels * bytesPerSample * 8).round();
 
     final durationSeconds = totalSampleFrames / sampleRate;
     metadata.duration = Duration(

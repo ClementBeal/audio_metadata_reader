@@ -3,6 +3,34 @@ import 'package:audio_metadata_reader/src/parsers/tags/vorbis_comment.dart';
 import 'package:test/test.dart';
 
 void main() {
+  for (final String value in ['unknown/2019', '/2019', 'circa/1999']) {
+    test('ignores malformed DATE=$value and keeps an existing date', () {
+      final VorbisMetadata metadata = VorbisMetadata();
+
+      parseVorbisComment('DATE=2018'.codeUnits, metadata, fetchImage: false);
+      parseVorbisComment('DATE=$value'.codeUnits, metadata, fetchImage: false);
+
+      expect(metadata.date, equals([DateTime(2018)]));
+    });
+  }
+
+  final Map<String, DateTime> validDates = {
+    '2019': DateTime(2019),
+    '2019-04-01': DateTime(2019, 4, 1),
+    '2019/2020': DateTime(2019),
+  };
+
+  for (final MapEntry<String, DateTime> entry in validDates.entries) {
+    test('returns the date for DATE=${entry.key}', () {
+      final VorbisMetadata metadata = VorbisMetadata();
+
+      parseVorbisComment('DATE=${entry.key}'.codeUnits, metadata,
+          fetchImage: false);
+
+      expect(metadata.date, equals([entry.value]));
+    });
+  }
+
   test('Parse LANGUAGE Vorbis comment into dedicated field', () {
     final metadata = VorbisMetadata();
 

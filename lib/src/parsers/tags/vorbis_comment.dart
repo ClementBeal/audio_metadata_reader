@@ -102,7 +102,12 @@ void parseVorbisComment(
       if (parsedDatetime != null) {
         metadata.date.add(parsedDatetime);
       } else if (value.contains("/")) {
-        metadata.date.add(DateTime(int.parse(value.split("/").first)));
+        // Some taggers store year ranges such as "2019/2020". Keep the first
+        // year only if it is numeric: free text must not abort the entire file.
+        final int? parsedYear = int.tryParse(value.split("/").first);
+        if (parsedYear != null) {
+          metadata.date.add(DateTime(parsedYear));
+        }
       } else if (int.tryParse(value) != null) {
         metadata.date.add(DateTime(int.parse(value)));
       }

@@ -10,6 +10,8 @@ void main() {
 
     expect(metadata.title, equals('WAV cover fixture'));
     expect(metadata.sampleRate, equals(44100));
+    expect(metadata.bitrate, equals(705600));
+    expect(metadata.duration, equals(const Duration(milliseconds: 100)));
     expect(metadata.pictures, hasLength(1));
     final Picture picture = metadata.pictures.single;
     expect(
@@ -32,7 +34,7 @@ void main() {
     final result = readMetadata(track, getImage: false);
 
     expect(result.sampleRate, equals(48000));
-    expect(result.bitrate, equals(96000));
+    expect(result.bitrate, equals(768000));
     expect(result.album, equals("Stupeflip"));
     expect(result.artist, equals("Stupeflip"));
     expect(result.discNumber, isNull);
@@ -62,7 +64,7 @@ void main() {
     expect(result.year, equals(DateTime(2014)));
     expect(result.genres, contains("Rock"));
     expect(result.sampleRate, equals(44100));
-    expect(result.bitrate, equals(176400));
+    expect(result.bitrate, equals(1411200));
     expect(result.duration?.inSeconds, closeTo(1, 0.1));
   });
 }

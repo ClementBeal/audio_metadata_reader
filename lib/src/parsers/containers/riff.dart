@@ -36,7 +36,7 @@ class RiffParser extends TagParser<RiffMetadata> {
     _parseChunks();
 
     if (metadata.bitrate != null && dataSize != null) {
-      final durationSeconds = dataSize! / metadata.bitrate!;
+      final double durationSeconds = dataSize! * 8 / metadata.bitrate!;
       metadata.duration =
           Duration(microseconds: (durationSeconds * 1000000).round());
     }
@@ -112,7 +112,7 @@ class RiffParser extends TagParser<RiffMetadata> {
     }
 
     metadata.samplerate = getUint32LE(chunkData.sublist(4, 8));
-    metadata.bitrate = getUint32LE(chunkData.sublist(8, 12));
+    metadata.bitrate = getUint32LE(chunkData.sublist(8, 12)) * 8;
   }
 
   /// Parse a `LIST` chunk and delegate INFO payload parsing when available.

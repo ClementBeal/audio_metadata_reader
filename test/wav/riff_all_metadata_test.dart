@@ -14,6 +14,8 @@ void main() {
     final riffMetadata = metadata as RiffMetadata;
     expect(riffMetadata.title, equals('Le Crou ne mourra jamais (intro)'));
     expect(riffMetadata.artist, equals('Stupeflip'));
+    expect(riffMetadata.bitrate, equals(768000));
+    expect(riffMetadata.duration!.inSeconds, equals(5));
   });
 
   test('updateMetadata works on WAV files through readAllMetadata', () {
@@ -47,6 +49,8 @@ void main() {
     expect(riffMetadata.genre, equals('Rock'));
     expect(riffMetadata.publisher, equals('WAV ID3 Chunk Publisher'));
     expect(riffMetadata.copyright, equals('WAV ID3 Chunk Copyright'));
+    expect(riffMetadata.bitrate, equals(1411200));
+    expect(riffMetadata.duration!.inSeconds, equals(1));
   });
 
   test('readAllMetadata preserves unknown RIFF chunks and INFO fields', () {

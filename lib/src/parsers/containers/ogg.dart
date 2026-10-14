@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/src/metadata/base.dart';
@@ -21,12 +22,16 @@ class OggPage {
   /// Stream serial number this page belongs to.
   final int bitstreamSerialNumber;
 
+  /// Size of each segment of [data], as listed in the page segment table.
+  final List<int> segmentSizes;
+
   /// Build an OGG page structure.
   OggPage({
     required this.data,
     required this.headerType,
     required this.granulePosition,
     required this.bitstreamSerialNumber,
+    this.segmentSizes = const <int>[],
   });
 }
 
@@ -58,11 +63,15 @@ class OGGParser extends TagParser<VorbisMetadata> {
     ];
 
     VorbisMetadata m = VorbisMetadata();
+    bool isOpus = false;
+    int opusPreSkip = 0;
 
     for (final page in pages) {
       final content = page.data;
 
       if (String.fromCharCodes(content.sublist(0, 8)) == "OpusHead") {
+        isOpus = true;
+        opusPreSkip = content[10] | (content[11] << 8);
         m.sampleRate = getUint32LE(content.sublist(12, 16));
         m.bitrate = getUint32LE(content.sublist(13, 17));
       } else if (String.fromCharCodes(content.sublist(0, 8)) == "OpusTags") {
@@ -81,26 +90,89 @@ class OGGParser extends TagParser<VorbisMetadata> {
       }
     }
 
-    // we need the sample rate to calculate the duration
-    // it's mandatory
-    // we have X samples per second (the sample rate obvio)
-    // and a page contains exactly X samples
-
+    // The granule position of the last page is the total number of samples.
+    // Opus always counts them at 48 kHz (the OpusHead sample rate is only the
+    // original input rate) and the first `pre-skip` samples must be dropped.
     if ((m.duration == null || m.duration == Duration.zero) &&
         m.sampleRate != null) {
       OggPage? page;
+      int startGranule = pages.first.granulePosition;
+
+      // An Opus stream may not start at granule 0 (RFC 7845, section 4.3):
+      // its start is the first audio page granule minus the samples it holds.
+      if (isOpus) {
+        page = _parseUniquePage();
+        if (page.headerType & 0x04 == 0) {
+          startGranule = max(page.granulePosition - _opusPageSamples(page), 0);
+        }
+      }
 
       while (page?.headerType != 0x04) {
         page = _parseUniquePageHeader();
       }
 
+      final int granuleRate = isOpus ? 48000 : m.sampleRate!;
+      final int totalSamples =
+          page!.granulePosition - startGranule - (isOpus ? opusPreSkip : 0);
+
       m.duration = Duration(
-        seconds: (page!.granulePosition - pages.first.granulePosition) ~/
-            m.sampleRate!,
+        microseconds: (max(totalSamples, 0) * 1000000 / granuleRate).round(),
       );
     }
 
     return m;
+  }
+
+  /// Number of 48 kHz samples in the Opus packets completed on [page].
+  ///
+  /// A packet ends on the first segment smaller than 255 bytes.
+  int _opusPageSamples(OggPage page) {
+    int samples = 0;
+    int packetStart = 0;
+    int packetLength = 0;
+
+    for (final int segmentSize in page.segmentSizes) {
+      packetLength += segmentSize;
+      if (segmentSize < 255) {
+        if (packetLength > 0) {
+          samples += _opusPacketSamples(
+              page.data.sublist(packetStart, packetStart + packetLength));
+        }
+        packetStart += packetLength;
+        packetLength = 0;
+      }
+    }
+
+    return samples;
+  }
+
+  /// Number of 48 kHz samples in an Opus packet, read from its TOC byte
+  /// (RFC 6716, section 3.1).
+  int _opusPacketSamples(Uint8List packet) {
+    final int config = packet[0] >> 3;
+    final int frameSamples;
+    if (config < 12) {
+      // SILK-only: 10, 20, 40 or 60 ms.
+      frameSamples = const <int>[480, 960, 1920, 2880][config % 4];
+    } else if (config < 16) {
+      // Hybrid: 10 or 20 ms.
+      frameSamples = const <int>[480, 960][config % 2];
+    } else {
+      // CELT-only: 2.5, 5, 10 or 20 ms.
+      frameSamples = const <int>[120, 240, 480, 960][config % 4];
+    }
+
+    final int frameCountCode = packet[0] & 0x03;
+    final int frameCount;
+    if (frameCountCode == 0) {
+      frameCount = 1;
+    } else if (frameCountCode < 3) {
+      frameCount = 2;
+    } else {
+      frameCount = packet.length > 1 ? packet[1] & 0x3F : 0;
+    }
+
+    return frameSamples * frameCount;
   }
 
   VorbisMetadata _parseVorbisComment(
@@ -194,6 +266,7 @@ class OGGParser extends TagParser<VorbisMetadata> {
       granulePosition: granulePosition,
       headerType: headerType,
       bitstreamSerialNumber: bitstreamSerialNumber,
+      segmentSizes: segsizes,
     );
   }
 

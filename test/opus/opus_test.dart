@@ -1,7 +1,6 @@
 import 'dart:io';
 
-import 'package:audio_metadata_reader/src/metadata/base.dart';
-import 'package:audio_metadata_reader/src/parser.dart';
+import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -39,5 +38,12 @@ void main() {
     final result = readMetadata(track);
 
     expect(result.duration, Duration(minutes: 3, seconds: 15));
+  });
+
+  test("Correct duration of an OPUS file encoded at 16 kHz", () {
+    final File track = File('./test/opus/track_16khz.opus');
+    final AudioMetadata result = readMetadata(track);
+
+    expect(result.duration, equals(const Duration(milliseconds: 1375)));
   });
 }

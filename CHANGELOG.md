@@ -20,6 +20,21 @@
 * always close the reader even if there's an error ([9367009](https://github.com/ClementBeal/audio_metadata_reader/commit/9367009578a10be2d2f26a2c9eabdd8b2ec68668))
 * add linter rules ([9f39e1d](https://github.com/ClementBeal/audio_metadata_reader/commit/9f39e1d77e5683424bf40f6e5521c871ee2e603d))
 
+## [1.8.1](https://github.com/ClementBeal/audio_metadata_reader/compare/v1.8.0...v1.8.1) (2026-10-14)
+
+
+### Bug Fixes
+
+* **ape:** preserve values with zero-prefixed lengths ([be0a800](https://github.com/ClementBeal/audio_metadata_reader/commit/be0a80038a107d71711f67f8281caa4d2ab4e2d4))
+* bound MP4 box traversal ([220b2c6](https://github.com/ClementBeal/audio_metadata_reader/commit/220b2c695267f0989b89e3627e39303e996e5c48))
+* compute Opus duration from the 48 kHz granule clock ([9a3d009](https://github.com/ClementBeal/audio_metadata_reader/commit/9a3d0099c63ae87092d101056731092494f47fa3))
+* honor getImage when reading AIFF metadata ([c9a9e58](https://github.com/ClementBeal/audio_metadata_reader/commit/c9a9e58c7a71ded6236367b893a48c90255410c1))
+* honor getImage when reading WAV metadata ([9a92eb3](https://github.com/ClementBeal/audio_metadata_reader/commit/9a92eb3265f83550dc38dffe868277baa4c89f13))
+* ignore LENGTH comment when computing Ogg duration ([8bcbb8f](https://github.com/ClementBeal/audio_metadata_reader/commit/8bcbb8f6af972511cae46cdc4ccd992921a3fd76))
+* ignore malformed Vorbis date ranges ([ba135a3](https://github.com/ClementBeal/audio_metadata_reader/commit/ba135a3f31b23c3d86f017a3d8e2bccef0174b44))
+* report AIFF bitrate in bits per second ([558bb2e](https://github.com/ClementBeal/audio_metadata_reader/commit/558bb2ed0177bd338c68fbe1050cb9866603af2a))
+* report WAV bitrate in bits per second ([e5d0719](https://github.com/ClementBeal/audio_metadata_reader/commit/e5d071978a2e0dd9b33fba200ba201033e539dc0))
+
 ## [1.8.0](https://github.com/ClementBeal/audio_metadata_reader/compare/v1.7.1...v1.8.0) (2026-09-08)
 
 

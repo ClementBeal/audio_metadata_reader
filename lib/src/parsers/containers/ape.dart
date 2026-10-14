@@ -67,25 +67,24 @@ class ApeParser extends TagParser<ApeMetadata> {
       footerSize: footer.size,
     );
 
-    ApeMetadata? parsedMetadata;
-    for (final startOffset in startOffsets) {
-      final metadata = _tryParseItems(
-        startOffset: startOffset,
-        footerOffset: footerOffset,
-        itemCount: footer.itemCount,
-      );
+    // Parse without skipping bytes first: valid lengths like 256 and 512
+    // start with a zero byte, which must not be mistaken for padding.
+    for (final bool recoverPadding in <bool>[false, true]) {
+      for (final int startOffset in startOffsets) {
+        final ApeMetadata? metadata = _tryParseItems(
+          startOffset: startOffset,
+          footerOffset: footerOffset,
+          itemCount: footer.itemCount,
+          recoverPadding: recoverPadding,
+        );
 
-      if (metadata != null) {
-        parsedMetadata = metadata;
-        break;
+        if (metadata != null) {
+          return metadata;
+        }
       }
     }
 
-    if (parsedMetadata == null) {
-      throw StateError('Malformed APEv2 tag: cannot parse items');
-    }
-
-    return parsedMetadata;
+    throw StateError('Malformed APEv2 tag: cannot parse items');
   }
 
   /// Returns true when we can locate a valid APEv2 footer.
@@ -178,19 +177,21 @@ class ApeParser extends TagParser<ApeMetadata> {
     required int startOffset,
     required int footerOffset,
     required int itemCount,
+    required bool recoverPadding,
   }) {
     final metadata = ApeMetadata();
     _buffer.setPositionSync(startOffset);
 
     for (int i = 0; i < itemCount; i++) {
-      // A few taggers leave one or more NUL bytes between items. NUL is not a
-      // valid first byte for an APE key, so skipping it here is unambiguous and
-      // lets us recover without scanning beyond the declared footer boundary.
-      while (_buffer.fileCursor < footerOffset) {
-        final nextByte = _buffer.read(1)[0];
-        if (nextByte != 0x00) {
-          _buffer.setPositionSync(_buffer.fileCursor - 1);
-          break;
+      // Skip padding only after normal parsing fails. This recovery is
+      // ambiguous when a padded item's length also starts with zero.
+      if (recoverPadding) {
+        while (_buffer.fileCursor < footerOffset) {
+          final int nextByte = _buffer.read(1)[0];
+          if (nextByte != 0x00) {
+            _buffer.setPositionSync(_buffer.fileCursor - 1);
+            break;
+          }
         }
       }
 

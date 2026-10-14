@@ -93,8 +93,8 @@ class OGGParser extends TagParser<VorbisMetadata> {
     // The granule position of the last page is the total number of samples.
     // Opus always counts them at 48 kHz (the OpusHead sample rate is only the
     // original input rate) and the first `pre-skip` samples must be dropped.
-    if ((m.duration == null || m.duration == Duration.zero) &&
-        m.sampleRate != null) {
+    // This always replaces a duration read from a `LENGTH` comment.
+    if (m.sampleRate != null) {
       OggPage? page;
       int startGranule = pages.first.granulePosition;
 

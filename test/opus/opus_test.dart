@@ -46,4 +46,11 @@ void main() {
 
     expect(result.duration, equals(const Duration(milliseconds: 1375)));
   });
+
+  test("LENGTH comment does not overwrite the OPUS duration", () {
+    final File track = File('./test/opus/track_length_tag.opus');
+    final AudioMetadata result = readMetadata(track);
+
+    expect(result.duration, equals(const Duration(milliseconds: 1375)));
+  });
 }

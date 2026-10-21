@@ -41,6 +41,18 @@ class BoxHeader {
   });
 }
 
+/// A tag atom wraps its value in a nested `data` box, whose header alone is
+/// 8 bytes (`size` + `type`). A shorter payload cannot contain that wrapper.
+const int _minTagAtomPayload = 8;
+
+/// Offset of the value inside a nested `data` box payload: 8 bytes of box
+/// header, 4 bytes of version/flags and 4 bytes of locale.
+const int _dataBoxValueOffset = 16;
+
+/// `disk` and `trkn` values are two 16-bit numbers (`number`, `total`) followed
+/// by 2 reserved bytes, so 6 bytes are needed before reading them.
+const int _minNumberPairValueLength = 6;
+
 /// MP4 box types this parser understands and recursively explores.
 final supportedBox = [
   "moov",
@@ -58,6 +70,7 @@ final supportedBox = [
   "pgap",
   "©nam",
   "©ART",
+  "aART",
   "©alb",
   "©cmt",
   "©day",
@@ -245,74 +258,110 @@ class MP4Parser extends TagParser<Mp4Metadata> {
       // `chpl` is a chapter list atom used by many MP4/M4A encoders.
       _parseChapterListBox(buffer.read(box.payloadSize));
     } else if (box.type[0] == "©" ||
-        ["gnre", "trkn", "disk", "tmpo", "cpil", "too", "covr", "pgap", "gen"]
-            .contains(box.type)) {
+        [
+          "aART",
+          "gnre",
+          "trkn",
+          "disk",
+          "tmpo",
+          "cpil",
+          "too",
+          "covr",
+          "pgap",
+          "gen"
+        ].contains(box.type)) {
       final boxName = (box.type[0] == "©") ? box.type.substring(1) : box.type;
 
       if (boxName == "covr" && !fetchImage) {
         buffer.skip(box.payloadSize);
+      } else if (box.payloadSize < _minTagAtomPayload) {
+        // Too small to hold the nested `data` box header, so the atom carries
+        // no value. Skipping it keeps such files readable instead of failing
+        // the whole parse.
+        buffer.skip(box.payloadSize);
       } else {
         final Uint8List metadataValue = buffer.read(box.payloadSize);
 
-        // sometimes the data is stored inside another box called `data`
-        // we try to find out if the data contains the box type "data" (0:4 is the box size)
-        // otherwise we just skip the Apple's tag of 4 chars
-        final Uint8List data =
-            (String.fromCharCodes(metadataValue.sublist(4, 8)) == "data")
-                ? metadataValue.sublist(16)
-                : metadataValue.sublist(4);
+        // Tag values are usually wrapped in a nested `data` box, but a few
+        // encoders store the raw value after a 4-byte size instead. Detect the
+        // wrapper by its type at offset 4 and fall back to the shorter layout.
+        final bool wrappedInDataBox =
+            String.fromCharCodes(metadataValue.sublist(4, 8)) == "data";
+        final Uint8List data = !wrappedInDataBox
+            ? metadataValue.sublist(4)
+            : (metadataValue.length >= _dataBoxValueOffset
+                ? metadataValue.sublist(_dataBoxValueOffset)
+                // A `data` box truncated before its value: the atom exists but
+                // holds nothing.
+                : Uint8List(0));
 
-        final String value = _decodeString(data);
+        // An atom can exist with no value at all (an empty `data` box). Keep
+        // the field null instead of storing an empty string, so callers can
+        // tell "no tag" apart from "a tag whose value is empty".
+        if (data.isNotEmpty) {
+          final String value = _decodeString(data);
 
-        switch (boxName) {
-          case "nam":
-            tags.title = value;
-            break;
-          case "ART":
-            tags.artist = value;
-            break;
-          case "alb":
-            tags.album = value;
-            break;
-          case "cmt":
-            break;
-          case "lyr":
-            tags.lyrics = value;
-            break;
-          case "gen":
-            tags.genre = value;
-            break;
-          case "day":
-            final int? intDay = int.tryParse(value);
+          switch (boxName) {
+            case "nam":
+              tags.title = value;
+              break;
+            case "ART":
+              tags.artist = value;
+              break;
+            case "aART":
+              // The iTunes metadata spec stores the album artist in its own
+              // `aART` atom, separate from the track artist in `©ART`.
+              tags.albumArtist = value;
+              break;
+            case "alb":
+              tags.album = value;
+              break;
+            case "cmt":
+              break;
+            case "lyr":
+              tags.lyrics = value;
+              break;
+            case "gen":
+              tags.genre = value;
+              break;
+            case "day":
+              final int? intDay = int.tryParse(value);
 
-            if (intDay != null) {
-              tags.year = DateTime(intDay);
-            } else {
-              tags.year = DateTime.tryParse(value);
-            }
-            break;
-          case "too":
-            break;
-          case "disk":
-            tags.discNumber = getUint16(data.sublist(2, 4));
-            tags.totalDiscs = getUint16(data.sublist(4, 6));
-            break;
+              if (intDay != null) {
+                tags.year = DateTime(intDay);
+              } else {
+                tags.year = DateTime.tryParse(value);
+              }
+              break;
+            case "too":
+              break;
+            case "disk":
+              if (data.length < _minNumberPairValueLength) {
+                break;
+              }
+              tags.discNumber = getUint16(data.sublist(2, 4));
+              tags.totalDiscs = getUint16(data.sublist(4, 6));
+              break;
 
-          case "covr":
-            final Uint8List imageData = data;
-            tags.picture = Picture(
-                imageData,
-                lookupMimeType("no path", headerBytes: imageData) ?? "",
-                PictureType.coverFront);
-            break;
-          case "trkn":
-            final int a = getUint16(data.sublist(2, 4));
-            final int totalTracks = getUint16(data.sublist(4, 6));
-            tags.totalTracks = totalTracks;
-            if (a > 0) {
-              tags.trackNumber = a;
-            }
-            break;
+            case "covr":
+              final Uint8List imageData = data;
+              tags.picture = Picture(
+                  imageData,
+                  lookupMimeType("no path", headerBytes: imageData) ?? "",
+                  PictureType.coverFront);
+              break;
+            case "trkn":
+              if (data.length < _minNumberPairValueLength) {
+                break;
+              }
+              final int a = getUint16(data.sublist(2, 4));
+              final int totalTracks = getUint16(data.sublist(4, 6));
+              tags.totalTracks = totalTracks;
+              if (a > 0) {
+                tags.trackNumber = a;
+              }
+              break;
+          }
         }
       }
     } else if (box.type == "----") {

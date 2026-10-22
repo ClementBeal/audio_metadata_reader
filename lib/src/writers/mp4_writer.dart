@@ -353,6 +353,9 @@ class Mp4Writer extends BaseMetadataWriter<Mp4Metadata> {
     if (mp4metadata.artist != null) {
       ilstBuilder.add(_buildStringTag("©ART", mp4metadata.artist!));
     }
+    if (mp4metadata.albumArtist != null) {
+      ilstBuilder.add(_buildStringTag("aART", mp4metadata.albumArtist!));
+    }
     if (mp4metadata.album != null) {
       ilstBuilder.add(_buildStringTag("©alb", mp4metadata.album!));
     }

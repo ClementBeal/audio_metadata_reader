@@ -157,17 +157,94 @@ void main() {
     expect(() => readMetadata(file, getImage: false), returnsNormally);
   });
 
-  test("Reject a child box that exceeds its parent boundary", () {
+  test("Skip a child box that exceeds its parent boundary", () {
     // The `free` header declares 16 bytes, but only its 8-byte header fits in
-    // `moov`. A parser must not treat bytes after `moov` as this child's data.
+    // `moov`. The parser must not read bytes after `moov` as this child's
+    // data: it drops the rest of `moov` and keeps what it read before.
     final File file = createTemporaryFile(
       'mp4_child_exceeds_parent.m4a',
       Uint8List.fromList([
         ..._fileTypeBox(),
         ..._makeBox('moov', [
+          ..._metadataBox({'\u00a9nam': 'Title'}),
           ..._u32(16),
           ...ascii.encode('free'),
         ]),
+      ]),
+    );
+    addTearDown(() => file.deleteSync());
+
+    expect(readMetadata(file, getImage: false).title, 'Title');
+  });
+
+  test("Keep the tags read before a malformed tag box", () {
+    final File file = createTemporaryFile(
+      'mp4_malformed_tag.m4a',
+      Uint8List.fromList([
+        ..._fileTypeBox(),
+        ..._makeBox('moov', [
+          ..._metadataBox(
+            {'\u00a9nam': 'Title', '\u00a9ART': 'Artist'},
+            // A tag header whose size runs past `ilst`.
+            trailer: [..._u32(4096), 0xa9, ...ascii.encode('alb')],
+          ),
+        ]),
+      ]),
+    );
+    addTearDown(() => file.deleteSync());
+
+    final AudioMetadata result = readMetadata(file, getImage: false);
+    expect(result.title, 'Title');
+    expect(result.artist, 'Artist');
+    expect(result.album, isNull);
+  });
+
+  test(
+    "Parse an M4A whose audio is followed by bytes that are not a box",
+    () {
+      // Layout of iTunes-style ALAC files seen in the wild: ftyp, moov
+      // (udta > meta > hdlr + ilst, then free), free, mdat, then a 256-byte
+      // `RLTP=…|` text trailer padded with zeros. The trailer reads as a box
+      // of 1,380,734,032 bytes (`RLTP`) typed `=0|4`, far past the file end.
+      final Uint8List trailer = Uint8List(256)
+        ..setAll(0, ascii.encode('RLTP=0|4|||43||Cold|/0|60:-1:100:24:0::0|'));
+      final File file = createTemporaryFile(
+        'mp4_trailing_non_box_bytes.m4a',
+        Uint8List.fromList([
+          ..._fileTypeBox(),
+          ..._makeBox('moov', [
+            ..._makeBox('mvhd', _movieHeader(timeScale: 44100, units: 441000)),
+            ..._metadataBox(
+              {
+                '\u00a9nam': 'Soy El Mismo',
+                '\u00a9ART': 'Artist',
+                '\u00a9alb': 'Album',
+              },
+              trailer: _makeBox('free', List.filled(32, 0)),
+            ),
+          ]),
+          ..._makeBox('free', List.filled(64, 0)),
+          ..._makeBox('mdat', List.filled(1024, 0x55)),
+          ...trailer,
+        ]),
+      );
+      addTearDown(() => file.deleteSync());
+
+      final AudioMetadata result = readMetadata(file, getImage: false);
+      expect(result.title, 'Soy El Mismo');
+      expect(result.artist, 'Artist');
+      expect(result.album, 'Album');
+      expect(result.duration, const Duration(seconds: 10));
+    },
+  );
+
+  test("Reject a file whose top level breaks before any moov box", () {
+    final File file = createTemporaryFile(
+      'mp4_garbage_before_moov.m4a',
+      Uint8List.fromList([
+        ..._fileTypeBox(),
+        ...ascii.encode('RLTP=0|4|||43||'),
+        ...List.filled(64, 0),
       ]),
     );
     addTearDown(() => file.deleteSync());
@@ -177,6 +254,59 @@ void main() {
       throwsA(isA<MetadataParserException>()),
     );
   });
+}
+
+/// `udta` > `meta` (full box) > `hdlr` + `ilst` holding text [tags], with
+/// [trailer] appended after `ilst` inside `meta`, or inside `ilst` when it is
+/// not a complete box list (see the tests).
+Uint8List _metadataBox(Map<String, String> tags,
+    {List<int> trailer = const []}) {
+  final BytesBuilder items = BytesBuilder();
+  for (final entry in tags.entries) {
+    final Uint8List dataBox = _makeBox('data', [
+      ..._u32(1), // UTF-8 text
+      ..._u32(0), // locale
+      ...utf8.encode(entry.value),
+    ]);
+    items.add(_makeRawTypeBox(entry.key, dataBox));
+  }
+  final bool trailerIsBoxList = trailer.isEmpty ||
+      ByteData.sublistView(Uint8List.fromList(trailer)).getUint32(0) ==
+          trailer.length;
+  if (!trailerIsBoxList) items.add(trailer);
+  final Uint8List hdlr = _makeBox('hdlr', [
+    ..._u32(0),
+    ..._u32(0),
+    ...ascii.encode('mdir'),
+    ...ascii.encode('appl'),
+    ..._u32(0),
+    ..._u32(0),
+    0,
+  ]);
+  final Uint8List meta = _makeBox('meta', [
+    ..._u32(0), // version + flags
+    ...hdlr,
+    ..._makeBox('ilst', items.toBytes()),
+    if (trailerIsBoxList) ...trailer,
+  ]);
+  return _makeBox('udta', meta);
+}
+
+/// A box whose type may hold the `©` byte (0xA9), as iTunes tags do.
+Uint8List _makeRawTypeBox(String type, List<int> payload) {
+  return Uint8List.fromList([
+    ..._u32(payload.length + 8),
+    ...type.codeUnits.map((int unit) => unit & 0xff),
+    ...payload,
+  ]);
+}
+
+/// A version 0 `mvhd` payload (100 bytes) with the given duration.
+Uint8List _movieHeader({required int timeScale, required int units}) {
+  final ByteData data = ByteData(100);
+  data.setUint32(12, timeScale);
+  data.setUint32(16, units);
+  return data.buffer.asUint8List();
 }
 
 File _copyTrackWithFinalZeroSizedFreeBox() {

@@ -57,6 +57,26 @@ void main() {
         contains('deliberately much longer'));
   });
 
+  test('keeps non-box bytes that follow the last box', () {
+    final Directory directory = Directory.systemTemp.createTempSync();
+    addTearDown(() => directory.deleteSync(recursive: true));
+
+    // Some taggers append a 256-byte `RLTP=…` text trailer after `mdat`.
+    final Uint8List trailer = Uint8List(256)
+      ..setAll(0, ascii.encode('RLTP=0|4|||43||Cold|/0|60:-1:100|'));
+    final File target = File('${directory.path}/writer_trailer.m4a')
+      ..writeAsBytesSync([
+        ...File('test/mp4/writer_source.m4a').readAsBytesSync(),
+        ...trailer,
+      ]);
+
+    Mp4Writer().write(target, Mp4Metadata(title: 'Edited title'));
+
+    final Uint8List after = target.readAsBytesSync();
+    expect(after.sublist(after.length - trailer.length), equals(trailer));
+    expect(readMetadata(target, getImage: false).title, 'Edited title');
+  });
+
   test('keeps siblings after a full-box meta atom aligned', () {
     final Directory directory = Directory.systemTemp.createTempSync();
     addTearDown(() => directory.deleteSync(recursive: true));

@@ -73,6 +73,7 @@ final supportedBox = [
   "stbl",
   "stsd",
   "mp4a",
+  "alac",
 ];
 
 ///
@@ -336,7 +337,8 @@ class MP4Parser extends TagParser<Mp4Metadata> {
         //   break;
         default:
       }
-    } else if (box.type == "mp4a") {
+    } else if (box.type == "mp4a" || box.type == "alac") {
+      // Both are audio sample entries: the sample rate sits at the same place.
       final Uint8List bytes = buffer.read(box.payloadSize);
 
       // tags.bitrate = timeScale;

@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/parser.dart';
+import 'package:audio_metadata_reader/src/parsers/tags/tag_parser.dart';
 import 'package:audio_metadata_reader/src/utils/metadata_parser_exception.dart';
 import 'package:test/test.dart';
 
@@ -30,6 +31,19 @@ void main() {
     expect(result.trackTotal, equals(10));
     expect(result.genres.length, equals(1));
     expect(result.genres.first, equals("Rock"));
+  });
+  test("Read the sample rate of an ALAC (Apple Lossless) file", () {
+    // ALAC audio is described by an `alac` sample entry instead of `mp4a`
+    // (AAC). Both share the same AudioSampleEntry layout, so the sample rate
+    // sits at the same place. The fixture is generated once with ffmpeg:
+    //
+    // ffmpeg -f lavfi -i anullsrc=r=48000:cl=stereo -t 1 -c:a alac \
+    //   -metadata title="ALAC title" test/mp4/track_alac.m4a
+    final File track = File('./test/mp4/track_alac.m4a');
+    final AudioMetadata result = readMetadata(track, getImage: false);
+
+    expect(result.title, equals("ALAC title"));
+    expect(result.sampleRate, equals(48000));
   });
   test("Parse MP4 file and the cover", () {
     final track = File('./test/mp4/track.m4a');

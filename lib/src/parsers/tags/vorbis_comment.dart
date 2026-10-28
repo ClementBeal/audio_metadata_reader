@@ -4,31 +4,33 @@ import 'dart:typed_data';
 import 'package:audio_metadata_reader/src/metadata/base.dart';
 import 'package:audio_metadata_reader/src/parsers/tags/tag_parser.dart';
 
+/// Parse one `NAME=value` Vorbis comment into [metadata].
+///
+/// Only the name is decoded first: cover art that is not wanted
+/// ([fetchImage] false) is dropped before its value is decoded.
 void parseVorbisComment(
   List<int> bytes,
   VorbisMetadata metadata, {
   required bool fetchImage,
 }) {
-  int i = 0;
-  final commentBytes = <int>[];
-
-  while (bytes[i] != 0x3D) {
-    commentBytes.add(bytes[i]);
-    i += 1;
+  final int separator = bytes.indexOf(0x3D);
+  if (separator < 0) {
+    // Same error as indexing past the end of a comment without '='.
+    throw RangeError.index(bytes.length, bytes, 'bytes', null, bytes.length);
   }
-  i += 1;
 
-  final commentName = utf8.decode(commentBytes);
+  const Utf8Decoder decoder = Utf8Decoder();
+  final String commentName = decoder.convert(bytes, 0, separator);
+  final String upperName = commentName.toUpperCase();
 
-  String value;
-  value = utf8.decode(bytes.sublist(i));
+  if (upperName == 'METADATA_BLOCK_PICTURE' && !fetchImage) {
+    return;
+  }
 
-  switch (commentName.toUpperCase()) {
+  final String value = decoder.convert(bytes, separator + 1);
+
+  switch (upperName) {
     case 'METADATA_BLOCK_PICTURE':
-      if (!fetchImage) {
-        return;
-      }
-
       final imageValue = base64Decode(value);
       final buffer = ByteData.sublistView(imageValue);
       int offset = 0;
@@ -196,7 +198,7 @@ void parseVorbisComment(
       }
       break;
     default:
-      metadata.unknowns[commentName.toUpperCase()] = value;
+      metadata.unknowns[upperName] = value;
       break;
   }
 }

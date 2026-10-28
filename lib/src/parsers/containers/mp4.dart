@@ -73,6 +73,7 @@ final supportedBox = [
   "stbl",
   "stsd",
   "mp4a",
+  "alac",
 ];
 
 ///
@@ -100,6 +101,11 @@ final supportedBox = [
 /// - Normal boxes are at least 8 bytes; large-size boxes are at least 16.
 /// - Child boxes, including size-zero boxes, must end inside their parent.
 ///   This gives every traversal a finite, forward-only boundary.
+/// - A header that breaks these rules ends its scope: the rest of the parent
+///   is skipped and what was read before it is kept. Taggers and rippers
+///   append non-box bytes after `mdat` (e.g. a 256-byte `RLTP=…` trailer),
+///   which must not reject a file whose `moov` is intact. Only a file whose
+///   top level breaks before any `moov` is rejected.
 /// - `meta` may contain either a 4-byte version/flags field or child boxes
 ///   directly; both layouts occur in valid MP4-family files in the wild.
 ///
@@ -119,9 +125,17 @@ class MP4Parser extends TagParser<Mp4Metadata> {
     buffer = Buffer(randomAccessFile: reader);
 
     final int fileEnd = reader.lengthSync();
+    bool hasMovie = false;
 
     while (buffer.fileCursor < fileEnd) {
-      final BoxHeader box = _readBox(buffer, limit: fileEnd);
+      final BoxHeader? box = _tryReadBox(buffer, limit: fileEnd);
+
+      if (box == null) {
+        // Trailing bytes that are not a box: keep the metadata already read.
+        if (hasMovie) break;
+        _malformed('MP4 box exceeds its parent boundary');
+      }
+      if (box.type == "moov") hasMovie = true;
 
       if (supportedBox.contains(box.type)) {
         processBox(buffer, box);
@@ -145,23 +159,21 @@ class MP4Parser extends TagParser<Mp4Metadata> {
   /// [limit] is the absolute end of the current parent scope. Validating
   /// against it before reading a payload prevents malformed child sizes from
   /// seeking into a sibling box or beyond the file.
-  BoxHeader _readBox(Buffer buffer, {required int limit}) {
+  ///
+  /// Returns null when the bytes at the cursor cannot be a box of this scope:
+  /// fewer than 8 bytes left, an all-zero type, a size smaller than its
+  /// header or past [limit]. The cursor is then left inside the scope and the
+  /// caller skips to [limit].
+  BoxHeader? _tryReadBox(Buffer buffer, {required int limit}) {
     final int start = buffer.fileCursor;
-    _requireBytes(start, 8, limit);
+    if (start < 0 || start + 8 > limit) return null;
 
     final Uint8List headerBytes = buffer.read(8);
     final ByteData parser = ByteData.sublistView(headerBytes);
     final int declaredSize = parser.getUint32(0);
     final Uint8List boxNameBytes = headerBytes.sublist(4);
 
-    // throw error if we don't have a correct box name
-    if (boxNameBytes[0] == 0 &&
-        boxNameBytes[1] == 0 &&
-        boxNameBytes[2] == 0 &&
-        boxNameBytes[3] == 0) {
-      throw MetadataParserException(
-          track: File(""), message: "Malformed MP4 file");
-    }
+    if (boxNameBytes.every((int byte) => byte == 0)) return null;
 
     int headerSize = 8;
     int size = declaredSize;
@@ -171,17 +183,12 @@ class MP4Parser extends TagParser<Mp4Metadata> {
       // the containing box is the only legal EOF, so use its boundary.
       size = limit - start;
     } else if (declaredSize == 1) {
-      _requireBytes(buffer.fileCursor, 8, limit);
+      if (buffer.fileCursor + 8 > limit) return null;
       size = getUint64BE(buffer.read(8));
       headerSize = 16;
     }
 
-    if (size < headerSize) {
-      _malformed('MP4 box size is smaller than its header');
-    }
-    if (size > limit - start) {
-      _malformed('MP4 box exceeds its parent boundary');
-    }
+    if (size < headerSize || size > limit - start) return null;
 
     return BoxHeader(
       start: start,
@@ -316,27 +323,9 @@ class MP4Parser extends TagParser<Mp4Metadata> {
         }
       }
     } else if (box.type == "----") {
-      final BoxHeader mean = _readBox(buffer, limit: box.end);
-      String.fromCharCodes(buffer.read(mean.payloadSize)); // mean value
-
-      final BoxHeader name = _readBox(buffer, limit: box.end);
-
-      final nameValue =
-          String.fromCharCodes(buffer.read(name.payloadSize).sublist(4));
-      final BoxHeader dataBox = _readBox(buffer, limit: box.end);
-      final Uint8List data = buffer.read(dataBox.payloadSize);
-      final finalValue = String.fromCharCodes(data.sublist(8));
-
-      switch (nameValue) {
-        case "iTunes_CDDB_TrackNumber":
-          tags.trackNumber = int.parse(finalValue);
-          break;
-        // case "iTunes_CDDB_TrackNumber":
-        //   tags.trackNumber = int.parse(finalValue);
-        //   break;
-        default:
-      }
-    } else if (box.type == "mp4a") {
+      _parseFreeformBox(buffer, box);
+    } else if (box.type == "mp4a" || box.type == "alac") {
+      // Both are audio sample entries: the sample rate sits at the same place.
       final Uint8List bytes = buffer.read(box.payloadSize);
 
       // tags.bitrate = timeScale;
@@ -353,6 +342,33 @@ class MP4Parser extends TagParser<Mp4Metadata> {
     }
     if (buffer.fileCursor < box.end) {
       buffer.setPositionSync(box.end);
+    }
+  }
+
+  /// Parse an iTunes freeform `----` box: `mean`, `name` then `data`.
+  ///
+  /// A malformed child only drops this box; the caller moves to its end.
+  void _parseFreeformBox(Buffer buffer, BoxHeader box) {
+    final BoxHeader? mean = _tryReadBox(buffer, limit: box.end);
+    if (mean == null) return;
+    buffer.skip(mean.payloadSize);
+
+    final BoxHeader? name = _tryReadBox(buffer, limit: box.end);
+    if (name == null || name.payloadSize < 4) return;
+    final String nameValue =
+        String.fromCharCodes(buffer.read(name.payloadSize).sublist(4));
+
+    final BoxHeader? dataBox = _tryReadBox(buffer, limit: box.end);
+    if (dataBox == null || dataBox.payloadSize < 8) return;
+    final Uint8List data = buffer.read(dataBox.payloadSize);
+    final String finalValue = String.fromCharCodes(data.sublist(8));
+
+    switch (nameValue) {
+      case "iTunes_CDDB_TrackNumber":
+        final int? trackNumber = int.tryParse(finalValue.trim());
+        if (trackNumber != null) tags.trackNumber = trackNumber;
+        break;
+      default:
     }
   }
 
@@ -519,7 +535,14 @@ class MP4Parser extends TagParser<Mp4Metadata> {
     }
 
     while (buffer.fileCursor < box.end) {
-      final BoxHeader child = _readBox(buffer, limit: box.end);
+      final BoxHeader? child = _tryReadBox(buffer, limit: box.end);
+
+      if (child == null) {
+        // Not a box of this scope: skip the rest of the parent and keep the
+        // children already read.
+        buffer.setPositionSync(box.end);
+        break;
+      }
 
       if (supportedBox.contains(child.type)) {
         processBox(buffer, child);

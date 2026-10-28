@@ -62,6 +62,9 @@ class Mp4Writer extends BaseMetadataWriter<Mp4Metadata> {
     mp4metadata = metadata;
     final reader = source.openSync();
     final List<_TopLevelBox> boxes = <_TopLevelBox>[];
+    // Non-box bytes after the last box (some taggers append a text trailer
+    // after `mdat`); copied unchanged, as the reader skips them.
+    Uint8List trailingBytes = Uint8List(0);
 
     try {
       final lengthFile = reader.lengthSync();
@@ -69,11 +72,18 @@ class Mp4Writer extends BaseMetadataWriter<Mp4Metadata> {
       while (reader.positionSync() < lengthFile) {
         final int boxStart = reader.positionSync();
         final Uint8List headerBytes = reader.readSync(8);
-        final BoxHeader box = _readBox(headerBytes);
-        final int bodyLength = box.size - 8;
+        final BoxHeader? box = _tryReadBox(headerBytes);
+        final int bodyLength = (box?.size ?? 0) - 8;
 
-        if (bodyLength > lengthFile - reader.positionSync()) {
-          throw const FormatException("MP4 box extends beyond the file");
+        if (box == null || bodyLength > lengthFile - reader.positionSync()) {
+          if (boxes.any((_TopLevelBox box) => box.header.type == "moov")) {
+            reader.setPositionSync(boxStart);
+            trailingBytes = reader.readSync(lengthFile - boxStart);
+            break;
+          }
+          throw FormatException(box == null
+              ? "Malformed MP4 box header"
+              : "MP4 box extends beyond the file");
         }
 
         final Uint8List boxData = reader.readSync(bodyLength);
@@ -128,6 +138,7 @@ class Mp4Writer extends BaseMetadataWriter<Mp4Metadata> {
 
       outputBuilder.add(_serializeBox(box.header.type, outputData));
     }
+    outputBuilder.add(trailingBytes);
 
     destination.writeAsBytesSync(outputBuilder.takeBytes());
   }
@@ -472,6 +483,16 @@ class Mp4Writer extends BaseMetadataWriter<Mp4Metadata> {
     tagBuilder.add(dataBox);
 
     return tagBuilder.toBytes();
+  }
+
+  /// Same as [_readBox], but returns null when [headerBytes] cannot be a box
+  /// header (for instance, a text trailer appended after the last box).
+  BoxHeader? _tryReadBox(Uint8List headerBytes) {
+    try {
+      return _readBox(headerBytes);
+    } on FormatException {
+      return null;
+    }
   }
 
   /// A box (or atom) header uses 8 bytes

@@ -20,6 +20,18 @@
 * always close the reader even if there's an error ([9367009](https://github.com/ClementBeal/audio_metadata_reader/commit/9367009578a10be2d2f26a2c9eabdd8b2ec68668))
 * add linter rules ([9f39e1d](https://github.com/ClementBeal/audio_metadata_reader/commit/9f39e1d77e5683424bf40f6e5521c871ee2e603d))
 
+## [1.8.2](https://github.com/ClementBeal/audio_metadata_reader/compare/v1.8.1...v1.8.2) (2026-10-28)
+
+
+### Bug Fixes
+
+* **ogg:** return the duration of the last complete page of a truncated Ogg or Opus file instead of throwing ([39ad4c1](https://github.com/ClementBeal/audio_metadata_reader/commit/39ad4c1191c5dd246f36e00d8c59498ddddb8a91))
+
+
+### Performance Improvements
+
+* **ogg:** read Ogg/Opus duration from the file tail and stream comments ([#123](https://github.com/ClementBeal/audio_metadata_reader/issues/123)) ([39ad4c1](https://github.com/ClementBeal/audio_metadata_reader/commit/39ad4c1191c5dd246f36e00d8c59498ddddb8a91))
+
 ## [1.8.1](https://github.com/ClementBeal/audio_metadata_reader/compare/v1.8.0...v1.8.1) (2026-10-14)
 
 

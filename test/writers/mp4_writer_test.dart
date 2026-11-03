@@ -6,6 +6,24 @@ import 'package:audio_metadata_reader/audio_metadata_reader.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test('albumArtist round-trips through Mp4Writer', () {
+    final dir = Directory.systemTemp.createTempSync();
+    addTearDown(() => dir.deleteSync(recursive: true));
+    final target = File('${dir.path}/track.m4a');
+    target.writeAsBytesSync(File('test/mp4/track.m4a').readAsBytesSync());
+
+    final metadata = readAllMetadata(target, getImage: false) as Mp4Metadata;
+    final String? originalArtist = metadata.artist;
+    metadata.albumArtist = 'Test Album Artist';
+
+    Mp4Writer().write(target, metadata);
+
+    final reRead = readAllMetadata(target, getImage: false) as Mp4Metadata;
+    // The new `aART` atom must not disturb the track artist in `©ART`.
+    expect(reRead.artist, equals(originalArtist));
+    expect(reRead.albumArtist, equals('Test Album Artist'));
+  });
+
   test('updates chunk offsets when metadata grows before mdat', () {
     final Directory directory = Directory.systemTemp.createTempSync();
     addTearDown(() => directory.deleteSync(recursive: true));

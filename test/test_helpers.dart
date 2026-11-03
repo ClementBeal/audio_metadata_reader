@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -548,4 +549,56 @@ Uint8List mp3FrameHeaderCBR() {
     0x14, 0x70, 0x6E, 0x53, //
     0x3B,
   ]);
+}
+
+/// Build a minimal MP4/M4A file whose `ilst` holds [tagAtoms].
+///
+/// The layout is the one the parser walks: `ftyp`, then
+/// `moov` -> `udta` -> `meta` -> `ilst`. `meta` keeps its 4-byte version/flags
+/// prefix, which is the usual layout.
+File buildMinimalMp4(List<Uint8List> tagAtoms) {
+  final Uint8List ftyp = mp4Box('ftyp', <int>[
+    ...ascii.encode('M4A '),
+    ...mp4Uint32(0),
+    ...ascii.encode('isom'),
+    ...ascii.encode('M4A '),
+  ]);
+  final Uint8List meta = mp4Box('meta', <int>[
+    ...mp4Uint32(0), // version + flags
+    ...mp4Box('ilst', <int>[
+      for (final Uint8List atom in tagAtoms) ...atom,
+    ]),
+  ]);
+  final Uint8List moov = mp4Box('moov', mp4Box('udta', meta));
+
+  return createTemporaryFile(
+    'mp4_${DateTime.now().microsecondsSinceEpoch}.m4a',
+    Uint8List.fromList(<int>[...ftyp, ...moov]),
+  );
+}
+
+/// Build an ISO-BMFF box: a 32-bit size, a four-character [type] and [payload].
+Uint8List mp4Box(String type, List<int> payload) {
+  return (BytesBuilder()
+        // latin1 keeps the single-byte `©` (0xA9) intact, as ASCII cannot.
+        ..add(mp4Uint32(payload.length + 8))
+        ..add(latin1.encode(type))
+        ..add(payload))
+      .toBytes();
+}
+
+/// Build a text tag atom such as `©ART` or `aART` holding one `data` box.
+Uint8List mp4TextAtom(String type, String value) {
+  return mp4Box(
+      type,
+      mp4Box('data', <int>[
+        ...mp4Uint32(1), // version 0 + well-known type 1: UTF-8 text
+        ...mp4Uint32(0), // locale
+        ...utf8.encode(value),
+      ]));
+}
+
+/// Encode [value] as a big-endian unsigned 32-bit integer.
+Uint8List mp4Uint32(int value) {
+  return (ByteData(4)..setUint32(0, value)).buffer.asUint8List();
 }

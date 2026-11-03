@@ -5,8 +5,11 @@ class Mp4Metadata extends ParserTag {
   /// Track title (`©nam`).
   String? title;
 
-  /// Main artist (`©ART`/`aART` depending on source).
+  /// Track artist (`©ART`).
   String? artist;
+
+  /// Album artist (`aART`).
+  String? albumArtist;
 
   /// Album name (`©alb`).
   String? album;
@@ -51,6 +54,7 @@ class Mp4Metadata extends ParserTag {
   Mp4Metadata({
     this.title,
     this.artist,
+    this.albumArtist,
     this.album,
     this.year,
     this.trackNumber,
@@ -71,6 +75,7 @@ class Mp4Metadata extends ParserTag {
     return 'Mp4Metadata(\n'
         '  title: $title,\n'
         '  artist: $artist,\n'
+        '  albumArtist: $albumArtist,\n'
         '  album: $album,\n'
         '  year: $year,\n'
         '  trackNumber: $trackNumber,\n'

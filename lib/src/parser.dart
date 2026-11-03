@@ -137,6 +137,7 @@ AudioMetadata readMetadata(File track, {bool getImage = false}) {
         file: track,
         album: mp4Metadata.album,
         artist: mp4Metadata.artist,
+        albumArtist: mp4Metadata.albumArtist,
         bitrate: mp4Metadata.bitrate,
         discNumber: mp4Metadata.discNumber,
         duration: mp4Metadata.duration,

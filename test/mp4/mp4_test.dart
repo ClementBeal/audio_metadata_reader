@@ -45,6 +45,79 @@ void main() {
     expect(result.title, equals("ALAC title"));
     expect(result.sampleRate, equals(48000));
   });
+  test("Read the exact sample rate of a Hi-Res ALAC file", () {
+    // ALAC stores the sample rate twice: as a 16.16 fixed-point value in the
+    // AudioSampleEntry and as a full 32-bit value in its magic cookie. The
+    // fixed-point field cannot represent rates above 65535 Hz, so this
+    // 96 kHz file stores 48000 there and the cookie must win.
+    //
+    // The fixture is generated once with ffmpeg:
+    //
+    // ffmpeg -f lavfi -i "anullsrc=r=96000:cl=mono" -t 0.25 -c:a alac \
+    //   -sample_fmt s32p -metadata title="Hi-Res ALAC" \
+    //   test/mp4/track_alac_hires.m4a
+    final File track = File('./test/mp4/track_alac_hires.m4a');
+    final AudioMetadata result = readMetadata(track, getImage: false);
+
+    expect(result.title, equals("Hi-Res ALAC"));
+    expect(result.sampleRate, equals(96000));
+    // Average bitrate from the ALAC magic cookie.
+    expect(result.bitrate, equals(2304000));
+  });
+  test("Read an ALAC cookie that is stored without its child box", () {
+    // The usual layout wraps the cookie in a child `alac` box. Some muxers
+    // write the cookie directly after the AudioSampleEntry fields instead.
+    // The parser accepts that form when it fills the entry exactly, so the
+    // sample rate and bitrate still come from the cookie and not from the
+    // truncated fixed-point field (48000 here).
+    final File file = _mp4WithSampleEntry(
+      'mp4_alac_cookie_without_box.m4a',
+      _alacSampleEntry(48000, [
+        ..._u32(0), // cookie version + flags
+        ..._alacConfig(sampleRate: 96000, bitrate: 2304000),
+      ]),
+    );
+    addTearDown(() => file.deleteSync());
+
+    final AudioMetadata result = readMetadata(file, getImage: false);
+    expect(result.sampleRate, equals(96000));
+    expect(result.bitrate, equals(2304000));
+  });
+  test("Read an ALAC configuration stored without the cookie header", () {
+    // Older muxers may omit the 4-byte version/flags field and keep only the
+    // 24-byte ALACSpecificConfig. The parser prepends zeroed version/flags so
+    // both forms share the same field offsets.
+    final File file = _mp4WithSampleEntry(
+      'mp4_alac_bare_config.m4a',
+      _alacSampleEntry(48000, [
+        ..._alacConfig(sampleRate: 96000, bitrate: 2304000),
+      ]),
+    );
+    addTearDown(() => file.deleteSync());
+
+    final AudioMetadata result = readMetadata(file, getImage: false);
+    expect(result.sampleRate, equals(96000));
+    expect(result.bitrate, equals(2304000));
+  });
+  test("Ignore an ALAC child box that runs past the sample entry", () {
+    // The child box claims 4096 bytes but the entry holds far fewer. The
+    // parser must not read the next boxes as a codec configuration: it falls
+    // back to the AudioSampleEntry field and leaves the bitrate unset.
+    final File file = _mp4WithSampleEntry(
+      'mp4_alac_oversized_child.m4a',
+      _alacSampleEntry(44100, [
+        ..._u32(4096), // child box size, larger than the sample entry
+        ...ascii.encode('alac'),
+        ..._u32(0),
+        ..._alacConfig(sampleRate: 96000, bitrate: 2304000),
+      ]),
+    );
+    addTearDown(() => file.deleteSync());
+
+    final AudioMetadata result = readMetadata(file, getImage: false);
+    expect(result.sampleRate, equals(44100));
+    expect(result.bitrate, isNull);
+  });
   test("Parse MP4 file and the cover", () {
     final track = File('./test/mp4/track.m4a');
     final result = readMetadata(track, getImage: true);
@@ -307,6 +380,55 @@ Uint8List _movieHeader({required int timeScale, required int units}) {
   data.setUint32(12, timeScale);
   data.setUint32(16, units);
   return data.buffer.asUint8List();
+}
+
+/// A complete MP4 file whose `stsd` declares a single [sampleEntry].
+File _mp4WithSampleEntry(String filename, Uint8List sampleEntry) {
+  return createTemporaryFile(
+    filename,
+    Uint8List.fromList([
+      ..._fileTypeBox(),
+      ..._makeBox('moov', [
+        ..._makeBox('trak', [
+          ..._makeBox('mdia', [
+            ..._makeBox('minf', [
+              ..._makeBox('stbl', [
+                ..._makeBox('stsd', [
+                  ..._u32(0), // version + flags
+                  ..._u32(1), // entry count
+                  ...sampleEntry,
+                ]),
+              ]),
+            ]),
+          ]),
+        ]),
+      ]),
+    ]),
+  );
+}
+
+/// An `alac` sample entry announcing [baseSampleRate] Hz in its
+/// AudioSampleEntry fields, followed by [body] (the ALAC codec
+/// configuration, usually a child `alac` box).
+Uint8List _alacSampleEntry(int baseSampleRate, List<int> body) {
+  final ByteData fields = ByteData(28);
+  fields.setUint16(6, 1); // data_reference_index
+  fields.setUint16(16, 2); // channel count
+  fields.setUint16(18, 16); // sample size in bits
+  fields.setUint32(24, baseSampleRate << 16); // 16.16 fixed-point rate
+  return _makeBox('alac', [...fields.buffer.asUint8List(), ...body]);
+}
+
+/// A 24-byte `ALACSpecificConfig` declaring [bitrate] bps at [sampleRate] Hz.
+Uint8List _alacConfig({required int sampleRate, required int bitrate}) {
+  final ByteData config = ByteData(24);
+  config.setUint32(0, 4096); // frame length
+  config.setUint8(5, 16); // bit depth
+  config.setUint8(9, 2); // channel count
+  config.setUint32(12, 8192); // maximum frame size in bytes
+  config.setUint32(16, bitrate); // average bitrate in bits per second
+  config.setUint32(20, sampleRate); // sample rate in Hz
+  return config.buffer.asUint8List();
 }
 
 File _copyTrackWithFinalZeroSizedFreeBox() {

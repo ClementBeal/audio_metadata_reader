@@ -325,11 +325,48 @@ class MP4Parser extends TagParser<Mp4Metadata> {
     } else if (box.type == "----") {
       _parseFreeformBox(buffer, box);
     } else if (box.type == "mp4a" || box.type == "alac") {
-      // Both are audio sample entries: the sample rate sits at the same place.
+      // Both MP4A (AAC) and ALAC use the ISO/IEC 14496-12 AudioSampleEntry
+      // layout. Offsets below are relative to the start of the box payload
+      // (that is, right after the 8-byte box header):
+      //
+      //   0..5    reserved
+      //   6..7    data_reference_index
+      //   8..15   version / revision level / vendor
+      //   16..17  channel count
+      //   18..19  sample size in bits (16 for AAC, 16/24 for ALAC)
+      //   20..21  pre-defined
+      //   22..23  packet size (reserved for audio)
+      //   24..27  sample rate as a 16.16 fixed-point number
+      //
+      // The fixed-point field only has 16 integer bits, so it cannot hold a
+      // rate above 65535 Hz. Writers therefore store half the rate for Hi-Res
+      // files (88.2 kHz -> 44100, 96 kHz -> 48000, 192 kHz -> 96000). ALAC
+      // keeps the exact value in its magic cookie, which is parsed below.
       final Uint8List bytes = buffer.read(box.payloadSize);
 
-      // tags.bitrate = timeScale;
-      tags.sampleRate = getUint32(bytes.sublist(22, 26));
+      int? sampleRate;
+      if (bytes.length >= 28) {
+        sampleRate = getUint32(bytes.sublist(24, 28)) >> 16;
+      }
+
+      if (box.type == "alac") {
+        final Uint8List? cookie = _alacMagicCookie(bytes);
+        if (cookie != null && cookie.length >= 28) {
+          // The cookie stores the real (untruncated) sample rate.
+          final int cookieSampleRate = getUint32(cookie.sublist(24, 28));
+          if (cookieSampleRate > 0) {
+            sampleRate = cookieSampleRate;
+          }
+
+          // ALAC also stores the average bitrate of the encoded stream.
+          final int cookieBitrate = getUint32(cookie.sublist(20, 24));
+          if (cookieBitrate > 0) {
+            tags.bitrate = cookieBitrate;
+          }
+        }
+      }
+
+      tags.sampleRate = sampleRate;
     } else {
       buffer.setPositionSync(box.end);
     }
@@ -370,6 +407,71 @@ class MP4Parser extends TagParser<Mp4Metadata> {
         break;
       default:
     }
+  }
+
+  /// Return the normalised ALAC magic cookie of an `alac` sample entry.
+  ///
+  /// ALAC codec parameters are stored after the 28-byte AudioSampleEntry
+  /// body. The usual layout is a child box named `alac`, whose payload is a
+  /// 4-byte version/flags field followed by the 24-byte ALACSpecificConfig
+  /// (`ALACSpecificConfig` in the Apple Lossless reference implementation).
+  /// Both Apple's and ffmpeg's muxers write this form:
+  ///
+  /// ```text
+  /// [4-byte child size][4-byte "alac"][4-byte version/flags][24-byte config]
+  /// ```
+  ///
+  /// A few third-party muxers omit the child box and store either the whole
+  /// cookie or just the config directly. Those forms are accepted only when
+  /// they occupy the payload exactly, so unrelated trailing bytes cannot be
+  /// mistaken for a codec configuration.
+  ///
+  /// The returned array always starts with a 4-byte version/flags field, so
+  /// the fields keep fixed offsets inside it:
+  /// - 9:       bit depth in bits (16, 20, 24 or 32)
+  /// - 20..24:  average bitrate in bits per second
+  /// - 24..28:  sample rate in Hz (a full 32-bit value, unlike the 16.16
+  ///            fixed-point field of the AudioSampleEntry)
+  ///
+  /// Returns null when the entry is too short or the child box is malformed.
+  Uint8List? _alacMagicCookie(Uint8List payload) {
+    const int audioSampleEntrySize = 28;
+    const int configSize = 24;
+    const int versionAndFlagsSize = 4;
+    const int cookieWithoutBoxSize =
+        versionAndFlagsSize + configSize; // 28 bytes
+
+    // Usual form: a child box named `alac` ends the fixed sample-entry body.
+    if (payload.length >= audioSampleEntrySize + 8) {
+      final int childSize = getUint32(payload.sublist(28, 32));
+      final String childType = String.fromCharCodes(payload.sublist(32, 36));
+
+      if (childType == "alac") {
+        // The child size includes its own 8-byte header.
+        if (childSize < 8 || 28 + childSize > payload.length) {
+          return null;
+        }
+        return payload.sublist(36, 28 + childSize);
+      }
+    }
+
+    // Cookie stored without its box header: version/flags + config.
+    if (payload.length == audioSampleEntrySize + cookieWithoutBoxSize) {
+      return payload.sublist(
+        28,
+        audioSampleEntrySize + cookieWithoutBoxSize,
+      );
+    }
+
+    // Bare config (no version/flags). Prepend zeroed version/flags so the
+    // documented field offsets still apply.
+    if (payload.length == audioSampleEntrySize + configSize) {
+      final Uint8List cookie = Uint8List(cookieWithoutBoxSize);
+      cookie.setRange(versionAndFlagsSize, cookie.length, payload, 28);
+      return cookie;
+    }
+
+    return null;
   }
 
   /// Ensure a fixed-size field is completely inside [box]'s payload.

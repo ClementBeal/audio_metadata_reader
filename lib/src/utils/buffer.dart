@@ -35,33 +35,55 @@ class Buffer {
     _cursor = 0;
   }
 
-  /// Throws a [MetadataParserException] if a previous call to [_fill]
-  /// was unable to read any data from the file.
-  ///
-  /// Once the end of the file is reached, subsequent reads from
-  /// [RandomAccessFile] will read 0 bytes without failing. This
-  /// can cause [read] below to infinite loop.
-  void _throwOnNoData() {
-    if (_bufferedBytes == 0) {
-      throw MetadataParserException(
-          track: File(""), message: "Expected more data in file");
+  /// Rejects negative byte counts.
+  void _validateSize(int size) {
+    if (size < 0) {
+      throw ArgumentError.value(size, 'size', 'Must not be negative');
     }
   }
 
-  Uint8List read(int size) {
-    fileCursor += size;
+  /// Throws if [size] bytes are not available.
+  void _ensureBytesAvailable(int size) {
+    final int bytesAvailable = remainingBytes;
+    if (size > bytesAvailable) {
+      throw MetadataParserException(
+        track: File(''),
+        message: 'Expected $size bytes but only $bytesAvailable remain in file',
+      );
+    }
+  }
 
-    // if we read something big (~100kb), we can read it directly from file
-    // it makes the read faster
-    // no need to use the buffer
+  /// Throws when EOF is reached during a read.
+  void _throwOnNoData() {
+    if (_bufferedBytes == 0) {
+      throw MetadataParserException(
+        track: File(''),
+        message: 'Expected more data in file',
+      );
+    }
+  }
+
+  /// Reads exactly [size] bytes.
+  Uint8List read(int size) {
+    _validateSize(size);
+    _ensureBytesAvailable(size);
+
+    // Large payloads bypass the buffer.
     if (size > _bufferSize) {
       final result = Uint8List(size);
       final remaining = _bufferedBytes - _cursor;
       if (remaining > 0) {
         result.setRange(0, remaining, _buffer, _cursor);
       }
-      randomAccessFile.readIntoSync(result, remaining);
+      final int bytesRead = randomAccessFile.readIntoSync(result, remaining);
+      if (bytesRead != size - remaining) {
+        throw MetadataParserException(
+          track: File(''),
+          message: 'File was truncated while reading $size bytes',
+        );
+      }
       _fill();
+      fileCursor += size;
       return result;
     }
 
@@ -69,6 +91,7 @@ class Buffer {
       // Data fits within the current buffer
       final result = _buffer.sublist(_cursor, _cursor + size);
       _cursor += size;
+      fileCursor += size;
       return result;
     } else {
       // Data exceeds remaining buffer, needs refill
@@ -99,6 +122,7 @@ class Buffer {
           _throwOnNoData();
         }
       }
+      fileCursor += size;
       return result;
     }
   }
@@ -108,6 +132,7 @@ class Buffer {
   /// May return a smaller list if [remainingBytes] is
   /// less than [size].
   Uint8List readAtMost(int size) {
+    _validateSize(size);
     final readSize = min(size, remainingBytes);
     return read(readSize);
   }

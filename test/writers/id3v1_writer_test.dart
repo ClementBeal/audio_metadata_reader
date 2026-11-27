@@ -156,4 +156,27 @@ void main() {
     expect(id3GenreName(17), equals('Rock'));
     expect(id3GenreName(255), isNull);
   });
+
+  test('ID3v1Writer closes source handle when opening destination fails', () {
+    final dir = Directory.systemTemp.createTempSync();
+    addTearDown(() => dir.deleteSync(recursive: true));
+
+    final source = File('${dir.path}/source.mp3')
+      ..writeAsBytesSync(mp3FrameHeaderCBR());
+    final missingDirDestination =
+        File('${dir.path}/nonexistent_dir/destination.mp3');
+
+    expect(
+      () => ID3v1Writer().writeContents(
+        source,
+        missingDirDestination,
+        Mp3Metadata()..songName = 'Title',
+      ),
+      throwsA(isA<FileSystemException>()),
+    );
+
+    // On Windows an unclosed handle prevents deleting the source file.
+    source.deleteSync();
+    expect(source.existsSync(), isFalse);
+  });
 }

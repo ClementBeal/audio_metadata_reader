@@ -37,4 +37,24 @@ void main() {
     final parsedMetadata = readMetadata(target, getImage: false);
     expect(parsedMetadata.title, equals('Updated WAV title'));
   });
+
+  test('RiffWriter can be reused across multiple writes without leaking handles',
+      () {
+    final dir = Directory.systemTemp.createTempSync();
+    addTearDown(() => dir.deleteSync(recursive: true));
+
+    final target = File('${dir.path}/track.wav')
+      ..writeAsBytesSync(File('test/wav/track.wav').readAsBytesSync());
+
+    final writer = RiffWriter();
+    writer.write(target, RiffMetadata(title: 'First title'));
+    writer.write(target, RiffMetadata(title: 'Second title'));
+
+    final parsedMetadata = readMetadata(target, getImage: false);
+    expect(parsedMetadata.title, equals('Second title'));
+
+    // Ensure no file handle remains open on the target.
+    target.deleteSync();
+    expect(target.existsSync(), isFalse);
+  });
 }

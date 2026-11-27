@@ -13,7 +13,7 @@ class RiffWriter extends BaseMetadataWriter<RiffMetadata> {
   late RiffMetadata metadata;
 
   /// Reader helper bound to the original file.
-  late final Buffer buffer;
+  late Buffer buffer;
 
   @override
   void writeContents(File source, File destination, RiffMetadata metadata) {
@@ -21,10 +21,10 @@ class RiffWriter extends BaseMetadataWriter<RiffMetadata> {
     final builder = BytesBuilder();
 
     final reader = source.openSync();
-    buffer = Buffer(randomAccessFile: reader);
     late final Uint8List output;
 
     try {
+      buffer = Buffer(randomAccessFile: reader);
       reader.setPositionSync(0);
 
       buffer.skip(12);

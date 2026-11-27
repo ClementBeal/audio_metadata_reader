@@ -24,10 +24,12 @@ import 'package:audio_metadata_reader/src/writers/base_writer.dart'; // For enco
 class ID3v1Writer extends BaseMetadataWriter<Mp3Metadata> {
   @override
   void writeContents(File source, File destination, Mp3Metadata metadata) {
-    final sourceReader = source.openSync(mode: FileMode.read);
-    final destinationWriter = destination.openSync(mode: FileMode.write);
+    RandomAccessFile? sourceReader;
+    RandomAccessFile? destinationWriter;
 
     try {
+      sourceReader = source.openSync(mode: FileMode.read);
+      destinationWriter = destination.openSync(mode: FileMode.write);
       final sourceLength = sourceReader.lengthSync();
       const existingTagLength = 128;
       int audioLength = sourceLength;
@@ -73,7 +75,7 @@ class ID3v1Writer extends BaseMetadataWriter<Mp3Metadata> {
           bytes += List.filled(
               length - bytes.length, 0); // Pad with null bytes if too short
         }
-        destinationWriter.writeFromSync(bytes);
+        destinationWriter!.writeFromSync(bytes);
       }
 
       // Write title, artist, album (fixed-length 30).
@@ -101,8 +103,11 @@ class ID3v1Writer extends BaseMetadataWriter<Mp3Metadata> {
       final genre = metadata.genres.isEmpty ? null : metadata.genres.first;
       destinationWriter.writeByteSync(id3GenreCode(genre) ?? 255);
     } finally {
-      sourceReader.closeSync();
-      destinationWriter.closeSync();
+      try {
+        sourceReader?.closeSync();
+      } finally {
+        destinationWriter?.closeSync();
+      }
     }
   }
 }
